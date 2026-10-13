@@ -163,9 +163,15 @@ internal static class WicCodec
         Check(hr, "stream");
         hr = AsStream(streamObj!).InitializeFromFilename(outputPath, 0x40000000);
         Check(hr, "stream-init");
-        hr = AsEncoder(encoderObj!).Initialize((IStream)streamObj, 0);
+        // JPEG/PNG reject WICBitmapEncoderCacheInMemory (0). The platform sample uses NoCache (2).
+        const int unsupported = unchecked((int)0x88982F81);
+        hr = InitEncoder(factory, ref container, (IStream)streamObj!, 2, ref encoderObj);
+        if (hr == unsupported)
+            hr = InitEncoder(factory, ref container, (IStream)streamObj!, 1, ref encoderObj);
+        if (hr == unsupported)
+            hr = InitEncoder(factory, ref container, (IStream)streamObj!, 0, ref encoderObj);
         Check(hr, "encoder-init");
-        hr = AsEncoder(encoderObj).CreateNewFrame(out frameObj, out bagObj);
+        hr = AsEncoder(encoderObj!).CreateNewFrame(out frameObj, out bagObj);
         Check(hr, "frame-encode");
         IPropertyBag2? bag = bagObj is null ? null : AsBag(bagObj);
         if (container == FormatJpeg || container == FormatWebp)
@@ -175,7 +181,17 @@ internal static class WicCodec
         hr = AsFrameEncode(frameObj).WriteSource(source, IntPtr.Zero);
         Check(hr, "write");
         Check(AsFrameEncode(frameObj).Commit(), "frame-commit");
-        Check(AsEncoder(encoderObj).Commit(), "encoder-commit");
+        Check(AsEncoder(encoderObj!).Commit(), "encoder-commit");
+    }
+
+    private static int InitEncoder(IWICImagingFactory factory, ref Guid container, IStream stream, int cache, ref object? encoderObj)
+    {
+        Release(encoderObj);
+        encoderObj = null;
+        var hr = factory.CreateEncoder(ref container, IntPtr.Zero, out encoderObj);
+        if (hr < 0)
+            return hr;
+        return AsEncoder(encoderObj!).Initialize(stream, cache);
     }
 
     private static void Encode(IWICImagingFactory factory, IWICBitmapSource source, string outputPath, Guid container, int quality, out object? a, out object? b)
