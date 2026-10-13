@@ -1,0 +1,118 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using Kutu.Core.Models;
+using Kutu.Core.Security;
+
+namespace Kutu.Core.Settings;
+
+public sealed class SettingsService
+{
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        WriteIndented = true,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
+
+    private readonly ISecretProtector _protector;
+    private readonly string _path;
+
+    public SettingsService(ISecretProtector protector, string? path = null)
+    {
+        _protector = protector;
+        _path = path ?? Path.Combine(AppDirectory, "settings.json");
+    }
+
+    public AppSettings Current { get; private set; } = new();
+
+    public static string AppDirectory =>
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Kutu");
+
+    public async Task LoadAsync(CancellationToken cancellationToken = default)
+    {
+        if (!File.Exists(_path))
+        {
+            Current = new AppSettings();
+            return;
+        }
+
+        await using var stream = File.OpenRead(_path);
+        var document = await JsonSerializer.DeserializeAsync<SettingsDocument>(stream, JsonOptions, cancellationToken)
+            .ConfigureAwait(false);
+        Current = document is null ? new AppSettings() : FromDocument(document);
+    }
+
+    public async Task SaveAsync(CancellationToken cancellationToken = default)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
+        var document = ToDocument(Current);
+        await using var stream = File.Create(_path);
+        await JsonSerializer.SerializeAsync(stream, document, JsonOptions, cancellationToken).ConfigureAwait(false);
+    }
+
+    public SettingsDocument ToDocument(AppSettings settings) => new()
+    {
+        Language = settings.Language,
+        StartWithWindows = settings.StartWithWindows,
+        ContextMenuRegistered = settings.ContextMenuRegistered,
+        ScreenshotHotkey = settings.ScreenshotHotkey,
+        LauncherHotkey = settings.LauncherHotkey,
+        ColorPickerHotkey = settings.ColorPickerHotkey,
+        ClipboardHotkey = settings.ClipboardHotkey,
+        TranslateHotkey = settings.TranslateHotkey,
+        ClipboardLimit = settings.ClipboardLimit,
+        UploadEndpoint = settings.UploadEndpoint,
+        DeepLEndpoint = settings.DeepLEndpoint,
+        AbuseIpDbKeyProtected = Protect(settings.AbuseIpDbKey),
+        DeepLKeyProtected = Protect(settings.DeepLKey),
+        UploadApiKeyProtected = Protect(settings.UploadApiKey),
+        Snippets = settings.Snippets,
+        ColorHistory = settings.ColorHistory,
+        JpegQuality = settings.JpegQuality,
+        TranslateSource = settings.TranslateSource,
+        TranslateTarget = settings.TranslateTarget
+    };
+
+    public AppSettings FromDocument(SettingsDocument document) => new()
+    {
+        Language = string.IsNullOrWhiteSpace(document.Language) ? "tr" : document.Language,
+        StartWithWindows = document.StartWithWindows,
+        ContextMenuRegistered = document.ContextMenuRegistered,
+        ScreenshotHotkey = document.ScreenshotHotkey,
+        LauncherHotkey = document.LauncherHotkey,
+        ColorPickerHotkey = document.ColorPickerHotkey,
+        ClipboardHotkey = document.ClipboardHotkey,
+        TranslateHotkey = document.TranslateHotkey,
+        ClipboardLimit = document.ClipboardLimit <= 0 ? 50 : document.ClipboardLimit,
+        UploadEndpoint = document.UploadEndpoint,
+        DeepLEndpoint = string.IsNullOrWhiteSpace(document.DeepLEndpoint)
+            ? "https://api-free.deepl.com/v2/translate"
+            : document.DeepLEndpoint,
+        AbuseIpDbKey = Unprotect(document.AbuseIpDbKeyProtected),
+        DeepLKey = Unprotect(document.DeepLKeyProtected),
+        UploadApiKey = Unprotect(document.UploadApiKeyProtected),
+        Snippets = document.Snippets ?? [],
+        ColorHistory = document.ColorHistory ?? [],
+        JpegQuality = document.JpegQuality is < 1 or > 100 ? 85 : document.JpegQuality,
+        TranslateSource = string.IsNullOrWhiteSpace(document.TranslateSource) ? "auto" : document.TranslateSource,
+        TranslateTarget = string.IsNullOrWhiteSpace(document.TranslateTarget) ? "TR" : document.TranslateTarget
+    };
+
+    private string Protect(string plain) =>
+        string.IsNullOrEmpty(plain) ? "" : _protector.Protect(plain);
+
+    private string Unprotect(string protectedValue)
+    {
+        if (string.IsNullOrEmpty(protectedValue))
+            return "";
+
+        try
+        {
+            return _protector.Unprotect(protectedValue);
+        }
+        catch
+        {
+            return "";
+        }
+    }
+}

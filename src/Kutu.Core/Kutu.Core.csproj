@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>Kutu.Core</RootNamespace>
+    <Description>Shared models and pure logic for Kutu.</Description>
+  </PropertyGroup>
+</Project>

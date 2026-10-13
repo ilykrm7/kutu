@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>Kutu.Tools.ImageConverter</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Kutu.Imaging\Kutu.Imaging.csproj" />
+    <ProjectReference Include="..\..\Kutu.Sdk\Kutu.Sdk.csproj" />
+  </ItemGroup>
+</Project>

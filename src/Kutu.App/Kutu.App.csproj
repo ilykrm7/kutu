@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <RootNamespace>Kutu.App</RootNamespace>
+    <AssemblyName>Kutu</AssemblyName>
+    <ApplicationIcon>Assets\kutu.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <Description>Kutu — Windows için küçük araçlar.</Description>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' != ''">
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+    <DebugType>embedded</DebugType>
+  </PropertyGroup>
+  <ItemGroup>
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Kutu.Core\Kutu.Core.csproj" />
+    <ProjectReference Include="..\Kutu.Sdk\Kutu.Sdk.csproj" />
+    <ProjectReference Include="..\Tools\ClipboardHistory\Kutu.Tools.ClipboardHistory.csproj" />
+    <ProjectReference Include="..\Tools\ColorPicker\Kutu.Tools.ColorPicker.csproj" />
+    <ProjectReference Include="..\Tools\ImageConverter\Kutu.Tools.ImageConverter.csproj" />
+    <ProjectReference Include="..\Tools\ImageResize\Kutu.Tools.ImageResize.csproj" />
+    <ProjectReference Include="..\Tools\IpReputation\Kutu.Tools.IpReputation.csproj" />
+    <ProjectReference Include="..\Tools\Screenshot\Kutu.Tools.Screenshot.csproj" />
+    <ProjectReference Include="..\Tools\TextExpander\Kutu.Tools.TextExpander.csproj" />
+    <ProjectReference Include="..\Tools\Translate\Kutu.Tools.Translate.csproj" />
+    <ProjectReference Include="..\Tools\Upload\Kutu.Tools.Upload.csproj" />
+    <ProjectReference Include="..\Tools\Whois\Kutu.Tools.Whois.csproj" />
+  </ItemGroup>
+</Project>

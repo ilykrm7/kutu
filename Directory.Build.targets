@@ -1,0 +1,9 @@
+<Project>
+  <ItemGroup Condition="'$(UseWPF)' == 'true'">
+    <PackageReference Include="WPF-UI" Version="4.3.0" />
+    <Using Include="System.IO" />
+    <Using Include="System.Net.Http" />
+    <Using Include="System.Windows.Controls.TextBlock" Alias="TextBlock" />
+    <Using Include="System.Windows.Controls.Image" Alias="Image" />
+  </ItemGroup>
+</Project>

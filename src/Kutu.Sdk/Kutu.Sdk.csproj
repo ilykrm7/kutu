@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>Kutu.Sdk</RootNamespace>
+    <Description>Tool contracts and Turkish/English string resources.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Kutu.Core\Kutu.Core.csproj" />
+  </ItemGroup>
+</Project>

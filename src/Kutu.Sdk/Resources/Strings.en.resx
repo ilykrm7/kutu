@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="App_Name" xml:space="preserve"><value>Kutu</value></data>
+  <data name="App_Tagline" xml:space="preserve"><value>Small tools, one place.</value></data>
+  <data name="Nav_Dashboard" xml:space="preserve"><value>Tools</value></data>
+  <data name="Nav_Settings" xml:space="preserve"><value>Settings</value></data>
+  <data name="Dash_SearchPlaceholder" xml:space="preserve"><value>Search tools or press Alt+Space</value></data>
+  <data name="Dash_Hint" xml:space="preserve"><value>Shortcut: {0}</value></data>
+  <data name="Dash_Greeting" xml:space="preserve"><value>What do you want to do?</value></data>
+  <data name="Tool_Image_Title" xml:space="preserve"><value>Convert image</value></data>
+  <data name="Tool_Image_Desc" xml:space="preserve"><value>PNG, JPG, WebP, HEIC, ICO and BMP.</value></data>
+  <data name="Tool_Resize_Title" xml:space="preserve"><value>Resize and compress</value></data>
+  <data name="Tool_Resize_Desc" xml:space="preserve"><value>Batch resize and lower quality.</value></data>
+  <data name="Tool_Shot_Title" xml:space="preserve"><value>Screenshot</value></data>
+  <data name="Tool_Shot_Desc" xml:space="preserve"><value>Pick a region, annotate, copy or upload.</value></data>
+  <data name="Tool_Color_Title" xml:space="preserve"><value>Color picker</value></data>
+  <data name="Tool_Color_Desc" xml:space="preserve"><value>HEX, RGB and HSL, with history.</value></data>
+  <data name="Tool_Clip_Title" xml:space="preserve"><value>Clipboard history</value></data>
+  <data name="Tool_Clip_Desc" xml:space="preserve"><value>Recent copies, search and pins.</value></data>
+  <data name="Tool_Expand_Title" xml:space="preserve"><value>Text expander</value></data>
+  <data name="Tool_Expand_Desc" xml:space="preserve"><value>Triggers like :sig paste anywhere.</value></data>
+  <data name="Tool_Whois_Title" xml:space="preserve"><value>WHOIS and DNS</value></data>
+  <data name="Tool_Whois_Desc" xml:space="preserve"><value>RDAP record and DNS records.</value></data>
+  <data name="Tool_Ip_Title" xml:space="preserve"><value>IP reputation</value></data>
+  <data name="Tool_Ip_Desc" xml:space="preserve"><value>AbuseIPDB score, country and ASN.</value></data>
+  <data name="Tool_Upload_Title" xml:space="preserve"><value>Upload to link</value></data>
+  <data name="Tool_Upload_Desc" xml:space="preserve"><value>Turn text or an image into a shareable link.</value></data>
+  <data name="Tool_Translate_Title" xml:space="preserve"><value>Translate</value></data>
+  <data name="Tool_Translate_Desc" xml:space="preserve"><value>DeepL, or a keyless fallback.</value></data>
+  <data name="Action_Back" xml:space="preserve"><value>Back</value></data>
+  <data name="Action_Copy" xml:space="preserve"><value>Copy</value></data>
+  <data name="Action_Save" xml:space="preserve"><value>Save</value></data>
+  <data name="Action_Upload" xml:space="preserve"><value>Upload</value></data>
+  <data name="Action_Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Action_Close" xml:space="preserve"><value>Close</value></data>
+  <data name="Action_Open" xml:space="preserve"><value>Open</value></data>
+  <data name="Action_Exit" xml:space="preserve"><value>Exit</value></data>
+  <data name="Action_Convert" xml:space="preserve"><value>Convert</value></data>
+  <data name="Action_Browse" xml:space="preserve"><value>Choose files</value></data>
+  <data name="Action_Clear" xml:space="preserve"><value>Clear</value></data>
+  <data name="Action_Delete" xml:space="preserve"><value>Delete</value></data>
+  <data name="Action_Pin" xml:space="preserve"><value>Pin</value></data>
+  <data name="Action_Unpin" xml:space="preserve"><value>Unpin</value></data>
+  <data name="Action_Add" xml:space="preserve"><value>Add</value></data>
+  <data name="Action_Lookup" xml:space="preserve"><value>Look up</value></data>
+  <data name="Action_Check" xml:space="preserve"><value>Check</value></data>
+  <data name="Action_Translate" xml:space="preserve"><value>Translate</value></data>
+  <data name="Action_TranslateClipboard" xml:space="preserve"><value>Translate clipboard</value></data>
+  <data name="Action_PickColor" xml:space="preserve"><value>Pick color</value></data>
+  <data name="Action_TakeShot" xml:space="preserve"><value>Take screenshot</value></data>
+  <data name="Action_Apply" xml:space="preserve"><value>Apply</value></data>
+  <data name="Action_Copied" xml:space="preserve"><value>Copied</value></data>
+  <data name="Settings_General" xml:space="preserve"><value>General</value></data>
+  <data name="Settings_Hotkeys" xml:space="preserve"><value>Shortcuts</value></data>
+  <data name="Settings_Api" xml:space="preserve"><value>API keys</value></data>
+  <data name="Settings_Integration" xml:space="preserve"><value>Integration</value></data>
+  <data name="Settings_StartWithWindows" xml:space="preserve"><value>Start with Windows</value></data>
+  <data name="Settings_ContextMenu" xml:space="preserve"><value>Right-click menu: Convert with Kutu</value></data>
+  <data name="Settings_Language" xml:space="preserve"><value>Language</value></data>
+  <data name="Settings_ScreenshotHotkey" xml:space="preserve"><value>Screenshot</value></data>
+  <data name="Settings_LauncherHotkey" xml:space="preserve"><value>Launcher</value></data>
+  <data name="Settings_ColorHotkey" xml:space="preserve"><value>Color picker</value></data>
+  <data name="Settings_ClipboardHotkey" xml:space="preserve"><value>Clipboard history</value></data>
+  <data name="Settings_TranslateHotkey" xml:space="preserve"><value>Quick translate</value></data>
+  <data name="Settings_AbuseKey" xml:space="preserve"><value>AbuseIPDB key</value></data>
+  <data name="Settings_DeepLKey" xml:space="preserve"><value>DeepL key</value></data>
+  <data name="Settings_DeepLEndpoint" xml:space="preserve"><value>DeepL endpoint</value></data>
+  <data name="Settings_UploadEndpoint" xml:space="preserve"><value>Upload endpoint</value></data>
+  <data name="Settings_UploadKey" xml:space="preserve"><value>Upload key</value></data>
+  <data name="Settings_Saved" xml:space="preserve"><value>Settings saved.</value></data>
+  <data name="Settings_RestartHint" xml:space="preserve"><value>Language applies fully the next time the window opens.</value></data>
+  <data name="Settings_KeysHint" xml:space="preserve"><value>Keys are encrypted on this PC with DPAPI. They are never stored in code.</value></data>
+  <data name="Settings_HotkeyHint" xml:space="preserve"><value>Click a box and press the shortcut. Esc clears it.</value></data>
+  <data name="Tray_Open" xml:space="preserve"><value>Open Kutu</value></data>
+  <data name="Tray_Shot" xml:space="preserve"><value>Screenshot</value></data>
+  <data name="Tray_Exit" xml:space="preserve"><value>Exit</value></data>
+  <data name="Launcher_Placeholder" xml:space="preserve"><value>Type a tool: ss, color, whois, translate…</value></data>
+  <data name="Launcher_Empty" xml:space="preserve"><value>No matching tool.</value></data>
+  <data name="Drop_Hint" xml:space="preserve"><value>Drop images here or choose files.</value></data>
+  <data name="Image_Format" xml:space="preserve"><value>Format</value></data>
+  <data name="Image_Quality" xml:space="preserve"><value>Quality</value></data>
+  <data name="Image_Done" xml:space="preserve"><value>{0} files converted.</value></data>
+  <data name="Image_Working" xml:space="preserve"><value>Converting…</value></data>
+  <data name="Image_None" xml:space="preserve"><value>Add an image first.</value></data>
+  <data name="Resize_Mode" xml:space="preserve"><value>Size</value></data>
+  <data name="Resize_LongEdge" xml:space="preserve"><value>Long edge</value></data>
+  <data name="Resize_Width" xml:space="preserve"><value>Width</value></data>
+  <data name="Resize_Height" xml:space="preserve"><value>Height</value></data>
+  <data name="Resize_Percent" xml:space="preserve"><value>Percent</value></data>
+  <data name="Resize_Value" xml:space="preserve"><value>Value</value></data>
+  <data name="Resize_Done" xml:space="preserve"><value>{0} images saved.</value></data>
+  <data name="Resize_Working" xml:space="preserve"><value>Working…</value></data>
+  <data name="Shot_Hint" xml:space="preserve"><value>Use the shortcut, then drag a region. Arrow, box, pen, text, blur or highlight.</value></data>
+  <data name="Shot_Arrow" xml:space="preserve"><value>Arrow</value></data>
+  <data name="Shot_Rect" xml:space="preserve"><value>Rectangle</value></data>
+  <data name="Shot_Pen" xml:space="preserve"><value>Pen</value></data>
+  <data name="Shot_Text" xml:space="preserve"><value>Text</value></data>
+  <data name="Shot_Blur" xml:space="preserve"><value>Blur</value></data>
+  <data name="Shot_Highlight" xml:space="preserve"><value>Highlight</value></data>
+  <data name="Shot_Undo" xml:space="preserve"><value>Undo</value></data>
+  <data name="Shot_Select" xml:space="preserve"><value>Drag a region. Esc cancels.</value></data>
+  <data name="Shot_TextPrompt" xml:space="preserve"><value>Text</value></data>
+  <data name="Shot_Saved" xml:space="preserve"><value>Image saved.</value></data>
+  <data name="Shot_Uploaded" xml:space="preserve"><value>Link copied.</value></data>
+  <data name="Color_Hint" xml:space="preserve"><value>Color under the cursor. Click to copy and keep it.</value></data>
+  <data name="Color_History" xml:space="preserve"><value>History</value></data>
+  <data name="Color_Copied" xml:space="preserve"><value>{0} copied.</value></data>
+  <data name="Color_Empty" xml:space="preserve"><value>No colors yet.</value></data>
+  <data name="Clip_Search" xml:space="preserve"><value>Search clipboard</value></data>
+  <data name="Clip_Empty" xml:space="preserve"><value>Clipboard history is empty.</value></data>
+  <data name="Clip_Pinned" xml:space="preserve"><value>Pinned</value></data>
+  <data name="Clip_Cleared" xml:space="preserve"><value>Unpinned items removed.</value></data>
+  <data name="Expand_Trigger" xml:space="preserve"><value>Trigger</value></data>
+  <data name="Expand_Body" xml:space="preserve"><value>Text to paste</value></data>
+  <data name="Expand_Hint" xml:space="preserve"><value>Example: trigger :sig and your signature. It expands after a space or a new line. It does not run in elevated windows.</value></data>
+  <data name="Expand_Saved" xml:space="preserve"><value>Snippets saved.</value></data>
+  <data name="Expand_Invalid" xml:space="preserve"><value>Trigger and text are required.</value></data>
+  <data name="Whois_Domain" xml:space="preserve"><value>Domain</value></data>
+  <data name="Whois_Registrar" xml:space="preserve"><value>Registrar</value></data>
+  <data name="Whois_Created" xml:space="preserve"><value>Registered</value></data>
+  <data name="Whois_Expires" xml:space="preserve"><value>Expires</value></data>
+  <data name="Whois_Updated" xml:space="preserve"><value>Updated</value></data>
+  <data name="Whois_Status" xml:space="preserve"><value>Status</value></data>
+  <data name="Whois_Nameservers" xml:space="preserve"><value>Name servers</value></data>
+  <data name="Whois_Dns" xml:space="preserve"><value>DNS records</value></data>
+  <data name="Whois_Empty" xml:space="preserve"><value>No result.</value></data>
+  <data name="Ip_Address" xml:space="preserve"><value>IP address</value></data>
+  <data name="Ip_Score" xml:space="preserve"><value>Reputation score</value></data>
+  <data name="Ip_Reports" xml:space="preserve"><value>Reports</value></data>
+  <data name="Ip_Country" xml:space="preserve"><value>Country</value></data>
+  <data name="Ip_City" xml:space="preserve"><value>City</value></data>
+  <data name="Ip_Isp" xml:space="preserve"><value>ISP</value></data>
+  <data name="Ip_Asn" xml:space="preserve"><value>ASN</value></data>
+  <data name="Ip_Usage" xml:space="preserve"><value>Usage</value></data>
+  <data name="Ip_NeedKey" xml:space="preserve"><value>No AbuseIPDB key. Showing location only. Add a key in Settings.</value></data>
+  <data name="Ip_Invalid" xml:space="preserve"><value>Enter a valid IP address.</value></data>
+  <data name="Upload_Text" xml:space="preserve"><value>Text</value></data>
+  <data name="Upload_File" xml:space="preserve"><value>File</value></data>
+  <data name="Upload_Placeholder" xml:space="preserve"><value>Text to share</value></data>
+  <data name="Upload_Result" xml:space="preserve"><value>Link</value></data>
+  <data name="Upload_NeedConfig" xml:space="preserve"><value>Set the upload endpoint and key in Settings.</value></data>
+  <data name="Upload_Drop" xml:space="preserve"><value>Drop a file here.</value></data>
+  <data name="Upload_Ok" xml:space="preserve"><value>Uploaded. Link copied.</value></data>
+  <data name="Translate_Source" xml:space="preserve"><value>Source</value></data>
+  <data name="Translate_Target" xml:space="preserve"><value>Target</value></data>
+  <data name="Translate_Input" xml:space="preserve"><value>Text</value></data>
+  <data name="Translate_Output" xml:space="preserve"><value>Translation</value></data>
+  <data name="Translate_Auto" xml:space="preserve"><value>Auto</value></data>
+  <data name="Translate_Fallback" xml:space="preserve"><value>No DeepL key, used the free fallback.</value></data>
+  <data name="Translate_Empty" xml:space="preserve"><value>Nothing to translate.</value></data>
+  <data name="Translate_PopupHint" xml:space="preserve"><value>Clipboard text</value></data>
+  <data name="Common_Error" xml:space="preserve"><value>Something went wrong.</value></data>
+  <data name="Common_Working" xml:space="preserve"><value>Working…</value></data>
+  <data name="Common_Files" xml:space="preserve"><value>{0} files</value></data>
+  <data name="Lang_Tr" xml:space="preserve"><value>Türkçe</value></data>
+  <data name="Lang_En" xml:space="preserve"><value>English</value></data>
+  <data name="Alias_Image" xml:space="preserve"><value>convert,png,jpg</value></data>
+  <data name="Common_None" xml:space="preserve"><value>—</value></data>
+</root>
