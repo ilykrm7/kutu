@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.ComTypes;
 
 namespace Kutu.Imaging;
 
@@ -158,16 +159,18 @@ internal static class WicCodec
                 ? "WebP encoder is not available on this Windows install."
                 : "Encoder failed: 0x" + hr.ToString("X8"));
 
-        hr = SHCreateStreamOnFileEx(outputPath, 0x1011, 0x80, true, IntPtr.Zero, out var streamPtr);
+        hr = factory.CreateStream(out streamObj);
         Check(hr, "stream");
-        streamObj = Marshal.GetObjectForIUnknown(streamPtr);
-        Marshal.Release(streamPtr);
-        hr = AsEncoder(encoderObj).Initialize(streamObj, 2);
+        hr = AsStream(streamObj!).InitializeFromFilename(outputPath, 0x40000000);
+        Check(hr, "stream-init");
+        hr = AsEncoder(encoderObj!).Initialize((IStream)streamObj, 0);
         Check(hr, "encoder-init");
         hr = AsEncoder(encoderObj).CreateNewFrame(out frameObj, out bagObj);
         Check(hr, "frame-encode");
-        TrySetQuality(bagObj, quality);
-        hr = AsFrameEncode(frameObj).Initialize(bagObj);
+        IPropertyBag2? bag = bagObj is null ? null : AsBag(bagObj);
+        if (container == FormatJpeg || container == FormatWebp)
+            TrySetQuality(bag, quality);
+        hr = AsFrameEncode(frameObj).Initialize(bag);
         Check(hr, "frame-init");
         hr = AsFrameEncode(frameObj).WriteSource(source, IntPtr.Zero);
         Check(hr, "write");
@@ -182,16 +185,16 @@ internal static class WicCodec
         Release(bag);
     }
 
-    private static void TrySetQuality(object? bag, int quality)
+    private static void TrySetQuality(IPropertyBag2? bag, int quality)
     {
         if (bag is null)
             return;
         var name = Marshal.StringToCoTaskMemUni("ImageQuality");
         try
         {
-            var prop = new PropBag { pstrName = name };
+            var prop = new PropBag { dwType = 1, vt = 4, pstrName = name };
             var value = new PropVariant { vt = 4, flt = Math.Clamp(quality, 1, 100) / 100f };
-            AsBag(bag).Write(1, ref prop, ref value);
+            bag.Write(1, ref prop, ref value);
         }
         catch
         {
@@ -268,7 +271,14 @@ internal static class WicCodec
         var hr = CoCreateInstance(ClsidFactory2, IntPtr.Zero, 1, IidFactory, out var punk);
         if (hr < 0 || punk == IntPtr.Zero)
             throw new InvalidOperationException("WIC 0x" + hr.ToString("X8"));
-        return (IWICImagingFactory)Marshal.GetObjectForIUnknown(punk);
+        try
+        {
+            return (IWICImagingFactory)Marshal.GetObjectForIUnknown(punk);
+        }
+        finally
+        {
+            Marshal.Release(punk);
+        }
     }
 
     private static void Release(object? com)
@@ -294,15 +304,13 @@ internal static class WicCodec
     private static IWICBitmapSource AsSource(object o) => (IWICBitmapSource)o;
     private static IWICFormatConverter AsConverter(object o) => (IWICFormatConverter)o;
     private static IWICBitmapScaler AsScaler(object o) => (IWICBitmapScaler)o;
+    private static IWICStream AsStream(object o) => (IWICStream)o;
     private static IWICBitmapEncoder AsEncoder(object o) => (IWICBitmapEncoder)o;
     private static IWICBitmapFrameEncode AsFrameEncode(object o) => (IWICBitmapFrameEncode)o;
     private static IPropertyBag2 AsBag(object o) => (IPropertyBag2)o;
 
     [DllImport("ole32.dll")]
     private static extern int CoCreateInstance(Guid clsid, IntPtr outer, uint context, Guid iid, out IntPtr punk);
-
-    [DllImport("shlwapi.dll", CharSet = CharSet.Unicode)]
-    private static extern int SHCreateStreamOnFileEx(string path, uint mode, uint attributes, bool create, IntPtr template, out IntPtr stream);
 
     [ComImport]
     [Guid("ec5ec8a9-c395-4314-9c77-54d7a935ff70")]
@@ -318,6 +326,29 @@ internal static class WicCodec
         [PreserveSig] int Slot6([MarshalAs(UnmanagedType.IUnknown)] out object palette);
         [PreserveSig] int CreateFormatConverter([MarshalAs(UnmanagedType.IUnknown)] out object converter);
         [PreserveSig] int CreateBitmapScaler([MarshalAs(UnmanagedType.IUnknown)] out object scaler);
+        [PreserveSig] int Slot9([MarshalAs(UnmanagedType.IUnknown)] out object clipper);
+        [PreserveSig] int Slot10([MarshalAs(UnmanagedType.IUnknown)] out object rotator);
+        [PreserveSig] int CreateStream([MarshalAs(UnmanagedType.IUnknown)] out object stream);
+    }
+
+    [ComImport]
+    [Guid("135ff860-22b7-4ddf-b0f6-218f4f299a43")]
+    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    private interface IWICStream
+    {
+        void Read(IntPtr pv, uint cb, IntPtr pcbRead);
+        void Write(IntPtr pv, uint cb, IntPtr pcbWritten);
+        void Seek(long move, uint origin, IntPtr newPosition);
+        void SetSize(ulong newSize);
+        void CopyTo(IntPtr dest, ulong cb, IntPtr read, IntPtr written);
+        void Commit(uint flags);
+        void Revert();
+        void LockRegion(ulong offset, ulong cb, uint type);
+        void UnlockRegion(ulong offset, ulong cb, uint type);
+        void Stat(IntPtr stat, uint flags);
+        void Clone(IntPtr dest);
+        void InitializeFromIStream(IntPtr source);
+        [PreserveSig] int InitializeFromFilename([MarshalAs(UnmanagedType.LPWStr)] string path, uint access);
     }
 
     [ComImport]
@@ -381,7 +412,7 @@ internal static class WicCodec
     [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     private interface IWICBitmapEncoder
     {
-        [PreserveSig] int Initialize([MarshalAs(UnmanagedType.IUnknown)] object stream, int cache);
+        [PreserveSig] int Initialize(IStream stream, int cache);
         [PreserveSig] int GetContainerFormat(out Guid format);
         [PreserveSig] int GetEncoderInfo([MarshalAs(UnmanagedType.IUnknown)] out object info);
         [PreserveSig] int SetColorContexts(uint count, IntPtr contexts);
@@ -398,7 +429,7 @@ internal static class WicCodec
     [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     private interface IWICBitmapFrameEncode
     {
-        [PreserveSig] int Initialize([MarshalAs(UnmanagedType.IUnknown)] object? bag);
+        [PreserveSig] int Initialize(IPropertyBag2? bag);
         [PreserveSig] int SetSize(uint width, uint height);
         [PreserveSig] int SetResolution(double dpiX, double dpiY);
         [PreserveSig] int SetPixelFormat(ref Guid format);
@@ -425,12 +456,12 @@ internal static class WicCodec
         public uint dwType;
         public ushort vt;
         public ushort cfType;
-        public IntPtr dwHint;
+        public uint dwHint;
         public IntPtr pstrName;
         public Guid clsid;
     }
 
-    [StructLayout(LayoutKind.Explicit)]
+    [StructLayout(LayoutKind.Explicit, Size = 24)]
     private struct PropVariant
     {
         [FieldOffset(0)] public ushort vt;
