@@ -158,9 +158,11 @@ internal static class WicCodec
                 ? "WebP encoder is not available on this Windows install."
                 : "Encoder failed: 0x" + hr.ToString("X8"));
 
-        hr = SHCreateStreamOnFileEx(outputPath, 0x1011, 0x80, true, IntPtr.Zero, out streamObj);
+        hr = SHCreateStreamOnFileEx(outputPath, 0x1011, 0x80, true, IntPtr.Zero, out var streamPtr);
         Check(hr, "stream");
-        hr = AsEncoder(encoderObj).Initialize(streamObj!, 2);
+        streamObj = Marshal.GetObjectForIUnknown(streamPtr);
+        Marshal.Release(streamPtr);
+        hr = AsEncoder(encoderObj).Initialize(streamObj, 2);
         Check(hr, "encoder-init");
         hr = AsEncoder(encoderObj).CreateNewFrame(out frameObj, out bagObj);
         Check(hr, "frame-encode");
@@ -300,7 +302,7 @@ internal static class WicCodec
     private static extern int CoCreateInstance(Guid clsid, IntPtr outer, uint context, Guid iid, out IntPtr punk);
 
     [DllImport("shlwapi.dll", CharSet = CharSet.Unicode)]
-    private static extern int SHCreateStreamOnFileEx(string path, uint mode, uint attributes, bool create, IntPtr template, out object stream);
+    private static extern int SHCreateStreamOnFileEx(string path, uint mode, uint attributes, bool create, IntPtr template, out IntPtr stream);
 
     [ComImport]
     [Guid("ec5ec8a9-c395-4314-9c77-54d7a935ff70")]
