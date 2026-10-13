@@ -215,12 +215,24 @@ public class CoreLogicTests
     private static void WriteChunk(Stream stream, string type, byte[] data)
     {
         var typeBytes = System.Text.Encoding.ASCII.GetBytes(type);
-        stream.Write(BitConverter.GetBytes(data.Length).Reverse().ToArray());
+        stream.Write(U32Be(data.Length));
         stream.Write(typeBytes);
         stream.Write(data);
-        var crcInput = typeBytes.Concat(data).ToArray();
-        stream.Write(BitConverter.GetBytes(Crc32(crcInput)).Reverse().ToArray());
+        var crcInput = new byte[typeBytes.Length + data.Length];
+        typeBytes.CopyTo(crcInput, 0);
+        data.CopyTo(crcInput, typeBytes.Length);
+        stream.Write(U32Be(Crc32(crcInput)));
     }
+
+    private static byte[] U32Be(uint value) =>
+    [
+        (byte)(value >> 24),
+        (byte)(value >> 16),
+        (byte)(value >> 8),
+        (byte)value
+    ];
+
+    private static byte[] U32Be(int value) => U32Be((uint)value);
 
     private static (int W, int H) PngSize(byte[] png) =>
         ((png[16] << 24) | (png[17] << 16) | (png[18] << 8) | png[19], (png[20] << 24) | (png[21] << 16) | (png[22] << 8) | png[23]);
