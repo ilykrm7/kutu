@@ -12,11 +12,11 @@
   <data name="Dash_Hint" xml:space="preserve"><value>Shortcut: {0}</value></data>
   <data name="Dash_Greeting" xml:space="preserve"><value>What do you want to do?</value></data>
   <data name="Tool_Image_Title" xml:space="preserve"><value>Convert image</value></data>
-  <data name="Tool_Image_Desc" xml:space="preserve"><value>PNG, JPG, WebP, HEIC, ICO and BMP.</value></data>
+  <data name="Tool_Image_Desc" xml:space="preserve"><value>PNG, JPG, WebP, HEIC, ICO, PDF and BMP.</value></data>
   <data name="Tool_Resize_Title" xml:space="preserve"><value>Resize and compress</value></data>
   <data name="Tool_Resize_Desc" xml:space="preserve"><value>Batch resize and lower quality.</value></data>
   <data name="Tool_Shot_Title" xml:space="preserve"><value>Screenshot</value></data>
-  <data name="Tool_Shot_Desc" xml:space="preserve"><value>Pick a region, annotate, copy or upload.</value></data>
+  <data name="Tool_Shot_Desc" xml:space="preserve"><value>Pick a region and annotate on the frozen screen.</value></data>
   <data name="Tool_Color_Title" xml:space="preserve"><value>Color picker</value></data>
   <data name="Tool_Color_Desc" xml:space="preserve"><value>HEX, RGB and HSL, with history.</value></data>
   <data name="Tool_Clip_Title" xml:space="preserve"><value>Clipboard history</value></data>
@@ -26,11 +26,11 @@
   <data name="Tool_Whois_Title" xml:space="preserve"><value>WHOIS and DNS</value></data>
   <data name="Tool_Whois_Desc" xml:space="preserve"><value>RDAP record and DNS records.</value></data>
   <data name="Tool_Ip_Title" xml:space="preserve"><value>IP reputation</value></data>
-  <data name="Tool_Ip_Desc" xml:space="preserve"><value>AbuseIPDB score, country and ASN.</value></data>
+  <data name="Tool_Ip_Desc" xml:space="preserve"><value>Several providers, DNSBL and TOR. Location still works without a key.</value></data>
   <data name="Tool_Upload_Title" xml:space="preserve"><value>Upload to link</value></data>
   <data name="Tool_Upload_Desc" xml:space="preserve"><value>Turn text or an image into a shareable link.</value></data>
   <data name="Tool_Translate_Title" xml:space="preserve"><value>Translate</value></data>
-  <data name="Tool_Translate_Desc" xml:space="preserve"><value>DeepL, or a keyless fallback.</value></data>
+  <data name="Tool_Translate_Desc" xml:space="preserve"><value>Translates the selection to English. DeepL, then Google, then MyMemory.</value></data>
   <data name="Action_Back" xml:space="preserve"><value>Back</value></data>
   <data name="Action_Copy" xml:space="preserve"><value>Copy</value></data>
   <data name="Action_Save" xml:space="preserve"><value>Save</value></data>
@@ -94,7 +94,7 @@
   <data name="Resize_Value" xml:space="preserve"><value>Value</value></data>
   <data name="Resize_Done" xml:space="preserve"><value>{0} images saved.</value></data>
   <data name="Resize_Working" xml:space="preserve"><value>Working…</value></data>
-  <data name="Shot_Hint" xml:space="preserve"><value>Use the shortcut, then drag a region. Arrow, box, pen, text, blur or highlight.</value></data>
+  <data name="Shot_Hint" xml:space="preserve"><value>Pick a region with the shortcut. Annotate on the frozen screen, then copy or save. Esc cancels.</value></data>
   <data name="Shot_Arrow" xml:space="preserve"><value>Arrow</value></data>
   <data name="Shot_Rect" xml:space="preserve"><value>Rectangle</value></data>
   <data name="Shot_Pen" xml:space="preserve"><value>Pen</value></data>
@@ -116,7 +116,7 @@
   <data name="Clip_Cleared" xml:space="preserve"><value>Unpinned items removed.</value></data>
   <data name="Expand_Trigger" xml:space="preserve"><value>Trigger</value></data>
   <data name="Expand_Body" xml:space="preserve"><value>Text to paste</value></data>
-  <data name="Expand_Hint" xml:space="preserve"><value>Example: trigger :sig and your signature. It expands after a space or a new line. It does not run in elevated windows.</value></data>
+  <data name="Expand_Hint" xml:space="preserve"><value>The trigger expands as soon as it is typed, with no trailing space. Example: :adm or mail:sig. It does not run in elevated windows.</value></data>
   <data name="Expand_Saved" xml:space="preserve"><value>Snippets saved.</value></data>
   <data name="Expand_Invalid" xml:space="preserve"><value>Trigger and text are required.</value></data>
   <data name="Whois_Domain" xml:space="preserve"><value>Domain</value></data>
@@ -160,4 +160,36 @@
   <data name="Lang_En" xml:space="preserve"><value>English</value></data>
   <data name="Alias_Image" xml:space="preserve"><value>convert,png,jpg</value></data>
   <data name="Common_None" xml:space="preserve"><value>—</value></data>
+  <data name="Nav_Favorites" xml:space="preserve"><value>Favorites</value></data>
+  <data name="Dash_All" xml:space="preserve"><value>All</value></data>
+  <data name="Dash_Image" xml:space="preserve"><value>Image</value></data>
+  <data name="Dash_Text" xml:space="preserve"><value>Text</value></data>
+  <data name="Dash_Net" xml:space="preserve"><value>Network</value></data>
+  <data name="Dash_Soon" xml:space="preserve"><value>Soon</value></data>
+  <data name="Dash_Pin" xml:space="preserve"><value>Pin</value></data>
+  <data name="Dash_Unpin" xml:space="preserve"><value>Unpin</value></data>
+  <data name="Dash_FavEmpty" xml:space="preserve"><value>Tools you pin show up here.</value></data>
+  <data name="Dash_LauncherHint" xml:space="preserve"><value>Alt+Space</value></data>
+  <data name="Menu_ModernFail" xml:space="preserve"><value>The modern menu could not be installed. The classic entry stays under Show more options.</value></data>
+  <data name="Settings_VirusTotalKey" xml:space="preserve"><value>VirusTotal key</value></data>
+  <data name="Settings_IpqsKey" xml:space="preserve"><value>IPQualityScore key</value></data>
+  <data name="Settings_OtxKey" xml:space="preserve"><value>AlienVault OTX key</value></data>
+  <data name="Settings_GreyNoiseKey" xml:space="preserve"><value>GreyNoise key</value></data>
+  <data name="Settings_ShodanKey" xml:space="preserve"><value>Shodan key</value></data>
+  <data name="Settings_IpInfoKey" xml:space="preserve"><value>IPinfo key</value></data>
+  <data name="Ip_MyIp" xml:space="preserve"><value>Use my IP</value></data>
+  <data name="Ip_Working" xml:space="preserve"><value>Asking providers…</value></data>
+  <data name="Ip_Summary" xml:space="preserve"><value>Summary</value></data>
+  <data name="Ip_RiskHigh" xml:space="preserve"><value>High risk</value></data>
+  <data name="Ip_RiskMedium" xml:space="preserve"><value>Medium risk</value></data>
+  <data name="Ip_RiskLow" xml:space="preserve"><value>Low risk</value></data>
+  <data name="Ip_RiskInfo" xml:space="preserve"><value>Info</value></data>
+  <data name="Ip_AddKey" xml:space="preserve"><value>add a key</value></data>
+  <data name="Ip_NoRecord" xml:space="preserve"><value>No record</value></data>
+  <data name="Ip_Clean" xml:space="preserve"><value>Clean</value></data>
+  <data name="Translate_ToEnglish" xml:space="preserve"><value>Source is automatic, target is English.</value></data>
+  <data name="Translate_Working" xml:space="preserve"><value>Translating…</value></data>
+  <data name="Translate_NoSelection" xml:space="preserve"><value>No selected text.</value></data>
+  <data name="Image_HeifMissing" xml:space="preserve"><value>HEIC needs “HEIF Image Extensions” from the Microsoft Store.</value></data>
+  <data name="Shot_Move" xml:space="preserve"><value>Move</value></data>
 </root>

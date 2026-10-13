@@ -6,7 +6,8 @@ public enum KutuImageFormat
     Jpeg,
     Webp,
     Bmp,
-    Ico
+    Ico,
+    Pdf
 }
 
 public enum FitMode
@@ -44,6 +45,7 @@ public static class ImageFormats
         KutuImageFormat.Webp => ".webp",
         KutuImageFormat.Bmp => ".bmp",
         KutuImageFormat.Ico => ".ico",
+        KutuImageFormat.Pdf => ".pdf",
         _ => ".png"
     };
 

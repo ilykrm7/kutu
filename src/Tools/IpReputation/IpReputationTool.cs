@@ -1,9 +1,7 @@
-using System.Net;
-using System.Net.Http.Headers;
-using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using Kutu.Core.Network;
 using Kutu.Sdk.Hosting;
 using Kutu.Sdk.Localization;
 using Kutu.Sdk.Ui;
@@ -33,199 +31,160 @@ public sealed class IpReputationView : UserControl
 {
     private readonly IKutuHost _host;
     private readonly TextBox _ip;
-    private readonly TextBlock _status;
-    private readonly StackPanel _result;
+    private readonly StackPanel _body;
 
     public IpReputationView(IKutuHost host)
     {
         _host = host;
         _ip = Chrome.Input("8.8.8.8");
-        _ip.Width = 280;
+        _ip.MinWidth = 220;
         _ip.Margin = new Thickness(0, 0, 8, 0);
         _ip.KeyDown += async (_, e) =>
         {
             if (e.Key == System.Windows.Input.Key.Enter)
                 await CheckAsync();
         };
-
-        var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 12) };
+        var row = new StackPanel { Orientation = Orientation.Horizontal };
         row.Children.Add(_ip);
         row.Children.Add(Chrome.Primary(L.Get("Action_Check"), SymbolRegular.Shield24, async (_, _) => await CheckAsync()));
-        _status = Chrome.Hint("");
-        _result = new StackPanel();
+        row.Children.Add(Chrome.Secondary(L.Get("Ip_MyIp"), SymbolRegular.Person24, async (_, _) => await UseMineAsync()));
+        var form = new StackPanel();
+        form.Children.Add(Chrome.Label(L.Get("Ip_Address")));
+        form.Children.Add(row);
+        _body = new StackPanel { Margin = new Thickness(0, 14, 0, 0) };
         var stack = new StackPanel();
-        stack.Children.Add(Chrome.Label(L.Get("Ip_Address")));
-        stack.Children.Add(row);
-        stack.Children.Add(_status);
-        stack.Children.Add(_result);
+        stack.Children.Add(Chrome.Section(L.Get("Tool_Ip_Title"), SymbolRegular.Shield24, form));
+        stack.Children.Add(_body);
         Content = stack;
+    }
+
+    private async Task UseMineAsync()
+    {
+        _body.Children.Clear();
+        _body.Children.Add(Chrome.Loading(L.Get("Common_Working")));
+        try
+        {
+            _ip.Text = await IpLookup.PublicAddressAsync();
+            await CheckAsync();
+        }
+        catch (Exception ex)
+        {
+            _body.Children.Clear();
+            _body.Children.Add(Chrome.Hint(ex.Message));
+        }
     }
 
     private async Task CheckAsync()
     {
-        _result.Children.Clear();
-        var text = _ip.Text.Trim();
-        if (!IPAddress.TryParse(text, out var address))
+        _body.Children.Clear();
+        if (!System.Net.IPAddress.TryParse(_ip.Text.Trim(), out var address))
         {
-            _status.Text = L.Get("Ip_Invalid");
+            _body.Children.Add(Chrome.Hint(L.Get("Ip_Invalid")));
             return;
         }
 
-        _status.Text = L.Get("Common_Working");
-        try
+        _body.Children.Add(Chrome.Loading(L.Get("Ip_Working")));
+        var results = await IpLookup.CheckAllAsync(address.ToString(), _host.Settings);
+        _body.Children.Clear();
+        var summary = BuildSummary(address.ToString(), results);
+        Motion.Enter(summary);
+        _body.Children.Add(summary);
+        var index = 0;
+        foreach (var result in results)
         {
-            var report = await IpLookup.CheckAsync(address.ToString(), _host.Settings.AbuseIpDbKey);
-            _status.Text = report.AbuseScore is null ? L.Get("Ip_NeedKey") : "";
-            var panel = new StackPanel();
-            if (report.AbuseScore is int score)
-            {
-                panel.Children.Add(ScoreBadge(score));
-                panel.Children.Add(Line(L.Get("Ip_Reports"), report.Reports?.ToString() ?? L.Get("Common_None")));
-                panel.Children.Add(Line(L.Get("Ip_Usage"), Blank(report.Usage)));
-            }
-
-            panel.Children.Add(Line(L.Get("Ip_Country"), Blank(report.Country)));
-            panel.Children.Add(Line(L.Get("Ip_City"), Blank(report.City)));
-            panel.Children.Add(Line(L.Get("Ip_Isp"), Blank(report.Isp)));
-            panel.Children.Add(Line(L.Get("Ip_Asn"), Blank(report.Asn)));
-            _result.Children.Add(Chrome.Card(panel));
-        }
-        catch (Exception ex)
-        {
-            _status.Text = ex.Message;
+            var card = ProviderCard(result);
+            card.Margin = new Thickness(0, 0, 0, 12);
+            Motion.Enter(card, Math.Min(index * 35, 220));
+            _body.Children.Add(card);
+            index++;
         }
     }
 
-    private static UIElement ScoreBadge(int score)
+    private FrameworkElement BuildSummary(string ip, IEnumerable<ProviderOutcome> results)
     {
-        var color = score >= 75 ? Color.FromRgb(0xFF, 0x6B, 0x6B) : score >= 25 ? Color.FromRgb(0xFF, 0xC8, 0x57) : Color.FromRgb(0x4B, 0xDF, 0xB3);
+        var list = results.ToList();
+        var geo = list.FirstOrDefault(item => item.Id == "geo");
+        var score = IpRisk.Combine(
+            list.Where(item => item.Id is not "dnsbl" and not "tor").Select(item => item.Score).ToList(),
+            list.FirstOrDefault(item => item.Id == "dnsbl")?.DnsblHits,
+            list.FirstOrDefault(item => item.Id == "tor")?.Tor);
+        var level = IpRisk.Level(score);
+        var (label, color) = level switch
+        {
+            "high" => (L.Get("Ip_RiskHigh"), Color.FromRgb(0xFF, 0x6B, 0x6B)),
+            "medium" => (L.Get("Ip_RiskMedium"), Color.FromRgb(0xFF, 0xC8, 0x57)),
+            "low" => (L.Get("Ip_RiskLow"), Color.FromRgb(0x4B, 0xDF, 0xB3)),
+            _ => (L.Get("Ip_RiskInfo"), Color.FromRgb(0x93, 0xA0, 0xB8))
+        };
         var badge = new Border
         {
             Background = new SolidColorBrush(color),
-            CornerRadius = new CornerRadius(16),
-            Padding = new Thickness(16, 10, 16, 10),
+            CornerRadius = new CornerRadius(14),
+            Padding = new Thickness(14, 8, 14, 8),
             HorizontalAlignment = HorizontalAlignment.Left,
-            Margin = new Thickness(0, 0, 0, 14),
+            Margin = new Thickness(0, 0, 0, 12),
             Child = new TextBlock
             {
-                Text = $"{L.Get("Ip_Score")}  {score}",
-                FontSize = 22,
-                FontWeight = FontWeights.Bold,
+                Text = score is int value ? $"{label}  {value}" : label,
+                FontSize = 20,
+                FontWeight = FontWeights.SemiBold,
                 Foreground = Brushes.Black
             }
         };
-        return badge;
+        var panel = new StackPanel();
+        panel.Children.Add(badge);
+        panel.Children.Add(Chrome.ValueRow(L.Get("Ip_Address"), ip, () => Copy(ip)));
+        panel.Children.Add(Chrome.ValueRow(L.Get("Ip_Country"), First(list, item => item.Country) ?? geo?.Country ?? "—", null));
+        panel.Children.Add(Chrome.ValueRow(L.Get("Ip_City"), First(list, item => item.City) ?? "—", null));
+        panel.Children.Add(Chrome.ValueRow(L.Get("Ip_Isp"), First(list, item => item.Isp) ?? "—", null));
+        panel.Children.Add(Chrome.ValueRow(L.Get("Ip_Asn"), First(list, item => item.Asn) ?? "—", null));
+        return Chrome.Section(L.Get("Ip_Summary"), SymbolRegular.Shield24, panel);
     }
 
-    private static UIElement Line(string label, string value)
+    private FrameworkElement ProviderCard(ProviderOutcome result)
     {
-        var grid = new Grid { Margin = new Thickness(0, 4, 0, 4) };
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(140) });
-        grid.ColumnDefinitions.Add(new ColumnDefinition());
-        var l = Chrome.Label(label);
-        l.Margin = new Thickness(0);
-        var v = new TextBlock { Text = value, Foreground = Chrome.Text, TextWrapping = TextWrapping.Wrap, FontSize = 14 };
-        Grid.SetColumn(v, 1);
-        grid.Children.Add(l);
-        grid.Children.Add(v);
-        return grid;
+        var panel = new StackPanel();
+        if (result.Status == "missing")
+        {
+            var hint = new TextBlock
+            {
+                Text = L.Get("Ip_AddKey"),
+                Foreground = Chrome.Muted,
+                FontSize = 13,
+                Cursor = System.Windows.Input.Cursors.Hand,
+                TextDecorations = TextDecorations.Underline
+            };
+            hint.MouseLeftButtonUp += (_, _) => _host.ShowSettings();
+            panel.Children.Add(hint);
+        }
+        else
+        {
+            foreach (var line in result.Lines.Where(item => item.Label.Length > 0))
+                panel.Children.Add(Chrome.ValueRow(line.Label, line.Value, () => Copy(line.Value)));
+            if (result.Lines.Count == 0)
+                panel.Children.Add(Chrome.Hint(result.Status == "empty" ? L.Get("Ip_NoRecord") : L.Get("Ip_Clean")));
+        }
+
+        var card = Chrome.Section(result.Title + "  ·  " + StatusText(result.Status), SymbolRegular.Glance24, panel);
+        return card;
     }
 
-    private static string Blank(string? value) => string.IsNullOrWhiteSpace(value) ? L.Get("Common_None") : value;
-}
-
-public sealed class IpReport
-{
-    public int? AbuseScore { get; init; }
-
-    public int? Reports { get; init; }
-
-    public string? Usage { get; init; }
-
-    public string? Country { get; init; }
-
-    public string? City { get; init; }
-
-    public string? Isp { get; init; }
-
-    public string? Asn { get; init; }
-}
-
-public static class IpLookup
-{
-    public static async Task<IpReport> CheckAsync(string ip, string? abuseKey, CancellationToken cancellationToken = default)
+    private void Copy(string value)
     {
-        using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
-        http.DefaultRequestHeaders.UserAgent.ParseAdd("Kutu/1.0");
-        int? score = null;
-        int? reports = null;
-        string? usage = null;
-        string? country = null;
-        string? isp = null;
-        if (!string.IsNullOrWhiteSpace(abuseKey))
-        {
-            using var request = new HttpRequestMessage(HttpMethod.Get, $"https://api.abuseipdb.com/api/v2/check?ipAddress={Uri.EscapeDataString(ip)}&maxAgeInDays=90");
-            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            request.Headers.TryAddWithoutValidation("Key", abuseKey);
-            using var response = await http.SendAsync(request, cancellationToken);
-            var body = await response.Content.ReadAsStringAsync(cancellationToken);
-            if (!response.IsSuccessStatusCode)
-                throw new InvalidOperationException(Trim(body));
-
-            using var json = JsonDocument.Parse(body);
-            if (json.RootElement.TryGetProperty("data", out var data))
-            {
-                if (data.TryGetProperty("abuseConfidenceScore", out var scoreEl) && scoreEl.TryGetInt32(out var parsed))
-                    score = parsed;
-                if (data.TryGetProperty("totalReports", out var reportsEl) && reportsEl.TryGetInt32(out var parsedReports))
-                    reports = parsedReports;
-                usage = ReadString(data, "usageType");
-                country = ReadString(data, "countryCode");
-                isp = ReadString(data, "isp");
-            }
-        }
-
-        string? city = null;
-        string? asn = null;
-        string? geoCountry = null;
-        string? geoIsp = null;
-        try
-        {
-            var geoJson = await http.GetStringAsync($"https://ipwho.is/{Uri.EscapeDataString(ip)}", cancellationToken);
-            using var geo = JsonDocument.Parse(geoJson);
-            var root = geo.RootElement;
-            if (root.TryGetProperty("success", out var success) && success.ValueKind == JsonValueKind.True)
-            {
-                geoCountry = ReadString(root, "country");
-                city = ReadString(root, "city");
-                if (root.TryGetProperty("connection", out var connection))
-                {
-                    geoIsp = ReadString(connection, "isp");
-                    var asnNumber = ReadString(connection, "asn");
-                    var org = ReadString(connection, "org");
-                    asn = string.IsNullOrWhiteSpace(org) ? asnNumber : $"{asnNumber} {org}".Trim();
-                }
-            }
-        }
-        catch
-        {
-            // Geo is optional when AbuseIPDB already answered.
-        }
-
-        return new IpReport
-        {
-            AbuseScore = score,
-            Reports = reports,
-            Usage = usage,
-            Country = string.IsNullOrWhiteSpace(geoCountry) ? country : geoCountry,
-            City = city,
-            Isp = string.IsNullOrWhiteSpace(geoIsp) ? isp : geoIsp,
-            Asn = asn
-        };
+        _host.CopyText(value);
+        _host.Toast(L.Get("Action_Copied"));
     }
 
-    private static string? ReadString(JsonElement element, string name) =>
-        element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : value.ValueKind == JsonValueKind.Number ? value.ToString() : null;
+    private static string? First(IEnumerable<ProviderOutcome> results, Func<ProviderOutcome, string?> pick) =>
+        results.Select(pick).FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
 
-    private static string Trim(string body) => body.Length > 280 ? body[..280] : body;
+    private static string StatusText(string status) => status switch
+    {
+        "missing" => "",
+        "risk" => "Risk",
+        "clean" => "Temiz",
+        "empty" => "Kayıt yok",
+        "error" => "Ulaşılamadı",
+        _ => "Tamam"
+    };
 }

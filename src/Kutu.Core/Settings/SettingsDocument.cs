@@ -28,6 +28,18 @@ public sealed class SettingsDocument
 
     public string AbuseIpDbKeyProtected { get; set; } = "";
 
+    public string VirusTotalKeyProtected { get; set; } = "";
+
+    public string IpQualityScoreKeyProtected { get; set; } = "";
+
+    public string OtxKeyProtected { get; set; } = "";
+
+    public string GreyNoiseKeyProtected { get; set; } = "";
+
+    public string ShodanKeyProtected { get; set; } = "";
+
+    public string IpInfoKeyProtected { get; set; } = "";
+
     public string DeepLKeyProtected { get; set; } = "";
 
     public string UploadApiKeyProtected { get; set; } = "";
@@ -40,5 +52,11 @@ public sealed class SettingsDocument
 
     public string TranslateSource { get; set; } = "auto";
 
-    public string TranslateTarget { get; set; } = "TR";
+    public string TranslateTarget { get; set; } = "EN";
+
+    public bool? TextExpanderEnabled { get; set; }
+
+    public bool? ClipboardHistoryEnabled { get; set; }
+
+    public List<string> FavoriteTools { get; set; } = [];
 }

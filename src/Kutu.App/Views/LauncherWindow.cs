@@ -60,6 +60,8 @@ public sealed class LauncherWindow : Window
         {
             Render();
             _search.Focus();
+            if (Content is FrameworkElement element)
+                Motion.Enter(element, distance: 8);
         };
         Deactivated += (_, _) => Close();
     }
@@ -133,9 +135,10 @@ public sealed class LauncherWindow : Window
                 FontSize = 15,
                 VerticalAlignment = VerticalAlignment.Center
             };
+            var soon = tool.Id == "upload";
             var alias = new TextBlock
             {
-                Text = tool.Aliases.FirstOrDefault() ?? "",
+                Text = soon ? L.Get("Dash_Soon") : tool.Aliases.FirstOrDefault() ?? "",
                 Foreground = Chrome.Muted,
                 VerticalAlignment = VerticalAlignment.Center
             };
@@ -149,18 +152,22 @@ public sealed class LauncherWindow : Window
                 Background = selected ? new SolidColorBrush(Color.FromRgb(0x1A, 0x27, 0x42)) : Brushes.Transparent,
                 CornerRadius = new CornerRadius(12),
                 Padding = new Thickness(10, 8, 10, 8),
-                Cursor = Cursors.Hand,
+                Cursor = soon ? Cursors.Arrow : Cursors.Hand,
+                Opacity = soon ? 0.55 : 1,
                 Child = row,
                 Tag = tool
             };
             var index = i;
-            card.MouseLeftButtonUp += (_, _) => Open(_matches[index]);
+            if (!soon)
+                card.MouseLeftButtonUp += (_, _) => Open(_matches[index]);
             _results.Children.Add(card);
         }
     }
 
     private void Open(IKutuTool tool)
     {
+        if (tool.Id == "upload")
+            return;
         Close();
         _host.OpenTool(tool.Id);
     }

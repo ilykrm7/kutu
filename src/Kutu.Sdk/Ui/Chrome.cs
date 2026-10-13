@@ -73,6 +73,7 @@ public static class Chrome
             FontWeight = FontWeights.SemiBold
         };
         button.Click += click;
+        Motion.Pressable(button);
         return button;
     }
 
@@ -87,6 +88,7 @@ public static class Chrome
             Margin = new Thickness(0, 0, 8, 0)
         };
         button.Click += click;
+        Motion.Pressable(button);
         return button;
     }
 
@@ -125,14 +127,141 @@ public static class Chrome
         return new Border
         {
             MinHeight = 148,
-            CornerRadius = new CornerRadius(18),
-            BorderThickness = new Thickness(1.5),
+            CornerRadius = new CornerRadius(12),
+            BorderThickness = new Thickness(1),
             BorderBrush = Line,
             Background = Field,
             Child = label,
             AllowDrop = true,
             Margin = new Thickness(0, 0, 0, 14)
         };
+    }
+
+    public static Button Soon(string text, SymbolRegular symbol)
+    {
+        var button = new Button
+        {
+            Content = text,
+            Appearance = ControlAppearance.Secondary,
+            Icon = new SymbolIcon { Symbol = symbol, FontSize = 16 },
+            Padding = new Thickness(14, 8, 14, 8),
+            Margin = new Thickness(0, 0, 8, 0),
+            IsEnabled = false,
+            ToolTip = "Yakında"
+        };
+        return button;
+    }
+
+    public static UIElement ValueRow(string label, string value, Action? copy = null)
+    {
+        var grid = new Grid { Margin = new Thickness(0, 3, 0, 3) };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(148) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition());
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var name = Label(label);
+        name.Margin = new Thickness(0);
+        name.VerticalAlignment = VerticalAlignment.Center;
+        var text = new TextBlock
+        {
+            Text = string.IsNullOrWhiteSpace(value) ? "—" : value,
+            Foreground = Text,
+            TextWrapping = TextWrapping.Wrap,
+            FontSize = 14,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        Grid.SetColumn(text, 1);
+        grid.Children.Add(name);
+        grid.Children.Add(text);
+        if (copy is not null && !string.IsNullOrWhiteSpace(value))
+        {
+            var button = Secondary("", SymbolRegular.Copy24, (_, _) => copy());
+            button.Padding = new Thickness(8, 4, 8, 4);
+            button.Margin = new Thickness(8, 0, 0, 0);
+            button.ToolTip = "Kopyala";
+            Grid.SetColumn(button, 2);
+            grid.Children.Add(button);
+        }
+
+        return grid;
+    }
+
+    public static Border Section(string title, SymbolRegular symbol, UIElement body)
+    {
+        var icon = new SymbolIcon
+        {
+            Symbol = symbol,
+            FontSize = 16,
+            Foreground = Brushes.White,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        var bubble = new Border
+        {
+            Width = 28,
+            Height = 28,
+            CornerRadius = new CornerRadius(8),
+            Background = Accent,
+            Child = icon,
+            Margin = new Thickness(0, 0, 10, 0)
+        };
+        var heading = new TextBlock
+        {
+            Text = title,
+            FontSize = 15,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = Text,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        var header = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 12) };
+        header.Children.Add(bubble);
+        header.Children.Add(heading);
+        var stack = new StackPanel();
+        stack.Children.Add(header);
+        stack.Children.Add(body);
+        var card = Card(stack);
+        card.Margin = new Thickness(0, 0, 0, 12);
+        return card;
+    }
+
+    public static ScrollViewer ScrollPage(UIElement content, double maxWidth = 880)
+    {
+        var host = new PageHost { MaxContentWidth = maxWidth, Child = content };
+        return new ScrollViewer
+        {
+            Content = host,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
+        };
+    }
+
+    public static UIElement Loading(string text)
+    {
+        var ring = new System.Windows.Shapes.Ellipse
+        {
+            Width = 18,
+            Height = 18,
+            StrokeThickness = 2.2,
+            Stroke = Accent,
+            StrokeDashArray = new DoubleCollection { 2.2, 1.6 },
+            RenderTransformOrigin = new Point(0.5, 0.5),
+            RenderTransform = new RotateTransform()
+        };
+        ((RotateTransform)ring.RenderTransform).BeginAnimation(
+            RotateTransform.AngleProperty,
+            new System.Windows.Media.Animation.DoubleAnimation(0, 360, TimeSpan.FromMilliseconds(700))
+            {
+                RepeatBehavior = System.Windows.Media.Animation.RepeatBehavior.Forever
+            });
+        var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 4, 0, 8) };
+        row.Children.Add(ring);
+        row.Children.Add(new TextBlock
+        {
+            Text = text,
+            Foreground = Muted,
+            Margin = new Thickness(10, 0, 0, 0),
+            VerticalAlignment = VerticalAlignment.Center
+        });
+        return row;
     }
 
     public static SymbolRegular Symbol(string name) =>

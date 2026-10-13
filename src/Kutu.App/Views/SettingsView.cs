@@ -24,6 +24,12 @@ public sealed class SettingsView : UserControl
     private readonly TextBox _clipboard;
     private readonly TextBox _translate;
     private readonly PasswordBox _abuse;
+    private readonly PasswordBox _virusTotal;
+    private readonly PasswordBox _ipqs;
+    private readonly PasswordBox _otx;
+    private readonly PasswordBox _greyNoise;
+    private readonly PasswordBox _shodan;
+    private readonly PasswordBox _ipInfo;
     private readonly PasswordBox _deepL;
     private readonly PasswordBox _uploadKey;
     private readonly TextBox _deepLEndpoint;
@@ -45,6 +51,12 @@ public sealed class SettingsView : UserControl
         _clipboard = HotkeyBox();
         _translate = HotkeyBox();
         _abuse = new PasswordBox { RevealButtonEnabled = true };
+        _virusTotal = new PasswordBox { RevealButtonEnabled = true };
+        _ipqs = new PasswordBox { RevealButtonEnabled = true };
+        _otx = new PasswordBox { RevealButtonEnabled = true };
+        _greyNoise = new PasswordBox { RevealButtonEnabled = true };
+        _shodan = new PasswordBox { RevealButtonEnabled = true };
+        _ipInfo = new PasswordBox { RevealButtonEnabled = true };
         _deepL = new PasswordBox { RevealButtonEnabled = true };
         _uploadKey = new PasswordBox { RevealButtonEnabled = true };
         _deepLEndpoint = Chrome.Input("https://api-free.deepl.com/v2/translate");
@@ -65,11 +77,7 @@ public sealed class SettingsView : UserControl
         stack.Children.Add(Section(L.Get("Settings_Integration"), Integration()));
         stack.Children.Add(Chrome.Primary(L.Get("Action_Save"), SymbolRegular.Save24, async (_, _) => await SaveAsync()));
         stack.Children.Add(_status);
-        Content = new ScrollViewer
-        {
-            Content = new Border { Padding = new Thickness(28, 18, 28, 28), Child = stack },
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto
-        };
+        Content = Chrome.ScrollPage(stack, 760);
         LoadFromSettings();
     }
 
@@ -86,6 +94,12 @@ public sealed class SettingsView : UserControl
         _clipboard.Text = settings.ClipboardHotkey;
         _translate.Text = settings.TranslateHotkey;
         _abuse.Password = settings.AbuseIpDbKey;
+        _virusTotal.Password = settings.VirusTotalKey;
+        _ipqs.Password = settings.IpQualityScoreKey;
+        _otx.Password = settings.OtxKey;
+        _greyNoise.Password = settings.GreyNoiseKey;
+        _shodan.Password = settings.ShodanKey;
+        _ipInfo.Password = settings.IpInfoKey;
         _deepL.Password = settings.DeepLKey;
         _uploadKey.Password = settings.UploadApiKey;
         _deepLEndpoint.Text = settings.DeepLEndpoint;
@@ -124,6 +138,12 @@ public sealed class SettingsView : UserControl
         panel.Children.Add(Chrome.Hint(L.Get("Settings_KeysHint")));
         panel.Children.Add(Chrome.Label(L.Get("Settings_AbuseKey")));
         panel.Children.Add(_abuse);
+        panel.Children.Add(KeyRow(L.Get("Settings_VirusTotalKey"), _virusTotal));
+        panel.Children.Add(KeyRow(L.Get("Settings_IpqsKey"), _ipqs));
+        panel.Children.Add(KeyRow(L.Get("Settings_OtxKey"), _otx));
+        panel.Children.Add(KeyRow(L.Get("Settings_GreyNoiseKey"), _greyNoise));
+        panel.Children.Add(KeyRow(L.Get("Settings_ShodanKey"), _shodan));
+        panel.Children.Add(KeyRow(L.Get("Settings_IpInfoKey"), _ipInfo));
         panel.Children.Add(Chrome.Label(L.Get("Settings_DeepLKey")));
         panel.Children.Add(_deepL);
         panel.Children.Add(Chrome.Label(L.Get("Settings_DeepLEndpoint")));
@@ -165,9 +185,11 @@ public sealed class SettingsView : UserControl
 
         try
         {
-            ContextMenuRegistration.SetEnabled(enabled);
+            var note = ContextMenuRegistration.SetEnabled(enabled);
             _host.Settings.ContextMenuRegistered = enabled;
             await _host.SaveSettingsAsync();
+            if (note == "classic-only")
+                _status.Text = L.Get("Menu_ModernFail");
         }
         catch (Exception ex)
         {
@@ -187,6 +209,12 @@ public sealed class SettingsView : UserControl
         settings.ClipboardHotkey = _clipboard.Text.Trim();
         settings.TranslateHotkey = _translate.Text.Trim();
         settings.AbuseIpDbKey = _abuse.Password.Trim();
+        settings.VirusTotalKey = _virusTotal.Password.Trim();
+        settings.IpQualityScoreKey = _ipqs.Password.Trim();
+        settings.OtxKey = _otx.Password.Trim();
+        settings.GreyNoiseKey = _greyNoise.Password.Trim();
+        settings.ShodanKey = _shodan.Password.Trim();
+        settings.IpInfoKey = _ipInfo.Password.Trim();
         settings.DeepLKey = _deepL.Password.Trim();
         settings.UploadApiKey = _uploadKey.Password.Trim();
         settings.DeepLEndpoint = _deepLEndpoint.Text.Trim();
@@ -234,6 +262,14 @@ public sealed class SettingsView : UserControl
         stack.Children.Add(Chrome.Heading(title));
         stack.Children.Add(body);
         return Chrome.Card(stack);
+    }
+
+    private static UIElement KeyRow(string label, UIElement input)
+    {
+        var panel = new StackPanel();
+        panel.Children.Add(Chrome.Label(label));
+        panel.Children.Add(input);
+        return panel;
     }
 
     private static UIElement Row(string label, UIElement input)

@@ -7,18 +7,20 @@
                  Height="780"
                  MinWidth="980"
                  MinHeight="640"
+                 Background="#070B14"
                  WindowStartupLocation="CenterScreen"
                  WindowBackdropType="Mica"
                  WindowCornerPreference="Round"
                  ExtendsContentIntoTitleBar="True"
+                 Icon="Assets/kutu.ico"
                  FontFamily="Segoe UI Variable Text, Segoe UI">
-    <Grid>
+    <Grid Background="#070B14">
         <Grid.RowDefinitions>
             <RowDefinition Height="48" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <ui:TitleBar x:Name="AppTitleBar" Grid.Row="0" Title="Kutu" />
+        <ui:TitleBar x:Name="AppTitleBar" Grid.Row="0" Title="Kutu" Background="#070B14" Foreground="#F4F7FB" />
 
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
@@ -27,29 +29,27 @@
             </Grid.ColumnDefinitions>
 
             <Border Grid.Column="0" Background="#B80B1220" BorderBrush="{StaticResource KutuLineBrush}" BorderThickness="0,0,1,0">
-                <DockPanel Margin="16,8,16,18">
+                <DockPanel Margin="16,8,16,16">
                     <StackPanel DockPanel.Dock="Bottom">
-                        <Button x:Name="SettingsButton" Style="{StaticResource NavButton}" Click="Settings_Click" />
-                        <TextBlock x:Name="VersionText" Margin="14,12,0,0" Foreground="{StaticResource KutuMutedBrush}" FontSize="12" />
+                        <TextBlock x:Name="FooterLink" Margin="14,8,0,0" Foreground="{StaticResource KutuMutedBrush}" FontSize="12"
+                                   Cursor="Hand" TextDecorations="Underline" />
+                        <TextBlock x:Name="VersionText" Margin="14,4,0,0" Foreground="{StaticResource KutuMutedBrush}" FontSize="11" Opacity="0.8" />
                     </StackPanel>
                     <StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="8,8,8,22">
-                            <Border Width="42" Height="42" CornerRadius="13" Background="{StaticResource KutuAccentBrush}">
-                                <TextBlock Text="K" FontSize="22" FontWeight="Bold" Foreground="White"
-                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
-                            </Border>
-                            <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
-                                <TextBlock Text="Kutu" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource KutuTextBrush}" />
-                                <TextBlock x:Name="TaglineText" Foreground="{StaticResource KutuMutedBrush}" FontSize="12" TextWrapping="Wrap" />
-                            </StackPanel>
+                            <Image Width="40" Height="40" Source="/Assets/kutu-mark.png" RenderOptions.BitmapScalingMode="HighQuality" />
+                            <TextBlock Text="Kutu" Margin="12,0,0,0" FontSize="20" FontWeight="SemiBold"
+                                       Foreground="{StaticResource KutuTextBrush}" VerticalAlignment="Center" />
                         </StackPanel>
                         <Button x:Name="DashboardButton" Style="{StaticResource NavButton}" Click="Dashboard_Click" />
+                        <Button x:Name="FavoritesButton" Style="{StaticResource NavButton}" Click="Favorites_Click" />
+                        <Button x:Name="SettingsButton" Style="{StaticResource NavButton}" Click="Settings_Click" />
                     </StackPanel>
                 </DockPanel>
             </Border>
 
             <Grid Grid.Column="1">
-                <ContentControl x:Name="Pages" Margin="8,0,8,0" />
+                <ContentControl x:Name="Pages" />
                 <Border x:Name="ToastCard" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,24"
                         Background="#F2141C2E" BorderBrush="{StaticResource KutuAccentBrush}" BorderThickness="1"
                         CornerRadius="14" Padding="16,10" Visibility="Collapsed">

@@ -4,6 +4,8 @@ namespace Kutu.Sdk.Hosting;
 
 public interface IClipboardHistory
 {
+    bool Enabled { get; set; }
+
     IReadOnlyList<ClipItem> Items { get; }
 
     event EventHandler? Changed;

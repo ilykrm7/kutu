@@ -8,6 +8,7 @@ using Kutu.Tools.ClipboardHistory;
 using Kutu.Tools.ColorPicker;
 using Kutu.Tools.Screenshot;
 using Kutu.Tools.Translate;
+using Kutu.Imaging;
 using Kutu.Tools.Upload;
 
 namespace Kutu.App.Services;
@@ -150,7 +151,7 @@ public sealed class AppHost : IKutuHost
 
     public void ShowClipboardPopup() => ClipboardPopup.Show(this);
 
-    public void ShowTranslatePopup() => TranslatePopup.Show(this);
+    public void ShowTranslatePopup() => _ = SelectionTranslator.RunAsync(this);
 
     public void ShowLauncher() => _window?.ToggleLauncher(this);
 
@@ -184,6 +185,15 @@ public sealed class AppHost : IKutuHost
             return;
         }
 
+        var convertTo = Array.FindIndex(args, arg => arg.Equals("--convert-to", StringComparison.OrdinalIgnoreCase));
+        if (convertTo >= 0 && convertTo + 1 < args.Length)
+        {
+            var format = args[convertTo + 1];
+            var targets = args.Skip(convertTo + 2).Where(arg => !arg.StartsWith('-')).Select(arg => arg.Trim('"')).ToList();
+            _ = ConvertToAsync(format, targets);
+            return;
+        }
+
         var files = new List<string>();
         for (var i = 0; i < args.Length; i++)
         {
@@ -200,6 +210,43 @@ public sealed class AppHost : IKutuHost
 
         if (files.Count > 0)
             OpenTool("image-converter", files);
+    }
+
+    private async Task ConvertToAsync(string formatName, List<string> files)
+    {
+        var format = formatName.ToLowerInvariant() switch
+        {
+            "jpeg" or "jpg" => KutuImageFormat.Jpeg,
+            "png" => KutuImageFormat.Png,
+            "webp" => KutuImageFormat.Webp,
+            "ico" => KutuImageFormat.Ico,
+            "pdf" => KutuImageFormat.Pdf,
+            "bmp" => KutuImageFormat.Bmp,
+            _ => (KutuImageFormat?)null
+        };
+        if (format is null || files.Count == 0)
+            return;
+
+        var done = 0;
+        try
+        {
+            foreach (var file in files.Where(File.Exists))
+            {
+                await ImagePipeline.ConvertAsync(file, ImageFormats.OutputPath(file, format.Value), format.Value, Settings.JpegQuality);
+                done++;
+            }
+
+            Toast(string.Format(L.Get("Image_Done"), done));
+        }
+        catch (HeifCodecMissingException)
+        {
+            Toast(L.Get("Image_HeifMissing"));
+        }
+        catch (Exception ex)
+        {
+            AppLog.Write(ex);
+            Toast(ex.Message);
+        }
     }
 }
 

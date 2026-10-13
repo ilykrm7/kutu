@@ -45,13 +45,8 @@ public static class ScreenshotController
         {
             await Task.Delay(180);
             var screen = ScreenCapture.Capture();
-            var overlay = new RegionOverlay(screen);
-            var accepted = overlay.ShowDialog() == true && overlay.Crop is not null;
-            if (!accepted || overlay.Crop is null)
-                return;
-
-            var editor = new EditorWindow(overlay.Crop, host);
-            editor.ShowDialog();
+            var studio = new CaptureStudio(screen, host);
+            studio.ShowDialog();
         }
         finally
         {

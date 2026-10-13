@@ -11,20 +11,29 @@
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <Description>Kutu — Windows için küçük araçlar.</Description>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(RuntimeIdentifier)' != ''">
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' != '' and '$(SelfContained)' != 'false'">
     <SelfContained>true</SelfContained>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' != ''">
     <PublishSingleFile>true</PublishSingleFile>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
-    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
-    <DebugType>embedded</DebugType>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <PublishReadyToRun>false</PublishReadyToRun>
   </PropertyGroup>
   <ItemGroup>
     <Using Remove="System.Windows.Forms" />
     <Using Remove="System.Drawing" />
   </ItemGroup>
   <ItemGroup>
+    <Resource Include="Assets\kutu-mark.png" />
+    <EmbeddedResource Include="Assets\kutu-mark.png" LogicalName="KutuMark.png" />
+    <EmbeddedResource Include="shell\KutuShell.dll" LogicalName="KutuShell.dll" Condition="Exists('shell\KutuShell.dll')" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\Kutu.Core\Kutu.Core.csproj" />
+    <ProjectReference Include="..\Kutu.Imaging\Kutu.Imaging.csproj" />
     <ProjectReference Include="..\Kutu.Sdk\Kutu.Sdk.csproj" />
     <ProjectReference Include="..\Tools\ClipboardHistory\Kutu.Tools.ClipboardHistory.csproj" />
     <ProjectReference Include="..\Tools\ColorPicker\Kutu.Tools.ColorPicker.csproj" />

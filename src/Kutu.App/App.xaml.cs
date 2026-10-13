@@ -57,9 +57,9 @@ public partial class App : Application
             settings.LoadAsync().GetAwaiter().GetResult();
             L.SetCulture(settings.Current.Language);
             ApplicationThemeManager.Apply(ApplicationTheme.Dark, Wpf.Ui.Controls.WindowBackdropType.Mica, false);
-            ApplicationAccentColorManager.Apply(Color.FromRgb(0x28, 0xA0, 0xF1), ApplicationTheme.Dark, false, false);
+            ApplicationAccentColorManager.Apply(SystemAccent(), ApplicationTheme.Dark, false, false);
 
-            var clipboard = new ClipboardHistoryService();
+            var clipboard = new ClipboardHistoryService { Enabled = settings.Current.ClipboardHistoryEnabled };
             IKutuTool[] tools =
             [
                 new ImageConverterTool(),
@@ -99,6 +99,22 @@ public partial class App : Application
             MessageBox.Show(ex.Message, "Kutu");
             Shutdown();
         }
+    }
+
+    private static Color SystemAccent()
+    {
+        try
+        {
+            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\DWM");
+            if (key?.GetValue("AccentColor") is int abgr)
+                return Color.FromRgb((byte)(abgr & 0xFF), (byte)((abgr >> 8) & 0xFF), (byte)((abgr >> 16) & 0xFF));
+        }
+        catch
+        {
+            // Keep the brand accent when the registry value is missing.
+        }
+
+        return Color.FromRgb(0x28, 0xA0, 0xF1);
     }
 
     private void BindHotkeys()

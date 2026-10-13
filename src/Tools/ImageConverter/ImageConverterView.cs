@@ -34,7 +34,7 @@ public sealed class ImageConverterView : UserControl, IAcceptsParameter
                 AddFiles(files);
         };
 
-        _format = DarkCombo(["PNG", "JPG", "WebP", "ICO", "BMP"]);
+        _format = DarkCombo(["PNG", "JPG", "WebP", "ICO", "PDF", "BMP"]);
         _quality = new Slider
         {
             Minimum = 40,
@@ -127,6 +127,7 @@ public sealed class ImageConverterView : UserControl, IAcceptsParameter
             "JPG" => KutuImageFormat.Jpeg,
             "WebP" => KutuImageFormat.Webp,
             "ICO" => KutuImageFormat.Ico,
+            "PDF" => KutuImageFormat.Pdf,
             "BMP" => KutuImageFormat.Bmp,
             _ => KutuImageFormat.Png
         };
@@ -143,6 +144,10 @@ public sealed class ImageConverterView : UserControl, IAcceptsParameter
 
             _status.Text = string.Format(L.Get("Image_Done"), done);
             _host.Toast(_status.Text);
+        }
+        catch (HeifCodecMissingException)
+        {
+            _status.Text = L.Get("Image_HeifMissing");
         }
         catch (Exception ex)
         {

@@ -151,6 +151,10 @@ public sealed class ImageResizeView : UserControl
             _status.Text = string.Format(L.Get("Resize_Done"), done);
             _host.Toast(_status.Text);
         }
+        catch (HeifCodecMissingException)
+        {
+            _status.Text = L.Get("Image_HeifMissing");
+        }
         catch (Exception ex)
         {
             _status.Text = ex.Message;

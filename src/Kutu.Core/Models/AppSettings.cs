@@ -26,6 +26,18 @@ public sealed class AppSettings
 
     public string AbuseIpDbKey { get; set; } = "";
 
+    public string VirusTotalKey { get; set; } = "";
+
+    public string IpQualityScoreKey { get; set; } = "";
+
+    public string OtxKey { get; set; } = "";
+
+    public string GreyNoiseKey { get; set; } = "";
+
+    public string ShodanKey { get; set; } = "";
+
+    public string IpInfoKey { get; set; } = "";
+
     public string DeepLKey { get; set; } = "";
 
     public string UploadApiKey { get; set; } = "";
@@ -38,5 +50,11 @@ public sealed class AppSettings
 
     public string TranslateSource { get; set; } = "auto";
 
-    public string TranslateTarget { get; set; } = "TR";
+    public string TranslateTarget { get; set; } = "EN";
+
+    public bool TextExpanderEnabled { get; set; } = true;
+
+    public bool ClipboardHistoryEnabled { get; set; } = true;
+
+    public List<string> FavoriteTools { get; set; } = [];
 }

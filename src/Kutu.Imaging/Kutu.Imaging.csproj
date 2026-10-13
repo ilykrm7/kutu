@@ -2,9 +2,6 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <RootNamespace>Kutu.Imaging</RootNamespace>
-    <Description>Image convert, resize, and ICO writing for Kutu.</Description>
+    <Description>Image convert and resize through the Windows Imaging Component.</Description>
   </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="Magick.NET-Q16-x64" Version="14.17.2" />
-  </ItemGroup>
 </Project>

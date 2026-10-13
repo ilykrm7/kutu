@@ -47,10 +47,6 @@ public sealed class TranslateView : UserControl
         _output.IsReadOnly = true;
         _status = Chrome.Hint("");
 
-        var langs = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 12) };
-        langs.Children.Add(Field(L.Get("Translate_Source"), _source));
-        langs.Children.Add(Field(L.Get("Translate_Target"), _target));
-
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 0) };
         buttons.Children.Add(Chrome.Primary(L.Get("Action_Translate"), SymbolRegular.Translate24, async (_, _) => await RunAsync(clipboard: false)));
         buttons.Children.Add(Chrome.Secondary(L.Get("Action_TranslateClipboard"), SymbolRegular.ClipboardPaste24, async (_, _) => await RunAsync(clipboard: true)));
@@ -64,7 +60,7 @@ public sealed class TranslateView : UserControl
         }));
 
         var stack = new StackPanel();
-        stack.Children.Add(langs);
+        stack.Children.Add(Chrome.Hint(L.Get("Translate_ToEnglish")));
         stack.Children.Add(Chrome.Label(L.Get("Translate_Input")));
         stack.Children.Add(_input);
         stack.Children.Add(buttons);
@@ -87,15 +83,10 @@ public sealed class TranslateView : UserControl
                 return;
             }
 
-            _status.Text = L.Get("Common_Working");
-            var source = _source.SelectedItem?.ToString() ?? "auto";
-            var target = _target.SelectedItem?.ToString() ?? "TR";
-            _host.Settings.TranslateSource = source;
-            _host.Settings.TranslateTarget = target;
-            await _host.SaveSettingsAsync();
-            var result = await TranslateClient.TranslateAsync(text, source, target, _host.Settings.DeepLKey, _host.Settings.DeepLEndpoint);
+            _status.Text = "";
+            var result = await TranslateClient.TranslateAsync(text, "auto", "EN", _host.Settings.DeepLKey, _host.Settings.DeepLEndpoint);
             _output.Text = result.Text;
-            _status.Text = result.UsedFallback ? L.Get("Translate_Fallback") : "";
+            _status.Text = "";
         }
         catch (Exception ex)
         {
@@ -208,12 +199,12 @@ public static class TranslatePopup
 
                 var result = await TranslateClient.TranslateAsync(
                     input.Text,
-                    host.Settings.TranslateSource,
-                    host.Settings.TranslateTarget,
+                    "auto",
+                    "EN",
                     host.Settings.DeepLKey,
                     host.Settings.DeepLEndpoint);
                 output.Text = result.Text;
-                status.Text = result.UsedFallback ? L.Get("Translate_Fallback") : "";
+                status.Text = "";
             }
             catch (Exception ex)
             {

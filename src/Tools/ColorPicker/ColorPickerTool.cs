@@ -5,6 +5,7 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 using Kutu.Core.Color;
 using Kutu.Core.Models;
 using Kutu.Sdk.Hosting;
@@ -116,6 +117,16 @@ public sealed class ColorLensWindow : Window
     private IntPtr _mouseHook;
     private IntPtr _keyHook;
     private RgbColor _color;
+    private int _pendingX;
+    private int _pendingY;
+    private int _flushing;
+    private IntPtr _screenDc;
+    private IntPtr _memDc;
+    private IntPtr _dib;
+    private IntPtr _bits;
+    private WriteableBitmap? _magnifier;
+    private readonly byte[] _pixels = new byte[15 * 15 * 4];
+    private readonly SolidColorBrush _swatchBrush = new(Colors.Black);
 
     public ColorLensWindow(IKutuHost host, Action? onPicked)
     {
@@ -124,7 +135,7 @@ public sealed class ColorLensWindow : Window
         _mouseProc = MouseHook;
         _keyProc = KeyHook;
         Width = 280;
-        SizeToContent = SizeToContent.Height;
+        Height = 318;
         WindowStyle = WindowStyle.None;
         AllowsTransparency = true;
         Background = Brushes.Transparent;
@@ -158,6 +169,7 @@ public sealed class ColorLensWindow : Window
         };
         Loaded += (_, _) =>
         {
+            EnsureSample();
             _mouseHook = SetWindowsHookEx(14, _mouseProc, GetModuleHandle(null), 0);
             _keyHook = SetWindowsHookEx(13, _keyProc, GetModuleHandle(null), 0);
             Activate();
@@ -168,6 +180,7 @@ public sealed class ColorLensWindow : Window
                 UnhookWindowsHookEx(_mouseHook);
             if (_keyHook != IntPtr.Zero)
                 UnhookWindowsHookEx(_keyHook);
+            ReleaseSample();
         };
         PreviewKeyDown += (_, e) =>
         {
@@ -185,7 +198,10 @@ public sealed class ColorLensWindow : Window
             if (msg is 0x0200 or 0x0201)
             {
                 GetCursorPos(out var point);
-                Dispatcher.BeginInvoke(() => MoveTo(point.X, point.Y));
+                _pendingX = point.X;
+                _pendingY = point.Y;
+                if (Interlocked.CompareExchange(ref _flushing, 1, 0) == 0)
+                    Dispatcher.BeginInvoke(FlushSample, DispatcherPriority.Background);
                 if (msg == 0x0201)
                 {
                     Dispatcher.BeginInvoke(Pick);
@@ -218,22 +234,82 @@ public sealed class ColorLensWindow : Window
         return CallNextHookEx(_keyHook, nCode, wParam, lParam);
     }
 
-    private void MoveTo(int x, int y)
+    private void FlushSample()
     {
-        var color = Sample(x, y);
-        _color = color;
-        _hex.Text = color.Hex;
-        _detail.Text = color.Rgb + "   " + color.Hsl;
-        _swatch.Background = new SolidColorBrush(Color.FromRgb(color.R, color.G, color.B));
-        _grid.Source = Magnifier(x, y);
+        var x = _pendingX;
+        var y = _pendingY;
+        try
+        {
+            PaintSample(x, y);
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _flushing, 0);
+            if ((_pendingX != x || _pendingY != y) && Interlocked.CompareExchange(ref _flushing, 1, 0) == 0)
+                Dispatcher.BeginInvoke(FlushSample, DispatcherPriority.Background);
+        }
+    }
+
+    private void PaintSample(int x, int y)
+    {
+        const int n = 15;
+        EnsureSample();
+        if (_bits == IntPtr.Zero || _magnifier is null)
+            return;
+
+        BitBlt(_memDc, 0, 0, n, n, _screenDc, x - n / 2, y - n / 2, 0x00CC0020);
+        Marshal.Copy(_bits, _pixels, 0, _pixels.Length);
+        for (var i = 3; i < _pixels.Length; i += 4)
+            _pixels[i] = 255;
+        var mid = (n / 2) * n + (n / 2);
+        var center = mid * 4;
+        _color = new RgbColor(_pixels[center + 2], _pixels[center + 1], _pixels[center]);
+        _pixels[center] = 255;
+        _pixels[center + 1] = 255;
+        _pixels[center + 2] = 255;
+        _pixels[center + 3] = 255;
+        _magnifier.WritePixels(new Int32Rect(0, 0, n, n), _pixels, n * 4, 0);
+        _hex.Text = _color.Hex;
+        _detail.Text = _color.Rgb + "   " + _color.Hsl;
+        _swatchBrush.Color = Color.FromRgb(_color.R, _color.G, _color.B);
+        _swatch.Background = _swatchBrush;
         double left = x + 28;
         double top = y + 28;
         if (left + Width > SystemParameters.VirtualScreenLeft + SystemParameters.VirtualScreenWidth)
             left = x - Width - 28;
-        if (top + 260 > SystemParameters.VirtualScreenTop + SystemParameters.VirtualScreenHeight)
-            top = y - 260;
+        if (top + Height > SystemParameters.VirtualScreenTop + SystemParameters.VirtualScreenHeight)
+            top = y - Height - 28;
         Left = left;
         Top = top;
+    }
+
+    private void EnsureSample()
+    {
+        if (_dib != IntPtr.Zero)
+            return;
+
+        const int n = 15;
+        _screenDc = GetDC(IntPtr.Zero);
+        _memDc = CreateCompatibleDC(_screenDc);
+        var info = new BitmapInfo { Header = new BitmapInfoHeader { Size = 40, Width = n, Height = -n, Planes = 1, BitCount = 32 } };
+        _dib = CreateDIBSection(_screenDc, ref info, 0, out _bits, IntPtr.Zero, 0);
+        SelectObject(_memDc, _dib);
+        _magnifier = new WriteableBitmap(n, n, 96, 96, PixelFormats.Bgra32, null);
+        _grid.Source = _magnifier;
+        _swatch.Background = _swatchBrush;
+    }
+
+    private void ReleaseSample()
+    {
+        if (_dib != IntPtr.Zero)
+            DeleteObject(_dib);
+        if (_memDc != IntPtr.Zero)
+            DeleteDC(_memDc);
+        if (_screenDc != IntPtr.Zero)
+            ReleaseDC(IntPtr.Zero, _screenDc);
+        _dib = IntPtr.Zero;
+        _memDc = IntPtr.Zero;
+        _screenDc = IntPtr.Zero;
     }
 
     private async void Pick()
@@ -248,56 +324,6 @@ public sealed class ColorLensWindow : Window
         _host.Toast(string.Format(L.Get("Color_Copied"), hex));
         _onPicked?.Invoke();
         Close();
-    }
-
-    private static RgbColor Sample(int x, int y)
-    {
-        var dc = GetDC(IntPtr.Zero);
-        try
-        {
-            var pixel = GetPixel(dc, x, y);
-            return new RgbColor((byte)(pixel & 0xFF), (byte)((pixel >> 8) & 0xFF), (byte)((pixel >> 16) & 0xFF));
-        }
-        finally
-        {
-            ReleaseDC(IntPtr.Zero, dc);
-        }
-    }
-
-    private static BitmapSource Magnifier(int x, int y)
-    {
-        const int n = 11;
-        var wb = new WriteableBitmap(n, n, 96, 96, PixelFormats.Bgra32, null);
-        var pixels = new byte[n * n * 4];
-        var dc = GetDC(IntPtr.Zero);
-        try
-        {
-            for (var row = 0; row < n; row++)
-            {
-                for (var col = 0; col < n; col++)
-                {
-                    var pixel = GetPixel(dc, x + col - n / 2, y + row - n / 2);
-                    var i = ((row * n) + col) * 4;
-                    pixels[i] = (byte)(pixel & 0xFF);
-                    pixels[i + 1] = (byte)((pixel >> 8) & 0xFF);
-                    pixels[i + 2] = (byte)((pixel >> 16) & 0xFF);
-                    pixels[i + 3] = 255;
-                }
-            }
-        }
-        finally
-        {
-            ReleaseDC(IntPtr.Zero, dc);
-        }
-
-        var mid = (n / 2) * n + (n / 2);
-        var center = mid * 4;
-        pixels[center] = 255;
-        pixels[center + 1] = 255;
-        pixels[center + 2] = 255;
-        wb.WritePixels(new Int32Rect(0, 0, n, n), pixels, n * 4, 0);
-        wb.Freeze();
-        return wb;
     }
 
     private delegate IntPtr HookProc(int nCode, IntPtr wParam, IntPtr lParam);
@@ -319,7 +345,44 @@ public sealed class ColorLensWindow : Window
     private static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
 
     [DllImport("gdi32.dll")]
-    private static extern uint GetPixel(IntPtr hdc, int x, int y);
+    private static extern IntPtr CreateCompatibleDC(IntPtr hdc);
+
+    [DllImport("gdi32.dll")]
+    private static extern IntPtr CreateDIBSection(IntPtr hdc, ref BitmapInfo pbmi, uint usage, out IntPtr bits, IntPtr section, uint offset);
+
+    [DllImport("gdi32.dll")]
+    private static extern IntPtr SelectObject(IntPtr hdc, IntPtr obj);
+
+    [DllImport("gdi32.dll")]
+    private static extern bool DeleteObject(IntPtr obj);
+
+    [DllImport("gdi32.dll")]
+    private static extern bool DeleteDC(IntPtr hdc);
+
+    [DllImport("gdi32.dll")]
+    private static extern bool BitBlt(IntPtr dest, int x, int y, int w, int h, IntPtr src, int sx, int sy, int rop);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct BitmapInfoHeader
+    {
+        public int Size;
+        public int Width;
+        public int Height;
+        public short Planes;
+        public short BitCount;
+        public int Compression;
+        public int SizeImage;
+        public int XPelsPerMeter;
+        public int YPelsPerMeter;
+        public int ClrUsed;
+        public int ClrImportant;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct BitmapInfo
+    {
+        public BitmapInfoHeader Header;
+    }
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern IntPtr SetWindowsHookEx(int idHook, HookProc lpfn, IntPtr hMod, uint dwThreadId);

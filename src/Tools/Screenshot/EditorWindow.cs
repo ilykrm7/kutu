@@ -70,7 +70,7 @@ public sealed class EditorWindow : Window
         var actions = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
         actions.Children.Add(Chrome.Secondary(L.Get("Action_Copy"), SymbolRegular.Copy24, (_, _) => Copy()));
         actions.Children.Add(Chrome.Secondary(L.Get("Action_Save"), SymbolRegular.Save24, (_, _) => Save()));
-        actions.Children.Add(Chrome.Primary(L.Get("Action_Upload"), SymbolRegular.CloudArrowUp24, async (_, _) => await UploadAsync()));
+        actions.Children.Add(Chrome.Soon(L.Get("Action_Upload"), SymbolRegular.CloudArrowUp24));
 
         var bar = new DockPanel { Margin = new Thickness(16, 12, 16, 8) };
         DockPanel.SetDock(actions, Dock.Right);

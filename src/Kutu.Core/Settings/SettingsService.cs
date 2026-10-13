@@ -64,13 +64,22 @@ public sealed class SettingsService
         UploadEndpoint = settings.UploadEndpoint,
         DeepLEndpoint = settings.DeepLEndpoint,
         AbuseIpDbKeyProtected = Protect(settings.AbuseIpDbKey),
+        VirusTotalKeyProtected = Protect(settings.VirusTotalKey),
+        IpQualityScoreKeyProtected = Protect(settings.IpQualityScoreKey),
+        OtxKeyProtected = Protect(settings.OtxKey),
+        GreyNoiseKeyProtected = Protect(settings.GreyNoiseKey),
+        ShodanKeyProtected = Protect(settings.ShodanKey),
+        IpInfoKeyProtected = Protect(settings.IpInfoKey),
         DeepLKeyProtected = Protect(settings.DeepLKey),
         UploadApiKeyProtected = Protect(settings.UploadApiKey),
         Snippets = settings.Snippets,
         ColorHistory = settings.ColorHistory,
         JpegQuality = settings.JpegQuality,
         TranslateSource = settings.TranslateSource,
-        TranslateTarget = settings.TranslateTarget
+        TranslateTarget = settings.TranslateTarget,
+        TextExpanderEnabled = settings.TextExpanderEnabled,
+        ClipboardHistoryEnabled = settings.ClipboardHistoryEnabled,
+        FavoriteTools = settings.FavoriteTools
     };
 
     public AppSettings FromDocument(SettingsDocument document) => new()
@@ -89,13 +98,22 @@ public sealed class SettingsService
             ? "https://api-free.deepl.com/v2/translate"
             : document.DeepLEndpoint,
         AbuseIpDbKey = Unprotect(document.AbuseIpDbKeyProtected),
+        VirusTotalKey = Unprotect(document.VirusTotalKeyProtected),
+        IpQualityScoreKey = Unprotect(document.IpQualityScoreKeyProtected),
+        OtxKey = Unprotect(document.OtxKeyProtected),
+        GreyNoiseKey = Unprotect(document.GreyNoiseKeyProtected),
+        ShodanKey = Unprotect(document.ShodanKeyProtected),
+        IpInfoKey = Unprotect(document.IpInfoKeyProtected),
         DeepLKey = Unprotect(document.DeepLKeyProtected),
         UploadApiKey = Unprotect(document.UploadApiKeyProtected),
         Snippets = document.Snippets ?? [],
         ColorHistory = document.ColorHistory ?? [],
         JpegQuality = document.JpegQuality is < 1 or > 100 ? 85 : document.JpegQuality,
         TranslateSource = string.IsNullOrWhiteSpace(document.TranslateSource) ? "auto" : document.TranslateSource,
-        TranslateTarget = string.IsNullOrWhiteSpace(document.TranslateTarget) ? "TR" : document.TranslateTarget
+        TranslateTarget = string.IsNullOrWhiteSpace(document.TranslateTarget) ? "EN" : document.TranslateTarget,
+        TextExpanderEnabled = document.TextExpanderEnabled ?? true,
+        ClipboardHistoryEnabled = document.ClipboardHistoryEnabled ?? true,
+        FavoriteTools = document.FavoriteTools ?? []
     };
 
     private string Protect(string plain) =>

@@ -26,6 +26,8 @@ public sealed class ClipboardHistoryService : IClipboardHistory
         Load();
     }
 
+    public bool Enabled { get; set; } = true;
+
     public IReadOnlyList<ClipItem> Items => _items;
 
     public event EventHandler? Changed;
@@ -110,7 +112,7 @@ public sealed class ClipboardHistoryService : IClipboardHistory
 
     private void Capture()
     {
-        if (Volatile.Read(ref _suppress) > 0)
+        if (!Enabled || Volatile.Read(ref _suppress) > 0)
             return;
 
         try

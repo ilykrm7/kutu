@@ -37,6 +37,22 @@ jobs:
       - name: Test
         run: dotnet test tests/Kutu.Core.Tests/Kutu.Core.Tests.csproj -c Release --nologo
 
+      - name: Build shell extension
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path src/Kutu.App/shell | Out-Null
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if ($vs) {
+            $built = "src\Kutu.App\shell\KutuShell.ci.dll"
+            cmd /c "`"$vs\VC\Auxiliary\Build\vcvars64.bat`" && cl /nologo /LD /O2 /EHsc /utf-8 src\Kutu.Shell\KutuShell.cpp /link /OUT:$built ole32.lib uuid.lib shell32.lib shlwapi.lib"
+            if ($LASTEXITCODE -eq 0 -and (Test-Path $built)) {
+              Move-Item -Force $built src\Kutu.App\shell\KutuShell.dll
+            } else {
+              Write-Host "cl did not produce a DLL; the committed KutuShell.dll stays in the package"
+            }
+          }
+          if (-not (Test-Path src/Kutu.App/shell/KutuShell.dll)) { throw "KutuShell.dll was not produced" }
+
       - name: Publish Kutu.exe
         shell: pwsh
         run: >
@@ -45,22 +61,46 @@ jobs:
           -r win-x64
           --self-contained true
           -p:PublishSingleFile=true
-          -p:IncludeNativeLibrariesForSelfExtract=true
           -p:EnableCompressionInSingleFile=true
-          -p:IncludeAllContentForSelfExtract=true
-          -p:DebugType=embedded
-          -o artifacts
+          -p:DebugType=none
+          -p:DebugSymbols=false
+          -p:PublishReadyToRun=false
+          -o artifacts/full
+
+      - name: Publish Kutu-lite.exe
+        shell: pwsh
+        run: >
+          dotnet publish src/Kutu.App/Kutu.App.csproj
+          -c Release
+          -r win-x64
+          -p:SelfContained=false
+          -p:PublishSingleFile=true
+          -p:EnableCompressionInSingleFile=true
+          -p:DebugType=none
+          -p:DebugSymbols=false
+          -p:PublishReadyToRun=false
+          -o artifacts/lite
+
+      - name: Rename lite exe and print sizes
+        shell: pwsh
+        run: |
+          Move-Item -Force artifacts/lite/Kutu.exe artifacts/lite/Kutu-lite.exe
+          Get-Item artifacts/full/Kutu.exe, artifacts/lite/Kutu-lite.exe | ForEach-Object { "{0}`t{1}" -f $_.Name, $_.Length }
 
       - name: Upload exe artifact
         uses: actions/upload-artifact@v4
         with:
           name: Kutu-win-x64
-          path: artifacts/Kutu.exe
+          path: |
+            artifacts/full/Kutu.exe
+            artifacts/lite/Kutu-lite.exe
           if-no-files-found: error
 
       - name: Attach exe to GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/Kutu.exe
+          files: |
+            artifacts/full/Kutu.exe
+            artifacts/lite/Kutu-lite.exe
           fail_on_unmatched_files: true
