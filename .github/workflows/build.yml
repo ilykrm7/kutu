@@ -40,15 +40,18 @@ jobs:
       - name: Build shell extension
         shell: pwsh
         run: |
+          $PSNativeCommandUseErrorActionPreference = $false
           New-Item -ItemType Directory -Force -Path src/Kutu.App/shell | Out-Null
           $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
           if ($vs) {
             $built = "src\Kutu.App\shell\KutuShell.ci.dll"
-            cmd /c "`"$vs\VC\Auxiliary\Build\vcvars64.bat`" && cl /nologo /LD /O2 /EHsc /utf-8 src\Kutu.Shell\KutuShell.cpp /link /OUT:$built ole32.lib uuid.lib shell32.lib shlwapi.lib"
-            if ($LASTEXITCODE -eq 0 -and (Test-Path $built)) {
+            cmd /c "`"$vs\VC\Auxiliary\Build\vcvars64.bat`" && cl /nologo /LD /O2 /EHsc /utf-8 src\Kutu.Shell\KutuShell.cpp /link /OUT:$built ole32.lib uuid.lib shell32.lib shlwapi.lib & exit /b 0"
+            if ((Test-Path $built) -and ((Get-Item $built).Length -gt 0)) {
               Move-Item -Force $built src\Kutu.App\shell\KutuShell.dll
+              Write-Host "Using the MSVC shell DLL"
             } else {
               Write-Host "cl did not produce a DLL; the committed KutuShell.dll stays in the package"
+              if (Test-Path $built) { Remove-Item $built -Force }
             }
           }
           if (-not (Test-Path src/Kutu.App/shell/KutuShell.dll)) { throw "KutuShell.dll was not produced" }
