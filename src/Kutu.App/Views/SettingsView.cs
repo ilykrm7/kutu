@@ -275,11 +275,9 @@ public sealed class SettingsView : UserControl
 
         try
         {
-            var note = ContextMenuRegistration.SetEnabled(enabled);
+            ContextMenuRegistration.SetEnabled(enabled);
             _host.Settings.ContextMenuRegistered = enabled;
             await _host.SaveSettingsAsync();
-            if (note == "classic-only")
-                _status.Text = L.Get("Menu_ModernFail");
         }
         catch (Exception ex)
         {

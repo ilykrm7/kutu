@@ -47,7 +47,7 @@ Derleme sıkıştırmaz ve gizlemez. `kutuwebp.dll` yalnız WebP gerekirken `%LO
 Ayarlar'daki anahtar iki kayıt yazar, ikisi de kullanıcıya aittir, yönetici istemez:
 
 - Klasik menü: **Kutu ile dönüştür** alt menüsü (JPEG, PNG, WebP, ICO, PDF, BMP). Windows 11'de bu öğe çoğunlukla **Daha fazla seçenek** altındadır.
-- Modern menü: aynı alt menü, imzasız seyrek paket (`AllowUnsigned` + `ExternalLocation`) ve `KutuShell.dll`. Paket dosyaları exe'nin içindedir; ilk çalıştırmada veya menü kaydında `%AppData%\Kutu\shell\<sürüm>` altına açılır ve oradan kaydedilir. Sürüm değişince yeniden açılır. `Kutu.exe` klasörüne yazılmaz. Klasör yazılamıyorsa yalnız klasik menü kalır. Windows 11 gerekir.
+- Modern menü: aynı alt menü, imzasız seyrek paket (`AllowUnsigned` + `ExternalLocation`) ve `KutuShell.dll`. Paket dosyaları exe'nin içindedir; kayıt denemesinde `%AppData%\Kutu\shell\<sürüm>` altına açılır. Sürüm değişince yeniden açılır. `Kutu.exe` klasörüne yazılmaz. Geliştirici Modu ve imza olmayan makinelerde bu kayıt sessizce atlanır, klasik menü kalır ve neden `%AppData%\Kutu\shell\<sürüm>\kutu-shell.log` içine yazılır. Windows 11 gerekir.
 
 ## Geliştirme
 

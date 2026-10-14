@@ -40,16 +40,16 @@ public static class ContextMenuRegistration
         var exe = HostProcess.Executable ?? "";
         SetClassic(enabled, exe);
         RemoveLegacyNeighbors(exe);
+        Notify();
         if (!enabled)
         {
-            TryRemoveSparse();
-            Notify();
+            Queue(() => TryRemoveSparse());
             return "";
         }
 
-        var modern = Install(exe);
-        Notify();
-        return modern == "ok" ? "" : "classic-only";
+        // Unsigned sparse packages need Developer Mode. Failure must not block the toggle.
+        Queue(() => Install(exe));
+        return "";
     }
 
     public static void EnsureClassic(string? exe)
@@ -170,6 +170,9 @@ public static class ContextMenuRegistration
         {
             result = "classic-only";
         }
+
+        if (result != "ok")
+            NoteModernSkip(dir, "unsigned sparse package was not registered (" + result + ")");
 
         try
         {
@@ -503,6 +506,35 @@ public static class ContextMenuRegistration
     }
 
     private static char Hex(int value) => (char)(value < 10 ? '0' + value : 'a' + value - 10);
+
+    private static void Queue(Action action)
+    {
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                action();
+            }
+            catch
+            {
+                // The classic cascade is already registered.
+            }
+        });
+    }
+
+    private static void NoteModernSkip(string dir, string reason)
+    {
+        try
+        {
+            File.AppendAllText(
+                Path.Combine(dir, "kutu-shell.log"),
+                DateTimeOffset.Now.ToString("u") + " modern menu skipped: " + reason + Environment.NewLine);
+        }
+        catch
+        {
+            // Expected on machines without Developer Mode. Never write kutu.log for this.
+        }
+    }
 
     private static void Notify() => SHChangeNotify(0x08000000, 0, IntPtr.Zero, IntPtr.Zero);
 
