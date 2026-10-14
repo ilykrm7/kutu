@@ -2,15 +2,17 @@
 
 Windows için küçük bir İsviçre çakısı. Görsel dönüştürür, ekran görüntüsü alır, renk seçer, panoyu hatırlar, yazdığın tetikleyiciyi metne çevirir, alan adı ve IP bakar, çevirir, bağlantıya yükler. Tek bir koyu, yuvarlak pencerede durur; sistem tepsisinde yaşar.
 
+**İndir:** [Releases](https://github.com/ilykrm7/kutu/releases/latest) sayfasından tek dosya `Kutu.exe` (~9.4 MB). .NET Framework 4.8 üzerinde çalışır; bu çerçeve Windows 10 ve 11 ile hazır gelir. Kurulum ya da ayrı bir çalışma zamanı gerekmez.
+
 Arayüz Türkçe. Metinler `src/Kutu.Sdk/Resources/Strings.resx` içinde. İngilizce karşılıkları `Strings.en.resx` dosyasında; Ayarlar'dan English seçilince bir sonraki açılışta kullanılır.
 
 ## Özellikler
 
-- **Görsel dönüştür** — PNG, JPG, WebP, BMP, ICO, PDF ve HEIC. HEIC, Windows HEIF koduyla okunur (Microsoft Store: HEIF Image Extensions). ImageMagick yok.
+- **Görsel dönüştür** — sağ tık menüsünde **Kutu ile dönüştür** (JPEG, PNG, WebP, ICO, PDF, BMP). PNG, JPG, WebP, BMP, ICO, PDF ve HEIC. HEIC, Windows HEIF koduyla okunur (Microsoft Store: HEIF Image Extensions). ImageMagick yok.
 - **Toplu boyut ve sıkıştırma** — uzun kenar, genişlik, yükseklik veya yüzde; JPG / WebP / PNG.
 - **Ekran görüntüsü** — donmuş ekranda bölge seçimi ve yerinde işaretleme. Kopyala veya kaydet. Yükle kapalıdır (Yakında). Esc vazgeçer.
 - **Renk seçici** — HEX, RGB, HSL, kopyala, geçmiş.
-- **Pano geçmişi** — son 50 kayıt, arama, sabitleme. Karttaki anahtar kapatır.
+- **Pano geçmişi** — Ctrl+Alt+V ile açılır; son 50 kayıt, arama, sabitleme. Karttaki anahtar kapatır.
 - **Metin genişletici** — tetikleyici tam yazılınca hemen genişler (`:adm`, `mail:imza`). Ayrı bir kanca iş parçacığı. Karttaki anahtar kapatır.
 - **WHOIS + DNS** — RDAP (`rdap.org`), anahtarsız. A, AAAA, MX, NS, TXT, CNAME.
 - **IP itibarı** — AbuseIPDB, VirusTotal, IPQualityScore, OTX, GreyNoise, Shodan, IPinfo (anahtar Ayarlar'da, DPAPI). Anahtarsız: ipwho.is, Spamhaus ZEN, SpamCop, Barracuda ve TOR çıkış listesi.
@@ -54,18 +56,6 @@ Uygulama `net48` hedefler. Çekirdek testler `net48` ve `net8.0` olarak derlenir
 
 v2 için bırakılan yerler: yazı tipi bulucu, OCR, arka plan silme, SSL kontrolü, ekran kaydı, parola / UUID / özet.
 
-## Windows'ta denenmemiş olanlar
-
-Bu depo Linux üzerinde derlenir; pencere, tepsi, genel kısayol, klavye kancası, sağ tık menüsü, DPAPI, WIC/HEIF ve ekran yakalama gerçek Windows'ta doğrulanmalıdır. HEIC, makinede HEIF kodu yoksa çökmez; Microsoft Store'daki HEIF Image Extensions istenir. Çoklu monitörde farklı DPI ölçeklerinde bölge seçimi kayabilir.
-
-Metin genişletici, Kutu'dan daha yetkili (yönetici) pencerelerde tuş görmez.
-
-## English
-
-Kutu is a Windows tray utility: image convert and resize (WIC, including PDF; HEIC via the Windows HEIF codec), in-place annotated screenshots, a color picker, clipboard history, an Espanso-style expander, RDAP/DNS lookup, multi-provider IP reputation, and translation to English (DeepL, then Google, then MyMemory). Upload stays disabled. UI strings live in RESX (Turkish by default, English included). Secrets are DPAPI-encrypted in the user profile. GitHub Actions publishes one `Kutu.exe` for .NET Framework 4.8, which Windows 10, Windows 11, and Server 2019 already include. Dependencies are embedded without compression or obfuscation. libwebp is written to `%LOCALAPPDATA%\Kutu\bin` only when a WebP encode or decode needs it. The Windows 11 top-level context menu is a per-user unsigned sparse package; the classic submenu remains under Show more options. No administrator rights.
-
-An unsigned executable can still trip a Defender machine-learning heuristic. Submit a false positive at the [Microsoft file submission portal](https://www.microsoft.com/en-us/wdsi/filesubmission) as a software developer, and include the detection name, the file version, and this repository. [SignPath](https://signpath.io/) signs open-source releases at no charge after the foundation reviews the project. [Azure Trusted Signing](https://learn.microsoft.com/azure/trusted-signing/) (formerly Artifact Signing) works from GitHub Actions once an organization identity check is done; it is a paid service.
-
 ## Lisans
 
-[MIT](LICENSE)
+MIT. © 2026 Kerim Ekşi · [kerimeksi.com](https://kerimeksi.com)
