@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using Kutu.Core;
 using Kutu.Sdk.Hosting;
 using Kutu.Sdk.Localization;
 using Kutu.Sdk.Ui;
@@ -113,7 +114,7 @@ public sealed class LauncherWindow : Window
 
         if (e.Key == Key.Enter && _matches.Count > 0)
         {
-            Open(_matches[Math.Clamp(_selected, 0, _matches.Count - 1)]);
+            Open(_matches[Num.Clamp(_selected, 0, _matches.Count - 1)]);
             e.Handled = true;
         }
     }
@@ -206,9 +207,9 @@ public sealed class LauncherWindow : Window
             return true;
 
         var title = L.Get(tool.TitleKey);
-        return title.Contains(query, StringComparison.OrdinalIgnoreCase)
-            || tool.Id.Contains(query, StringComparison.OrdinalIgnoreCase)
-            || tool.Aliases.Any(alias => alias.Contains(query, StringComparison.OrdinalIgnoreCase)
-                || query.Contains(alias, StringComparison.OrdinalIgnoreCase));
+        return title.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0
+            || tool.Id.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0
+            || tool.Aliases.Any(alias => alias.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0
+                || query.IndexOf(alias, StringComparison.OrdinalIgnoreCase) >= 0);
     }
 }

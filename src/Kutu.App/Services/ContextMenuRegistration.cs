@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Kutu.Core;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -33,7 +34,7 @@ public static class ContextMenuRegistration
 
     public static string SetEnabled(bool enabled)
     {
-        var exe = Environment.ProcessPath ?? "";
+        var exe = HostProcess.Executable ?? "";
         SetClassic(enabled, exe);
         if (!enabled)
         {
@@ -232,7 +233,7 @@ public static class ContextMenuRegistration
                 return false;
             if (!process.WaitForExit(20000))
             {
-                process.Kill(entireProcessTree: true);
+                process.Kill();
                 return false;
             }
 
@@ -246,7 +247,7 @@ public static class ContextMenuRegistration
 
     private static string Manifest(string exeName)
     {
-        var items = string.Join('\n', Extensions.Select(ext =>
+        var items = string.Join("\n", Extensions.Select(ext =>
             $"""    <desktop5:ItemType Type="{ext}"><desktop5:Verb Id="KutuConvert" Clsid="{Clsid}" /></desktop5:ItemType>"""));
         return $"""
             <?xml version="1.0" encoding="utf-8"?>

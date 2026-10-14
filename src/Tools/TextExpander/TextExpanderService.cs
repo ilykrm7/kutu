@@ -92,7 +92,7 @@ public sealed class TextExpanderService : IDisposable
 
     private IntPtr Hook(int nCode, IntPtr wParam, IntPtr lParam)
     {
-        if (nCode < 0 || (wParam != WmKeyDown && wParam != WmKeyUp && wParam != WmSysKeyDown && wParam != WmSysKeyUp))
+        if (nCode < 0 || (wParam != (IntPtr)WmKeyDown && wParam != (IntPtr)WmKeyUp && wParam != (IntPtr)WmSysKeyDown && wParam != (IntPtr)WmSysKeyUp))
             return CallNextHookEx(_hook, nCode, wParam, lParam);
 
         KeyInjector.EnterHook();
@@ -101,10 +101,10 @@ public sealed class TextExpanderService : IDisposable
             var data = Marshal.PtrToStructure<KbdLlHook>(lParam);
             if (ExpanderHook.ShouldHandle(data.Flags, KeyInjector.IsBusy, data.Extra))
             {
-                var down = wParam == WmKeyDown || wParam == WmSysKeyDown;
+                var down = wParam == (IntPtr)WmKeyDown || wParam == (IntPtr)WmSysKeyDown;
                 TrackModifier(data.VkCode, down);
                 NoteFocus();
-                if (down && wParam == WmKeyDown && _host.Settings.TextExpanderEnabled && !IsOwnProcess())
+                if (down && wParam == (IntPtr)WmKeyDown && _host.Settings.TextExpanderEnabled && !IsOwnProcess())
                     HandleKey(data.VkCode, data.ScanCode);
             }
 
@@ -357,7 +357,7 @@ public sealed class TextExpanderService : IDisposable
     {
         var hwnd = GetForegroundWindow();
         GetWindowThreadProcessId(hwnd, out var pid);
-        return pid == (uint)Environment.ProcessId;
+        return pid == (uint)Process.GetCurrentProcess().Id;
     }
 
     private delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);

@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Kutu.Core;
 
 [assembly: InternalsVisibleTo("Kutu.Core.Tests")]
 
@@ -13,7 +14,12 @@ internal static class LibWebp
 
     static LibWebp()
     {
+#if NETFRAMEWORK
+        if (LoadLibrary(Materialize()) == IntPtr.Zero)
+            throw new InvalidOperationException("image");
+#else
         NativeLibrary.SetDllImportResolver(typeof(LibWebp).Assembly, Resolve);
+#endif
     }
 
     public static void Write(byte[] bgra, int width, int height, int stride, float quality, string outputPath)
@@ -56,6 +62,10 @@ internal static class LibWebp
         }
     }
 
+#if NETFRAMEWORK
+    [DllImport("kernel32", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern IntPtr LoadLibrary(string fileName);
+#else
     private static IntPtr Resolve(string library, Assembly assembly, DllImportSearchPath? path)
     {
         if (!library.Equals("kutuwebp", StringComparison.OrdinalIgnoreCase))
@@ -63,6 +73,7 @@ internal static class LibWebp
 
         return NativeLibrary.Load(Materialize());
     }
+#endif
 
     private static string Materialize()
     {
@@ -97,7 +108,7 @@ internal static class LibWebp
     private static IEnumerable<string> Candidates()
     {
         yield return Path.Combine(AppContext.BaseDirectory, "kutuwebp.dll");
-        var process = Environment.ProcessPath;
+        var process = HostProcess.Executable;
         if (!string.IsNullOrWhiteSpace(process))
             yield return Path.Combine(Path.GetDirectoryName(process) ?? "", "kutuwebp.dll");
     }

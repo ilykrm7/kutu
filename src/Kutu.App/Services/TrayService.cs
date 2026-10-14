@@ -1,4 +1,5 @@
 using System.Windows;
+using Kutu.Core;
 using Kutu.Sdk.Hosting;
 using Kutu.Sdk.Localization;
 
@@ -65,7 +66,7 @@ public sealed class TrayService : IDisposable
     {
         try
         {
-            var path = Environment.ProcessPath;
+            var path = HostProcess.Executable;
             if (!string.IsNullOrWhiteSpace(path))
             {
                 var extracted = System.Drawing.Icon.ExtractAssociatedIcon(path);

@@ -24,10 +24,23 @@ public static class SingleInstance
             {
                 try
                 {
-                    await using var server = new NamedPipeServerStream(PipeName, PipeDirection.In, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
-                    await server.WaitForConnectionAsync(cancellationToken);
+                    using var server = new NamedPipeServerStream(PipeName, PipeDirection.In, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+                    using (cancellationToken.Register(() =>
+                    {
+                        try
+                        {
+                            server.Dispose();
+                        }
+                        catch (ObjectDisposedException)
+                        {
+                        }
+                    }))
+                    {
+                        await server.WaitForConnectionAsync();
+                    }
+
                     using var reader = new StreamReader(server);
-                    var payload = await reader.ReadToEndAsync(cancellationToken);
+                    var payload = await reader.ReadToEndAsync();
                     var args = JsonSerializer.Deserialize<string[]>(payload) ?? [];
                     onMessage(args);
                 }

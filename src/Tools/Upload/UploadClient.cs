@@ -25,7 +25,7 @@ public static class UploadClient
         request.Headers.TryAddWithoutValidation("X-Api-Key", apiKey);
         request.Headers.TryAddWithoutValidation("Authorization", "Bearer " + apiKey);
         using var response = await http.SendAsync(request, cancellationToken);
-        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+        var body = await response.Content.ReadAsStringAsync();
         if (!response.IsSuccessStatusCode)
             throw new InvalidOperationException(body.Length > 300 ? body[..300] : body);
 

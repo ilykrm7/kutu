@@ -15,7 +15,7 @@ public readonly record struct HotkeyGesture(bool Control, bool Alt, bool Shift, 
         if (Shift) parts.Add("Shift");
         if (Win) parts.Add("Win");
         parts.Add(NormalizeKey(Key));
-        return string.Join('+', parts);
+        return string.Join("+", parts);
     }
 
     public static bool TryParse(string? text, out HotkeyGesture gesture)
@@ -24,14 +24,17 @@ public readonly record struct HotkeyGesture(bool Control, bool Alt, bool Shift, 
         if (string.IsNullOrWhiteSpace(text))
             return false;
 
-        var parts = text.Split('+', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var parts = text.Split(new[] { '+' }, StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length == 0)
             return false;
 
         bool control = false, alt = false, shift = false, win = false;
         string? key = null;
-        foreach (var part in parts)
+        foreach (var raw in parts)
         {
+            var part = raw.Trim();
+            if (part.Length == 0)
+                continue;
             switch (part.ToLowerInvariant())
             {
                 case "ctrl":

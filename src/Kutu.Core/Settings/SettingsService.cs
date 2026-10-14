@@ -42,7 +42,7 @@ public sealed class SettingsService
             return;
         }
 
-        await using var stream = File.OpenRead(_path);
+        using var stream = File.OpenRead(_path);
         var document = await JsonSerializer.DeserializeAsync<SettingsDocument>(stream, JsonOptions, cancellationToken)
             .ConfigureAwait(false);
         if (document is null)
@@ -70,7 +70,7 @@ public sealed class SettingsService
     {
         Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
         var document = ToDocument(Current);
-        await using var stream = File.Create(_path);
+        using var stream = File.Create(_path);
         await JsonSerializer.SerializeAsync(stream, document, JsonOptions, cancellationToken).ConfigureAwait(false);
         ContextMenuDirty = false;
     }

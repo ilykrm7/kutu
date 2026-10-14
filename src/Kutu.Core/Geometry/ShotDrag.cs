@@ -1,3 +1,5 @@
+using Kutu.Core;
+
 namespace Kutu.Core.Geometry;
 
 public readonly record struct ShotDrag(double X, double Y, double Width, double Height)
@@ -11,13 +13,13 @@ public readonly record struct ShotDrag(double X, double Y, double Width, double 
     {
         var limitW = Math.Max(0, width);
         var limitH = Math.Max(0, height);
-        var left = Math.Clamp(X, 0, limitW);
-        var top = Math.Clamp(Y, 0, limitH);
-        var right = Math.Clamp(X + Width, 0, limitW);
-        var bottom = Math.Clamp(Y + Height, 0, limitH);
+        var left = Num.Clamp(X, 0, limitW);
+        var top = Num.Clamp(Y, 0, limitH);
+        var right = Num.Clamp(X + Width, 0, limitW);
+        var bottom = Num.Clamp(Y + Height, 0, limitH);
         return new ShotDrag(left, top, Math.Max(0, right - left), Math.Max(0, bottom - top));
     }
 
     public static (double X, double Y) ClampPoint(double x, double y, double width, double height) =>
-        (Math.Clamp(x, 0, Math.Max(0, width)), Math.Clamp(y, 0, Math.Max(0, height)));
+        (Num.Clamp(x, 0, Math.Max(0, width)), Num.Clamp(y, 0, Math.Max(0, height)));
 }

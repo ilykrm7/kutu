@@ -149,7 +149,7 @@ public sealed class WhoisView : UserControl
         {
             // A newer keystroke replaced this query.
         }
-        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+        catch (RdapNotFoundException)
         {
             _status.Text = L.Get("Whois_Empty");
         }
@@ -188,7 +188,12 @@ public static class RdapClient
     {
         using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
         http.DefaultRequestHeaders.UserAgent.ParseAdd("Kutu/1.0 (+https://github.com/ilykrm7/kutu)");
-        var json = await http.GetStringAsync($"https://rdap.org/domain/{Uri.EscapeDataString(domain)}", cancellationToken);
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"https://rdap.org/domain/{Uri.EscapeDataString(domain)}");
+        using var response = await http.SendAsync(request, cancellationToken);
+        if (response.StatusCode == HttpStatusCode.NotFound)
+            throw new RdapNotFoundException();
+        response.EnsureSuccessStatusCode();
+        var json = await response.Content.ReadAsStringAsync();
         return RdapParser.Parse(json);
     }
 }
@@ -226,4 +231,8 @@ public static class DnsLookup
         TxtRecord txt => string.Concat(txt.Text),
         _ => record.ToString()
     };
+}
+
+public sealed class RdapNotFoundException : Exception
+{
 }

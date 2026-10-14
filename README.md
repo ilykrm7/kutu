@@ -23,27 +23,26 @@ Kısayollar, Windows ile başlatma ve sağ tık menüsü Ayarlar'dan açılıp k
 
 ## Exe nerede
 
-Her push'ta Actions çıktısı `Kutu-win-x64` iki dosya içerir:
+Her push'ta Actions çıktısı `Kutu-win-x64` tek dosyadır: `Kutu.exe`. .NET Framework 4.8 üzerine kuruludur. Windows 10, Windows 11 ve Windows Server 2019 bu çerçeveyi hazır getirir; ayrı bir çalışma zamanı kurulmaz. Bağımlılıklar ve `kutuwebp.dll` exe'nin içindedir.
 
-- `Kutu.exe` — kendi .NET 8 çalışma zamanını taşıyan, sıkıştırılmış tek dosya.
-- `Kutu-lite.exe` — .NET 8 Desktop Runtime yüklü makineler için çerçeveye bağlı tek dosya.
-
-Sürüm etiketi (`v*`) itilince ikisi de GitHub Release'a eklenir. Kurulum yok. İlk açılışta Windows SmartScreen uyarabilir; imzasız bir topluluk aracı olduğu için bu beklenen bir durum.
+Sürüm etiketi (`v*`) itilince aynı dosya GitHub Release'a eklenir. Kurulum yok. İlk açılışta Windows SmartScreen uyarabilir; imzasız bir topluluk aracı olduğu için bu beklenen bir durum.
 
 ## Sağ tık menüsü
 
 Ayarlar'daki anahtar iki kayıt yazar, ikisi de kullanıcıya aittir, yönetici istemez:
 
 - Klasik menü: **Kutu ile dönüştür** alt menüsü (JPEG, PNG, WebP, ICO, PDF, BMP). Windows 11'de bu öğe çoğunlukla **Daha fazla seçenek** altındadır.
-- Modern menü: aynı alt menü, imzasız seyrek paket (`AllowUnsigned` + `ExternalLocation`) ve `KutuShell.dll`. Paket, çalışan exe'nin klasörüne yazılır (`kutu.path` hangi exe'nin — `Kutu.exe` veya `Kutu-lite.exe` — açılacağını söyler). Klasör yazılamıyorsa yalnız klasik menü kalır. Windows 11 gerekir.
+- Modern menü: aynı alt menü, imzasız seyrek paket (`AllowUnsigned` + `ExternalLocation`) ve `KutuShell.dll`. Paket, çalışan `Kutu.exe` klasörüne yazılır. Klasör yazılamıyorsa yalnız klasik menü kalır. Windows 11 gerekir.
 
 ## Geliştirme
 
 ```bash
-dotnet test tests/Kutu.Core.Tests/Kutu.Core.Tests.csproj -c Release
-dotnet publish src/Kutu.App/Kutu.App.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -o artifacts/full
-dotnet publish src/Kutu.App/Kutu.App.csproj -c Release -r win-x64 -p:SelfContained=false -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -o artifacts/lite
+dotnet test tests/Kutu.Core.Tests/Kutu.Core.Tests.csproj -c Release -f net8.0
+dotnet test tests/Kutu.Core.Tests/Kutu.Core.Tests.csproj -c Release -f net48
+dotnet publish src/Kutu.App/Kutu.App.csproj -c Release -o artifacts
 ```
+
+Uygulama `net48` hedefler. Çekirdek testler `net48` ve `net8.0` olarak derlenir; Linux'ta `net8.0`, Windows'ta `net48` çalışır.
 
 Çözüm `Kutu.sln`. Her araç `src/Tools/<Ad>` altında kendi projesinde. Yeni araç için:
 
@@ -61,7 +60,7 @@ Metin genişletici, Kutu'dan daha yetkili (yönetici) pencerelerde tuş görmez.
 
 ## English
 
-Kutu is a Windows tray utility: image convert and resize (WIC, including PDF; HEIC via the Windows HEIF codec), in-place annotated screenshots, a color picker, clipboard history, an Espanso-style expander, RDAP/DNS lookup, multi-provider IP reputation, and translation to English (DeepL, then Google, then MyMemory). Upload stays disabled. UI strings live in RESX (Turkish by default, English included). Secrets are DPAPI-encrypted in the user profile. GitHub Actions publishes a compressed self-contained `Kutu.exe` and a framework-dependent `Kutu-lite.exe` (needs the .NET 8 Desktop Runtime). The Windows 11 top-level context menu is a per-user unsigned sparse package; the classic submenu remains under Show more options. No administrator rights.
+Kutu is a Windows tray utility: image convert and resize (WIC, including PDF; HEIC via the Windows HEIF codec), in-place annotated screenshots, a color picker, clipboard history, an Espanso-style expander, RDAP/DNS lookup, multi-provider IP reputation, and translation to English (DeepL, then Google, then MyMemory). Upload stays disabled. UI strings live in RESX (Turkish by default, English included). Secrets are DPAPI-encrypted in the user profile. GitHub Actions publishes one `Kutu.exe` for .NET Framework 4.8, which Windows 10, Windows 11, and Server 2019 already include. Dependencies and libwebp are embedded. The Windows 11 top-level context menu is a per-user unsigned sparse package; the classic submenu remains under Show more options. No administrator rights.
 
 ## Lisans
 

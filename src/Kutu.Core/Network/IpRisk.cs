@@ -1,3 +1,5 @@
+using Kutu.Core;
+
 namespace Kutu.Core.Network;
 
 public static class IpRisk
@@ -8,7 +10,7 @@ public static class IpRisk
         foreach (var score in scores)
         {
             if (score is int value)
-                values.Add(Math.Clamp(value, 0, 100));
+                values.Add(Num.Clamp(value, 0, 100));
         }
 
         if (dnsblHits is > 0)

@@ -33,7 +33,7 @@ public static class ConvertArgs
         var list = new List<string>();
         for (var i = index + 2; i < args.Count; i++)
         {
-            if (args[i].StartsWith('-'))
+            if (args[i].StartsWith("-", StringComparison.Ordinal))
                 break;
             var path = args[i].Trim().Trim('"');
             if (path.Length > 0)

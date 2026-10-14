@@ -390,8 +390,8 @@ public partial class DashboardView : UserControl
     };
 
     private static bool Matches(IKutuTool tool, string title, string description, string query) =>
-        title.Contains(query, StringComparison.OrdinalIgnoreCase)
-        || description.Contains(query, StringComparison.OrdinalIgnoreCase)
-        || tool.Id.Contains(query, StringComparison.OrdinalIgnoreCase)
-        || tool.Aliases.Any(alias => alias.Contains(query, StringComparison.OrdinalIgnoreCase));
+        title.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0
+        || description.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0
+        || tool.Id.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0
+        || tool.Aliases.Any(alias => alias.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0);
 }

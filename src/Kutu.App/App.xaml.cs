@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Threading;
 using Kutu.App.Services;
+using Kutu.Core;
 using Kutu.Core.Diagnostics;
 using Kutu.Core.Settings;
 using Kutu.Sdk.Hosting;
@@ -96,7 +97,7 @@ public partial class App : Application
             _host.AttachTray(_tray.ShowNotice);
             if (settings.Current.ContextMenuRegistered)
             {
-                var exe = Environment.ProcessPath ?? "";
+                var exe = HostProcess.Executable ?? "";
                 _ = Task.Run(() =>
                 {
                     try
@@ -168,7 +169,7 @@ public partial class App : Application
     {
         try
         {
-            var exe = Environment.ProcessPath;
+            var exe = HostProcess.Executable;
             var staleOff = settings.ContextMenuExplicitOff && ContextMenuRegistration.HasClassicMenu();
             if (settings.ContextMenuExplicitOff && !staleOff)
             {

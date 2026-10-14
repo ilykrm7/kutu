@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
+using Kutu.Core;
 
 namespace Kutu.Imaging;
 
@@ -15,7 +16,7 @@ internal static class WicCodec
 
     public static void Convert(string inputPath, string outputPath, KutuImageFormat format, int quality, FitMode? fit, int fitValue)
     {
-        if (!OperatingSystem.IsWindows())
+        if (!HostProcess.IsWindows)
             throw new PlatformNotSupportedException("Image conversion uses the Windows Imaging Component.");
 
         var factory = CreateFactory();
@@ -291,7 +292,7 @@ internal static class WicCodec
             pixels[i + 2] = (byte)Math.Min(255, pixels[i + 2] * 255 / alpha);
         }
 
-        LibWebp.Write(pixels, (int)width, (int)height, stride, Math.Clamp(quality, 1, 100), outputPath);
+        LibWebp.Write(pixels, (int)width, (int)height, stride, Num.Clamp(quality, 1, 100), outputPath);
     }
 
     private static void Encode(IWICImagingFactory factory, IWICBitmapSource source, string outputPath, Guid container, int quality, out object? a, out object? b)
@@ -309,7 +310,7 @@ internal static class WicCodec
         try
         {
             var prop = new PropBag { dwType = 1, vt = 4, pstrName = name };
-            var value = new PropVariant { vt = 4, flt = Math.Clamp(quality, 1, 100) / 100f };
+            var value = new PropVariant { vt = 4, flt = Num.Clamp(quality, 1, 100) / 100f };
             bag.Write(1, ref prop, ref value);
         }
         catch

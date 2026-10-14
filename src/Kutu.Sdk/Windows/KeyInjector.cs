@@ -39,13 +39,13 @@ public static class KeyInjector
 
     public static Task RunAsync(Action work)
     {
-        var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var done = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         Run(() =>
         {
             try
             {
                 work();
-                done.TrySetResult();
+                done.TrySetResult(true);
             }
             catch (Exception ex)
             {

@@ -1,6 +1,7 @@
 bin/
 obj/
 artifacts/
+FodyWeavers.xsd
 .vs/
 .idea/
 *.user

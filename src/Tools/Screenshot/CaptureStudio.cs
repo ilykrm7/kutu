@@ -5,6 +5,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using Kutu.Core;
 using Kutu.Core.Geometry;
 using Kutu.Sdk.Hosting;
 using Kutu.Sdk.Localization;
@@ -442,7 +443,7 @@ public sealed class CaptureStudio : Window
     {
         color = default;
         var hex = text.Trim();
-        if (hex.StartsWith('#'))
+        if (hex.StartsWith("#", StringComparison.Ordinal))
             hex = hex[1..];
         if (hex.Length != 6)
             return false;
@@ -673,8 +674,8 @@ public sealed class CaptureStudio : Window
         var dx = current.X - _dragOrigin.X;
         var dy = current.Y - _dragOrigin.Y;
         var next = new Rect(_dragRect.X + dx, _dragRect.Y + dy, _dragRect.Width, _dragRect.Height);
-        next.X = Math.Clamp(next.X, 0, Math.Max(0, Width - next.Width));
-        next.Y = Math.Clamp(next.Y, 0, Math.Max(0, Height - next.Height));
+        next.X = Num.Clamp(next.X, 0, Math.Max(0, Width - next.Width));
+        next.Y = Num.Clamp(next.Y, 0, Math.Max(0, Height - next.Height));
         _sel = next;
         LayoutSelection(showChrome: true);
         RefreshCrop();
@@ -897,10 +898,10 @@ public sealed class CaptureStudio : Window
         var y = (int)Math.Round(dip.Y * _screen.ScaleY);
         var w = (int)Math.Round(dip.Width * _screen.ScaleX);
         var h = (int)Math.Round(dip.Height * _screen.ScaleY);
-        x = Math.Clamp(x, 0, Math.Max(0, _screen.Bitmap.PixelWidth - 1));
-        y = Math.Clamp(y, 0, Math.Max(0, _screen.Bitmap.PixelHeight - 1));
-        w = Math.Clamp(w, 1, _screen.Bitmap.PixelWidth - x);
-        h = Math.Clamp(h, 1, _screen.Bitmap.PixelHeight - y);
+        x = Num.Clamp(x, 0, Math.Max(0, _screen.Bitmap.PixelWidth - 1));
+        y = Num.Clamp(y, 0, Math.Max(0, _screen.Bitmap.PixelHeight - 1));
+        w = Num.Clamp(w, 1, _screen.Bitmap.PixelWidth - x);
+        h = Num.Clamp(h, 1, _screen.Bitmap.PixelHeight - y);
         return new Int32Rect(x, y, w, h);
     }
 

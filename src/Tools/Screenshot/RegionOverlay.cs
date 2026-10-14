@@ -1,3 +1,4 @@
+using Kutu.Core;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -123,10 +124,10 @@ public sealed class RegionOverlay : Window
         var y = (int)Math.Round(dip.Y * _screen.ScaleY);
         var w = (int)Math.Round(dip.Width * _screen.ScaleX);
         var h = (int)Math.Round(dip.Height * _screen.ScaleY);
-        x = Math.Clamp(x, 0, _screen.Bitmap.PixelWidth - 1);
-        y = Math.Clamp(y, 0, _screen.Bitmap.PixelHeight - 1);
-        w = Math.Clamp(w, 1, _screen.Bitmap.PixelWidth - x);
-        h = Math.Clamp(h, 1, _screen.Bitmap.PixelHeight - y);
+        x = Num.Clamp(x, 0, _screen.Bitmap.PixelWidth - 1);
+        y = Num.Clamp(y, 0, _screen.Bitmap.PixelHeight - 1);
+        w = Num.Clamp(w, 1, _screen.Bitmap.PixelWidth - x);
+        h = Num.Clamp(h, 1, _screen.Bitmap.PixelHeight - y);
         return new Int32Rect(x, y, w, h);
     }
 }

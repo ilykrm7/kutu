@@ -5,8 +5,9 @@ public static class DomainName
     public static string Normalize(string input)
     {
         var text = input.Trim();
-        if (text.Contains("://", StringComparison.Ordinal))
-            text = text.Split("://", 2)[1];
+        var scheme = text.IndexOf("://", StringComparison.Ordinal);
+        if (scheme >= 0)
+            text = text.Substring(scheme + 3);
 
         var slash = text.IndexOf('/');
         if (slash >= 0)
@@ -22,7 +23,7 @@ public static class DomainName
     public static bool IsComplete(string input)
     {
         var domain = Normalize(input);
-        if (domain.Length == 0 || domain.Contains(' ') || domain.Contains(':'))
+        if (domain.Length == 0 || domain.IndexOf(' ') >= 0 || domain.IndexOf(':') >= 0)
             return false;
 
         var labels = domain.Split('.');

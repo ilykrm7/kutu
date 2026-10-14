@@ -33,13 +33,13 @@ public static class PdfImage
             if (i == 3)
             {
                 Write("stream\n");
-                stream.Write(contentBytes);
+                stream.Write(contentBytes, 0, contentBytes.Length);
                 Write("\nendstream\n");
             }
             else if (i == 4)
             {
                 Write("stream\n");
-                stream.Write(jpeg);
+                stream.Write(jpeg, 0, jpeg.Length);
                 Write("\nendstream\n");
             }
 
@@ -63,5 +63,5 @@ public static class PdfImage
         File.WriteAllBytes(path, FromJpeg(jpeg, width, height));
     }
 
-    private static void WriteBytes(Stream stream, byte[] bytes) => stream.Write(bytes);
+    private static void WriteBytes(Stream stream, byte[] bytes) => stream.Write(bytes, 0, bytes.Length);
 }

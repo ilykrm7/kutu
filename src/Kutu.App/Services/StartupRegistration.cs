@@ -1,3 +1,4 @@
+using Kutu.Core;
 using Microsoft.Win32;
 
 namespace Kutu.App.Services;
@@ -12,7 +13,7 @@ public static class StartupRegistration
         using var key = Registry.CurrentUser.OpenSubKey(RunKey, writable: true)
             ?? throw new InvalidOperationException(RunKey);
         if (enabled)
-            key.SetValue(ValueName, $"\"{Environment.ProcessPath}\" --tray");
+            key.SetValue(ValueName, $"\"{HostProcess.Executable}\" --tray");
         else
             key.DeleteValue(ValueName, throwOnMissingValue: false);
     }

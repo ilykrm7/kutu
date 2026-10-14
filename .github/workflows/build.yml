@@ -21,7 +21,7 @@ jobs:
           dotnet-version: 8.0.x
 
       - name: Test
-        run: dotnet test tests/Kutu.Core.Tests/Kutu.Core.Tests.csproj -c Release --nologo
+        run: dotnet test tests/Kutu.Core.Tests/Kutu.Core.Tests.csproj -c Release -f net8.0 --nologo
 
   publish:
     name: win-x64 single file
@@ -35,7 +35,7 @@ jobs:
           dotnet-version: 8.0.x
 
       - name: Test
-        run: dotnet test tests/Kutu.Core.Tests/Kutu.Core.Tests.csproj -c Release --nologo
+        run: dotnet test tests/Kutu.Core.Tests/Kutu.Core.Tests.csproj -c Release -f net48 --nologo
 
       - name: Build shell extension
         shell: pwsh
@@ -61,34 +61,13 @@ jobs:
         run: >
           dotnet publish src/Kutu.App/Kutu.App.csproj
           -c Release
-          -r win-x64
-          --self-contained true
-          -p:PublishSingleFile=true
-          -p:EnableCompressionInSingleFile=true
           -p:DebugType=none
           -p:DebugSymbols=false
-          -p:PublishReadyToRun=false
-          -o artifacts/full
+          -o artifacts
 
-      - name: Publish Kutu-lite.exe
+      - name: Print size
         shell: pwsh
-        run: >
-          dotnet publish src/Kutu.App/Kutu.App.csproj
-          -c Release
-          -r win-x64
-          -p:SelfContained=false
-          -p:PublishSingleFile=true
-          -p:EnableCompressionInSingleFile=false
-          -p:DebugType=none
-          -p:DebugSymbols=false
-          -p:PublishReadyToRun=false
-          -o artifacts/lite
-
-      - name: Rename lite exe and print sizes
-        shell: pwsh
-        run: |
-          Move-Item -Force artifacts/lite/Kutu.exe artifacts/lite/Kutu-lite.exe
-          Get-Item artifacts/full/Kutu.exe, artifacts/lite/Kutu-lite.exe | ForEach-Object { "{0}`t{1}" -f $_.Name, $_.Length }
+        run: Get-Item artifacts/Kutu.exe | ForEach-Object { "{0}`t{1}" -f $_.Name, $_.Length }
 
       - name: Smoke start
         shell: pwsh
@@ -97,7 +76,7 @@ jobs:
           $PSNativeCommandUseErrorActionPreference = $false
           $log = Join-Path $env:APPDATA 'Kutu\kutu.log'
           function Stop-Kutu {
-            Get-Process -Name Kutu,Kutu-lite -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+            Get-Process -Name Kutu -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
             Start-Sleep -Seconds 1
           }
           function Assert-Started($path, $seconds) {
@@ -124,8 +103,9 @@ jobs:
             Stop-Kutu
             Write-Host "started $path"
           }
-          Assert-Started (Resolve-Path 'artifacts\lite\Kutu-lite.exe') 8
-          Assert-Started (Resolve-Path 'artifacts\full\Kutu.exe') 25
+          New-Item -ItemType Directory -Force -Path artifacts/ship | Out-Null
+          Copy-Item artifacts/Kutu.exe artifacts/ship/Kutu.exe -Force
+          Assert-Started (Resolve-Path 'artifacts\ship\Kutu.exe') 20
 
       - name: Context menu command
         shell: pwsh
@@ -133,13 +113,13 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $PSNativeCommandUseErrorActionPreference = $false
           function Stop-Kutu {
-            Get-Process -Name Kutu,Kutu-lite -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+            Get-Process -Name Kutu -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
             Start-Sleep -Seconds 1
           }
           Stop-Kutu
           $log = Join-Path $env:APPDATA 'Kutu\kutu.log'
           if (Test-Path $log) { Remove-Item $log -Force }
-          $lite = (Resolve-Path 'artifacts\lite\Kutu-lite.exe').Path
+          $lite = (Resolve-Path 'artifacts\ship\Kutu.exe').Path
           $proc = Start-Process -FilePath $lite -PassThru
           $extensions = '.png','.jpg','.jpeg','.jfif','.webp','.bmp','.gif','.tif','.tiff','.ico','.heic','.heif'
           $verbs = @(
@@ -174,7 +154,7 @@ jobs:
             if ($ready -and (Test-Path $store)) { $ready = $false }
             if ($ready -and (-not (Test-Path $settings) -or (Get-Content $settings -Raw) -notmatch '"contextMenuRegistered"\s*:\s*true')) { $ready = $false }
           } while (-not $ready -and (Get-Date) -lt $deadline)
-          if (-not $ready) { throw 'nested context menu was not registered for Kutu-lite.exe' }
+          if (-not $ready) { throw 'nested context menu was not registered for Kutu.exe' }
           foreach ($ext in $extensions) {
             $base = "HKCU:\Software\Classes\SystemFileAssociations\$ext\shell\Kutu"
             $item = Get-Item $base
@@ -196,7 +176,7 @@ jobs:
           if (Test-Path $store) { throw 'HKCU CommandStore is ignored by Explorer SubCommands and must not be registered' }
           $json = Get-Content $settings -Raw
           if ($json -notmatch '"contextMenuRegistered"\s*:\s*true') { throw "settings flag:`n$json" }
-          if ($proc.HasExited) { throw "Kutu-lite exited during menu registration with $($proc.ExitCode)" }
+          if ($proc.HasExited) { throw "Kutu exited during menu registration with $($proc.ExitCode)" }
           if (Test-Path $log) { throw "menu registration wrote kutu.log:`n$(Get-Content $log -Raw)" }
           $dir = Join-Path $env:TEMP ("kutu-menu-" + [guid]::NewGuid().ToString('N'))
           New-Item -ItemType Directory -Path $dir | Out-Null
@@ -209,7 +189,7 @@ jobs:
           $outB = Join-Path $dir 'b.jpg'
           # The main instance is still running. Explorer starts one process per file;
           # both must convert and exit without taking the single-instance mutex.
-          if ($proc.HasExited) { throw 'Kutu-lite exited before the convert-to check' }
+          if ($proc.HasExited) { throw 'Kutu exited before the convert-to check' }
           $convert = Start-Process -FilePath $lite -ArgumentList @('--convert-to','jpeg',$source) -PassThru
           $convertB = Start-Process -FilePath $lite -ArgumentList @('--convert-to','jpeg',$sourceB) -PassThru
           $deadline = (Get-Date).AddSeconds(30)
@@ -234,7 +214,7 @@ jobs:
             if ($alone.HasExited -and (Test-Path $out)) { break }
           } while ((Get-Date) -lt $aloneDeadline)
           if (-not $alone.HasExited) { throw 'convert-to with Kutu closed opened a window instead of exiting' }
-          Get-Process -Name Kutu,Kutu-lite -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+          Get-Process -Name Kutu -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
           if (-not (Test-Path $out)) { throw 'convert-to with Kutu closed did not write the jpeg' }
           Write-Host "context menu command wrote $($bytes.Length) bytes"
 
@@ -242,16 +222,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Kutu-win-x64
-          path: |
-            artifacts/full/Kutu.exe
-            artifacts/lite/Kutu-lite.exe
+          path: artifacts/ship/Kutu.exe
           if-no-files-found: error
 
       - name: Attach exe to GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            artifacts/full/Kutu.exe
-            artifacts/lite/Kutu-lite.exe
+          files: artifacts/Kutu.exe
           fail_on_unmatched_files: true

@@ -1,4 +1,5 @@
 using System.Windows.Threading;
+using Kutu.Core;
 using Kutu.Core.Commands;
 using Kutu.Core.Diagnostics;
 using Kutu.Core.Settings;
@@ -71,7 +72,7 @@ internal static class HeadlessConvert
         System.Drawing.Icon? owned = null;
         try
         {
-            var path = Environment.ProcessPath;
+            var path = HostProcess.Executable;
             if (!string.IsNullOrWhiteSpace(path))
                 owned = System.Drawing.Icon.ExtractAssociatedIcon(path);
         }

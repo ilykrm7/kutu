@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
+using Kutu.Core;
 using Kutu.Imaging;
 using Kutu.Sdk.Hosting;
 using Kutu.Sdk.Localization;
@@ -69,7 +70,7 @@ public sealed class ImageResizeView : UserControl
         {
             Minimum = 40,
             Maximum = 100,
-            Value = Math.Clamp(host.Settings.JpegQuality, 40, 100),
+            Value = Num.Clamp(host.Settings.JpegQuality, 40, 100),
             Width = 180,
             VerticalAlignment = VerticalAlignment.Center
         };

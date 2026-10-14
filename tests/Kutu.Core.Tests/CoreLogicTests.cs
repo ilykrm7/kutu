@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using Kutu.Core;
 using Kutu.Core.Color;
 using Kutu.Core.Geometry;
 using Kutu.Core.Commands;
@@ -223,7 +224,7 @@ public class CoreLogicTests
         service.Current.Snippets.Add(new Snippet { Trigger = ":imza", Body = "Kutu" });
         await service.SaveAsync();
 
-        var raw = await File.ReadAllTextAsync(path);
+        var raw = File.ReadAllText(path);
         Assert.DoesNotContain("secret-key", raw);
         Assert.Contains("enc:", raw);
 
@@ -248,13 +249,13 @@ public class CoreLogicTests
         Assert.False(missing.ContextMenuExplicitOff);
 
         Directory.CreateDirectory(dir);
-        await File.WriteAllTextAsync(path, """{"contextMenuRegistered":false}""");
+        File.WriteAllText(path, """{"contextMenuRegistered":false}""");
         var unset = new SettingsService(new TestProtector(), path);
         await unset.LoadAsync();
         Assert.True(unset.Current.ContextMenuRegistered);
         Assert.True(unset.ContextMenuDirty);
 
-        await File.WriteAllTextAsync(path, """{"contextMenuRegistered":false,"contextMenuUserSet":true}""");
+        File.WriteAllText(path, """{"contextMenuRegistered":false,"contextMenuUserSet":true}""");
         var off = new SettingsService(new TestProtector(), path);
         await off.LoadAsync();
         Assert.False(off.Current.ContextMenuRegistered);
@@ -263,7 +264,7 @@ public class CoreLogicTests
         off.CorrectContextMenuOn();
         Assert.True(off.ContextMenuDirty);
         await off.SaveAsync();
-        var raw = await File.ReadAllTextAsync(path);
+        var raw = File.ReadAllText(path);
         Assert.Contains("\"contextMenuRegistered\": true", raw);
         Directory.Delete(dir, recursive: true);
     }
@@ -283,7 +284,7 @@ public class CoreLogicTests
     [Fact]
     public void Webp_fallback_encoder_writes_riff()
     {
-        if (!OperatingSystem.IsWindows())
+        if (!HostProcess.IsWindows)
             return;
 
         var dir = Path.Combine(Path.GetTempPath(), "kutu-webp", Guid.NewGuid().ToString("N"));
@@ -300,7 +301,7 @@ public class CoreLogicTests
         var path = Path.Combine(dir, "solid.webp");
         LibWebp.Write(pixels, 8, 8, 32, 70, path);
         var encoded = File.ReadAllBytes(path);
-        Assert.Equal("RIFF", System.Text.Encoding.ASCII.GetString(encoded[..4]));
+        Assert.Equal("RIFF", System.Text.Encoding.ASCII.GetString(Take(encoded, 4)));
         var decoded = LibWebp.DecodeBgra(encoded, out var width, out var height);
         Assert.Equal(8, width);
         Assert.Equal(8, height);
@@ -373,7 +374,7 @@ public class CoreLogicTests
         var pdf = PdfImage.FromJpeg(jpeg, 40, 20);
         var text = System.Text.Encoding.ASCII.GetString(pdf);
         Assert.StartsWith("%PDF-1.4", text);
-        var raw = System.Text.Encoding.Latin1.GetString(pdf);
+        var raw = System.Text.Encoding.GetEncoding(28591).GetString(pdf);
         Assert.Contains("DCTDecode", raw);
         Assert.Contains("\u00ff\u00d8\u00ff\u00d9", raw);
     }
@@ -381,13 +382,13 @@ public class CoreLogicTests
     [Fact]
     public async Task Image_pipeline_converts_resizes_and_writes_ico()
     {
-        if (!OperatingSystem.IsWindows())
+        if (!HostProcess.IsWindows)
             return;
 
         var dir = Path.Combine(Path.GetTempPath(), "kutu-tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         var source = Path.Combine(dir, "in.png");
-        await File.WriteAllBytesAsync(source, SolidPng(40, 20, 0x28, 0xA0, 0xF1));
+        File.WriteAllBytes(source, SolidPng(40, 20, 0x28, 0xA0, 0xF1));
 
         var jpg = Path.Combine(dir, "out.jpg");
         await ImagePipeline.ConvertAsync(source, jpg, KutuImageFormat.Jpeg, 80);
@@ -404,15 +405,22 @@ public class CoreLogicTests
         await ImagePipeline.ResizeAndSaveAsync(source, resized, FitMode.LongEdge, 10, KutuImageFormat.Png, 90);
 
         Assert.True(new FileInfo(jpg).Length > 0);
-        Assert.Equal(new byte[] { 0xFF, 0xD8 }, File.ReadAllBytes(jpg)[..2]);
-        Assert.Equal("RIFF", System.Text.Encoding.ASCII.GetString(File.ReadAllBytes(webp)[..4]));
-        Assert.Equal(new byte[] { 137, 80, 78, 71 }, File.ReadAllBytes(fromWebp)[..4]);
+        Assert.Equal(new byte[] { 0xFF, 0xD8 }, Take(File.ReadAllBytes(jpg), 2));
+        Assert.Equal("RIFF", System.Text.Encoding.ASCII.GetString(Take(File.ReadAllBytes(webp), 4)));
+        Assert.Equal(new byte[] { 137, 80, 78, 71 }, Take(File.ReadAllBytes(fromWebp), 4));
         Assert.Equal(0, File.ReadAllBytes(ico)[0]);
         Assert.Equal(1, File.ReadAllBytes(ico)[2]);
-        Assert.StartsWith("%PDF", System.Text.Encoding.ASCII.GetString(File.ReadAllBytes(pdf)[..4]));
-        var (w, h) = PngSize(await File.ReadAllBytesAsync(resized));
+        Assert.StartsWith("%PDF", System.Text.Encoding.ASCII.GetString(Take(File.ReadAllBytes(pdf), 4)));
+        var (w, h) = PngSize(File.ReadAllBytes(resized));
         Assert.Equal(10, w);
         Assert.Equal(5, h);
+    }
+
+    private static byte[] Take(byte[] bytes, int count)
+    {
+        var slice = new byte[count];
+        Buffer.BlockCopy(bytes, 0, slice, 0, count);
+        return slice;
     }
 
     private static byte[] SolidPng(int width, int height, byte r, byte g, byte b)
@@ -430,12 +438,9 @@ public class CoreLogicTests
             }
         }
 
-        using var compressed = new MemoryStream();
-        using (var deflate = new System.IO.Compression.ZLibStream(compressed, System.IO.Compression.CompressionLevel.Fastest, true))
-            deflate.Write(raw);
-        var idat = compressed.ToArray();
+        var idat = Zlib(raw);
         using var png = new MemoryStream();
-        png.Write(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 });
+        Write(png, new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 });
         WriteChunk(png, "IHDR",
         [
             (byte)(width >> 24), (byte)(width >> 16), (byte)(width >> 8), (byte)width,
@@ -450,13 +455,39 @@ public class CoreLogicTests
     private static void WriteChunk(Stream stream, string type, byte[] data)
     {
         var typeBytes = System.Text.Encoding.ASCII.GetBytes(type);
-        stream.Write(U32Be(data.Length));
-        stream.Write(typeBytes);
-        stream.Write(data);
+        Write(stream, U32Be(data.Length));
+        Write(stream, typeBytes);
+        Write(stream, data);
         var crcInput = new byte[typeBytes.Length + data.Length];
         typeBytes.CopyTo(crcInput, 0);
         data.CopyTo(crcInput, typeBytes.Length);
-        stream.Write(U32Be(Crc32(crcInput)));
+        Write(stream, U32Be(Crc32(crcInput)));
+    }
+
+    private static void Write(Stream stream, byte[] bytes) => stream.Write(bytes, 0, bytes.Length);
+
+    private static byte[] Zlib(byte[] raw)
+    {
+        using var compressed = new MemoryStream();
+        compressed.WriteByte(0x78);
+        compressed.WriteByte(0x01);
+        using (var deflate = new System.IO.Compression.DeflateStream(compressed, System.IO.Compression.CompressionLevel.Fastest, true))
+            deflate.Write(raw, 0, raw.Length);
+        Write(compressed, U32Be(Adler32(raw)));
+        return compressed.ToArray();
+    }
+
+    private static uint Adler32(byte[] data)
+    {
+        uint a = 1;
+        uint b = 0;
+        foreach (var value in data)
+        {
+            a = (a + value) % 65521;
+            b = (b + a) % 65521;
+        }
+
+        return (b << 16) | a;
     }
 
     private static byte[] U32Be(uint value) =>

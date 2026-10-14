@@ -1,3 +1,5 @@
+using Kutu.Core;
+
 namespace Kutu.Core.Geometry;
 
 public readonly record struct ShotBarSlot(double X, double Y)
@@ -53,7 +55,7 @@ public readonly record struct ShotBarSlot(double X, double Y)
             var floor = innerBottom - height;
             if (floor < innerTop)
                 floor = innerTop;
-            top = Math.Clamp(inside, innerTop, floor);
+            top = Num.Clamp(inside, innerTop, floor);
         }
 
         return new ShotBarSlot(left, top);

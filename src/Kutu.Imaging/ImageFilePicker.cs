@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using Kutu.Core;
 
 namespace Kutu.Imaging;
 
@@ -12,7 +13,7 @@ public static class ImageFilePicker
 
     public static string[]? Pick(IntPtr owner)
     {
-        if (!OperatingSystem.IsWindows())
+        if (!HostProcess.IsWindows)
             return null;
 
         const int chars = 65536;

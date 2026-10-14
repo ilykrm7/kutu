@@ -214,7 +214,7 @@ public sealed class ColorLensWindow : Window
 
     private IntPtr KeyHook(int nCode, IntPtr wParam, IntPtr lParam)
     {
-        if (nCode >= 0 && wParam == 0x0100)
+        if (nCode >= 0 && wParam == (IntPtr)0x0100)
         {
             var vk = Marshal.ReadInt32(lParam);
             if (vk == 0x1B)

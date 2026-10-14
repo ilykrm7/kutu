@@ -44,7 +44,7 @@ public static class IpLookup
     {
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         cts.CancelAfter(TimeSpan.FromSeconds(6));
-        var text = (await Http.GetStringAsync("https://api.ipify.org", cts.Token)).Trim();
+        var text = (await HttpText.GetStringAsync(Http, "https://api.ipify.org", cts.Token)).Trim();
         if (!IPAddress.TryParse(text, out _))
             throw new InvalidOperationException("public-ip");
         return text;
@@ -164,7 +164,7 @@ public static class IpLookup
 
     private static async Task<ProviderOutcome> OtxAsync(string ip, string key)
     {
-        var kind = ip.Contains(':') ? "IPv6" : "IPv4";
+        var kind = ip.IndexOf(':') >= 0 ? "IPv6" : "IPv4";
         using var request = new HttpRequestMessage(HttpMethod.Get, $"https://otx.alienvault.com/api/v1/indicators/{kind}/{Uri.EscapeDataString(ip)}/general");
         request.Headers.TryAddWithoutValidation("X-OTX-API-KEY", key);
         using var json = await SendAsync(request);

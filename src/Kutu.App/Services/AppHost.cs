@@ -233,7 +233,7 @@ public sealed class AppHost : IKutuHost
         if (convertTo >= 0 && convertTo + 1 < args.Length)
         {
             var format = args[convertTo + 1];
-            var targets = args.Skip(convertTo + 2).Where(arg => !arg.StartsWith('-')).Select(arg => arg.Trim('"')).ToList();
+            var targets = args.Skip(convertTo + 2).Where(arg => !arg.StartsWith("-", StringComparison.Ordinal)).Select(arg => arg.Trim('"')).ToList();
             Toast(ConvertCommand.Execute(format, targets, Settings.JpegQuality));
             return;
         }
@@ -246,7 +246,7 @@ public sealed class AppHost : IKutuHost
 
             for (var j = i + 1; j < args.Length; j++)
             {
-                if (args[j].StartsWith('-'))
+                if (args[j].StartsWith("-", StringComparison.Ordinal))
                     break;
                 files.Add(args[j].Trim('"'));
             }

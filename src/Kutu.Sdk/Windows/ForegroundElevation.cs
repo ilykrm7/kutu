@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using System.Security.Principal;
+using Kutu.Core;
 using Kutu.Sdk.Hosting;
 using Kutu.Sdk.Localization;
 
@@ -15,7 +16,7 @@ public static class ForegroundElevation
 
     public static bool BlocksTyping()
     {
-        if (!OperatingSystem.IsWindows() || CurrentProcessElevated)
+        if (!HostProcess.IsWindows || CurrentProcessElevated)
             return false;
 
         try
@@ -38,7 +39,7 @@ public static class ForegroundElevation
 
     private static bool QueryCurrentProcess()
     {
-        if (!OperatingSystem.IsWindows())
+        if (!HostProcess.IsWindows)
             return false;
 
         try
@@ -59,7 +60,7 @@ public static class ForegroundElevation
             return false;
 
         GetWindowThreadProcessId(hwnd, out var pid);
-        if (pid == 0 || pid == (uint)Environment.ProcessId)
+        if (pid == 0 || pid == (uint)System.Diagnostics.Process.GetCurrentProcess().Id)
             return false;
 
         var process = OpenProcess(ProcessQueryLimitedInformation, false, pid);

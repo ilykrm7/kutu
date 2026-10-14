@@ -108,7 +108,7 @@ public sealed class UploadView : UserControl
             string type;
             if (!string.IsNullOrWhiteSpace(_filePath) && File.Exists(_filePath) && string.IsNullOrWhiteSpace(_text.Text))
             {
-                data = await File.ReadAllBytesAsync(_filePath);
+                data = File.ReadAllBytes(_filePath);
                 name = Path.GetFileName(_filePath);
                 type = "application/octet-stream";
             }
@@ -120,7 +120,7 @@ public sealed class UploadView : UserControl
             }
             else if (!string.IsNullOrWhiteSpace(_filePath))
             {
-                data = await File.ReadAllBytesAsync(_filePath);
+                data = File.ReadAllBytes(_filePath);
                 name = Path.GetFileName(_filePath);
                 type = "application/octet-stream";
             }

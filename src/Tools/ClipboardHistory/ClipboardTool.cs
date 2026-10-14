@@ -125,7 +125,7 @@ public static class ClipboardUi
     {
         if (string.IsNullOrWhiteSpace(query))
             return true;
-        return item.Text.Contains(query.Trim(), StringComparison.OrdinalIgnoreCase);
+        return item.Text.IndexOf(query.Trim(), StringComparison.OrdinalIgnoreCase) >= 0;
     }
 
     private static UIElement Row(IKutuHost host, ClipItem item, bool popup, Window? window)
