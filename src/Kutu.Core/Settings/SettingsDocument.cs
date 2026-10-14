@@ -10,6 +10,8 @@ public sealed class SettingsDocument
 
     public bool ContextMenuRegistered { get; set; }
 
+    public bool? ContextMenuUserSet { get; set; }
+
     public string ScreenshotHotkey { get; set; } = "Ctrl+Shift+S";
 
     public string LauncherHotkey { get; set; } = "Alt+Space";

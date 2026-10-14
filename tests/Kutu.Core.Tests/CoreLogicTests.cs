@@ -63,6 +63,12 @@ public class CoreLogicTests
     {
         Assert.Equal("ornek.com", DomainName.Normalize("https://ornek.com/path?q=1"));
         Assert.Equal("ornek.com", DomainName.Normalize("ORNEK.com."));
+        Assert.True(DomainName.IsComplete("https://ornek.com/path"));
+        Assert.True(DomainName.IsComplete("sub.example.co.uk"));
+        Assert.False(DomainName.IsComplete("example"));
+        Assert.False(DomainName.IsComplete("example.c"));
+        Assert.False(DomainName.IsComplete("not a domain"));
+        Assert.False(DomainName.IsComplete("192.168.0.1"));
     }
 
     [Fact]
@@ -136,6 +142,46 @@ public class CoreLogicTests
     }
 
     [Fact]
+    public void Webp_fallback_encoder_writes_riff()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        var dir = Path.Combine(Path.GetTempPath(), "kutu-webp", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        var pixels = new byte[8 * 8 * 4];
+        for (var i = 0; i < pixels.Length; i += 4)
+        {
+            pixels[i] = 0xF1;
+            pixels[i + 1] = 0xA0;
+            pixels[i + 2] = 0x28;
+            pixels[i + 3] = 255;
+        }
+
+        var path = Path.Combine(dir, "solid.webp");
+        LibWebp.Write(pixels, 8, 8, 32, 70, path);
+        Assert.Equal("RIFF", System.Text.Encoding.ASCII.GetString(File.ReadAllBytes(path)[..4]));
+        Directory.Delete(dir, recursive: true);
+    }
+
+    [Fact]
+    public void Output_names_drop_stacked_suffix_and_do_not_collide()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "kutu-names", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        var bmp = Path.Combine(dir, "test.kutu.bmp");
+        var jpg = Path.Combine(dir, "test.kutu.jpg");
+        File.WriteAllBytes(bmp, [1]);
+        File.WriteAllBytes(jpg, [1]);
+        var first = ImageFormats.OutputPath(bmp, KutuImageFormat.Jpeg);
+        File.WriteAllBytes(first, [2]);
+        var second = ImageFormats.OutputPath(jpg, KutuImageFormat.Jpeg);
+        Assert.Equal(Path.Combine(dir, "test.jpg"), first);
+        Assert.Equal(Path.Combine(dir, "test-2.jpg"), second);
+        Directory.Delete(dir, recursive: true);
+    }
+
+    [Fact]
     public void Pdf_wraps_jpeg_bytes()
     {
         var jpeg = new byte[] { 0xFF, 0xD8, 0xFF, 0xD9 };
@@ -161,15 +207,7 @@ public class CoreLogicTests
         var jpg = Path.Combine(dir, "out.jpg");
         await ImagePipeline.ConvertAsync(source, jpg, KutuImageFormat.Jpeg, 80);
         var webp = Path.Combine(dir, "out.webp");
-        var webpPresent = true;
-        try
-        {
-            await ImagePipeline.ConvertAsync(source, webp, KutuImageFormat.Webp, 70);
-        }
-        catch (InvalidOperationException ex) when (ex.Message.Contains("WebP", StringComparison.Ordinal))
-        {
-            webpPresent = false;
-        }
+        await ImagePipeline.ConvertAsync(source, webp, KutuImageFormat.Webp, 70);
 
         var ico = Path.Combine(dir, "out.ico");
         await ImagePipeline.ConvertAsync(source, ico, KutuImageFormat.Ico, 90);
@@ -180,8 +218,7 @@ public class CoreLogicTests
 
         Assert.True(new FileInfo(jpg).Length > 0);
         Assert.Equal(new byte[] { 0xFF, 0xD8 }, File.ReadAllBytes(jpg)[..2]);
-        if (webpPresent)
-            Assert.Equal("RIFF", System.Text.Encoding.ASCII.GetString(File.ReadAllBytes(webp)[..4]));
+        Assert.Equal("RIFF", System.Text.Encoding.ASCII.GetString(File.ReadAllBytes(webp)[..4]));
         Assert.Equal(0, File.ReadAllBytes(ico)[0]);
         Assert.Equal(1, File.ReadAllBytes(ico)[2]);
         Assert.StartsWith("%PDF", System.Text.Encoding.ASCII.GetString(File.ReadAllBytes(pdf)[..4]));

@@ -149,9 +149,9 @@ public sealed class ImageConverterView : UserControl, IAcceptsParameter
         {
             _status.Text = L.Get("Image_HeifMissing");
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            _status.Text = ex.InnerException?.Message ?? ex.Message;
+            _status.Text = L.Get("Image_Failed");
         }
     }
 

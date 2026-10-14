@@ -506,6 +506,7 @@ public sealed class CaptureStudio : Window
             return;
         _host.CopyImage(image);
         _host.Toast(L.Get("Action_Copied"));
+        Close();
     }
 
     private void Save()
@@ -521,6 +522,7 @@ public sealed class CaptureStudio : Window
         using var stream = System.IO.File.Create(dialog.FileName);
         encoder.Save(stream);
         _host.Toast(L.Get("Shot_Saved"));
+        Close();
     }
 
     private BitmapSource? RenderResult()

@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using Kutu.Sdk.Hosting;
 using Kutu.Sdk.Localization;
+using Kutu.Sdk.Windows;
 
 namespace Kutu.Tools.Translate;
 
@@ -11,6 +12,12 @@ public static class SelectionTranslator
 {
     public static async Task RunAsync(IKutuHost host)
     {
+        if (ForegroundElevation.BlocksTyping())
+        {
+            ForegroundElevation.NotifyOnce(host);
+            return;
+        }
+
         var toast = TinyToast.Show(L.Get("Translate_Working"));
         IDataObject? backup = null;
         try

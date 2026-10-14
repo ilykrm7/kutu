@@ -155,9 +155,9 @@ public sealed class ImageResizeView : UserControl
         {
             _status.Text = L.Get("Image_HeifMissing");
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            _status.Text = ex.Message;
+            _status.Text = L.Get("Image_Failed");
         }
     }
 

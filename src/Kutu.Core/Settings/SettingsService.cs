@@ -55,6 +55,7 @@ public sealed class SettingsService
         Language = settings.Language,
         StartWithWindows = settings.StartWithWindows,
         ContextMenuRegistered = settings.ContextMenuRegistered,
+        ContextMenuUserSet = true,
         ScreenshotHotkey = settings.ScreenshotHotkey,
         LauncherHotkey = settings.LauncherHotkey,
         ColorPickerHotkey = settings.ColorPickerHotkey,
@@ -86,7 +87,7 @@ public sealed class SettingsService
     {
         Language = string.IsNullOrWhiteSpace(document.Language) ? "tr" : document.Language,
         StartWithWindows = document.StartWithWindows,
-        ContextMenuRegistered = document.ContextMenuRegistered,
+        ContextMenuRegistered = document.ContextMenuUserSet is null || document.ContextMenuRegistered,
         ScreenshotHotkey = document.ScreenshotHotkey,
         LauncherHotkey = document.LauncherHotkey,
         ColorPickerHotkey = document.ColorPickerHotkey,

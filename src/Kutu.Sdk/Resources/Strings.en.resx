@@ -117,6 +117,7 @@
   <data name="Expand_Trigger" xml:space="preserve"><value>Trigger</value></data>
   <data name="Expand_Body" xml:space="preserve"><value>Text to paste</value></data>
   <data name="Expand_Hint" xml:space="preserve"><value>The trigger expands as soon as it is typed, with no trailing space. Example: :adm or mail:sig. It does not run in elevated windows.</value></data>
+  <data name="Hook_Elevated" xml:space="preserve"><value>Kutu can't type into an elevated window. Run Kutu as administrator.</value></data>
   <data name="Expand_Saved" xml:space="preserve"><value>Snippets saved.</value></data>
   <data name="Expand_Invalid" xml:space="preserve"><value>Trigger and text are required.</value></data>
   <data name="Whois_Domain" xml:space="preserve"><value>Domain</value></data>
@@ -191,5 +192,6 @@
   <data name="Translate_Working" xml:space="preserve"><value>Translating…</value></data>
   <data name="Translate_NoSelection" xml:space="preserve"><value>No selected text.</value></data>
   <data name="Image_HeifMissing" xml:space="preserve"><value>HEIC needs “HEIF Image Extensions” from the Microsoft Store.</value></data>
+  <data name="Image_Failed" xml:space="preserve"><value>Couldn't save the image.</value></data>
   <data name="Shot_Move" xml:space="preserve"><value>Move</value></data>
 </root>

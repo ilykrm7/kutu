@@ -6,7 +6,7 @@ public sealed class AppSettings
 
     public bool StartWithWindows { get; set; }
 
-    public bool ContextMenuRegistered { get; set; }
+    public bool ContextMenuRegistered { get; set; } = true;
 
     public string ScreenshotHotkey { get; set; } = "Ctrl+Shift+S";
 

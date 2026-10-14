@@ -4,4 +4,8 @@
     <RootNamespace>Kutu.Imaging</RootNamespace>
     <Description>Image convert and resize through the Windows Imaging Component.</Description>
   </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="native\kutuwebp.dll" LogicalName="kutuwebp.dll" />
+    <Content Include="native\kutuwebp.dll" Link="kutuwebp.dll" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+  </ItemGroup>
 </Project>

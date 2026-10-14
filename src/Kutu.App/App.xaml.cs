@@ -55,6 +55,16 @@ public partial class App : Application
         {
             var settings = new SettingsService(new DpapiProtector());
             settings.LoadAsync().GetAwaiter().GetResult();
+            try
+            {
+                if (settings.Current.ContextMenuRegistered)
+                    ContextMenuRegistration.EnsureClassic(Environment.ProcessPath);
+            }
+            catch
+            {
+                // Menu registration must not stop startup.
+            }
+
             L.SetCulture(settings.Current.Language);
             ApplicationThemeManager.Apply(ApplicationTheme.Dark, Wpf.Ui.Controls.WindowBackdropType.Mica, false);
             ApplicationAccentColorManager.Apply(SystemAccent(), ApplicationTheme.Dark, false, false);
@@ -85,6 +95,22 @@ public partial class App : Application
             };
             _expander = new TextExpanderService(_host);
             _tray = new TrayService(_host);
+            _host.AttachTray(_tray.ShowNotice);
+            if (settings.Current.ContextMenuRegistered)
+            {
+                var exe = Environment.ProcessPath ?? "";
+                _ = Task.Run(() =>
+                {
+                    try
+                    {
+                        ContextMenuRegistration.EnsureSparse(exe);
+                    }
+                    catch
+                    {
+                        // The classic menu is already registered.
+                    }
+                });
+            }
             _ipc = new CancellationTokenSource();
             SingleInstance.StartServer(args => Dispatcher.Invoke(() => _host.HandleArgs(args)), _ipc.Token);
             _window.Show();

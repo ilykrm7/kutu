@@ -59,9 +59,13 @@ public partial class MainWindow : FluentWindow
             return;
         }
 
-        _launcher = new LauncherWindow(host);
-        _launcher.Closed += (_, _) => _launcher = null;
-        _launcher.Show();
+        if (_launcher is null)
+        {
+            _launcher = new LauncherWindow(host);
+            _launcher.Closed += (_, _) => _launcher = null;
+        }
+
+        _launcher.Present();
     }
 
     public void ShowToast(string message)

@@ -18,6 +18,8 @@ public interface IKutuHost
 
     void Toast(string message);
 
+    void NotifyTray(string message);
+
     void CopyText(string text);
 
     void CopyImage(BitmapSource image);

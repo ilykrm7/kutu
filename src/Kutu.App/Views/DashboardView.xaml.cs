@@ -29,6 +29,12 @@ public partial class DashboardView : UserControl
         Refresh();
     }
 
+    private void OnPageWheel(object sender, MouseWheelEventArgs e)
+    {
+        PageScroller.ScrollToVerticalOffset(PageScroller.VerticalOffset - e.Delta);
+        e.Handled = true;
+    }
+
     public void ShowAll()
     {
         _favoritesOnly = false;

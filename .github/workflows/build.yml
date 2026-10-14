@@ -127,6 +127,67 @@ jobs:
           Assert-Started (Resolve-Path 'artifacts\lite\Kutu-lite.exe') 8
           Assert-Started (Resolve-Path 'artifacts\full\Kutu.exe') 25
 
+      - name: Context menu command
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $false
+          function Stop-Kutu {
+            Get-Process -Name Kutu,Kutu-lite -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+            Start-Sleep -Seconds 1
+          }
+          Stop-Kutu
+          $log = Join-Path $env:APPDATA 'Kutu\kutu.log'
+          if (Test-Path $log) { Remove-Item $log -Force }
+          $lite = (Resolve-Path 'artifacts\lite\Kutu-lite.exe').Path
+          $proc = Start-Process -FilePath $lite -PassThru
+          $extensions = '.png','.jpg','.jpeg','.webp','.bmp','.gif','.tif','.heic'
+          $ids = 'Kutu.ToJpeg','Kutu.ToPng','Kutu.ToWebp','Kutu.ToIco','Kutu.ToPdf','Kutu.ToBmp'
+          $deadline = (Get-Date).AddSeconds(20)
+          $ready = $false
+          do {
+            Start-Sleep -Seconds 1
+            $ready = $true
+            foreach ($ext in $extensions) {
+              if (-not (Test-Path "HKCU:\Software\Classes\SystemFileAssociations\$ext\shell\Kutu")) { $ready = $false; break }
+            }
+            $cmdKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\CommandStore\shell\Kutu.ToJpeg\command'
+            if (-not (Test-Path $cmdKey)) { $ready = $false }
+            elseif (((Get-Item $cmdKey).GetValue('')) -notlike "*$($lite)*") { $ready = $false }
+          } while (-not $ready -and (Get-Date) -lt $deadline)
+          if (-not $ready) { throw 'classic context menu was not registered for Kutu-lite.exe' }
+          foreach ($ext in $extensions) {
+            $item = Get-Item "HKCU:\Software\Classes\SystemFileAssociations\$ext\shell\Kutu"
+            if ($item.GetValue('MUIVerb') -ne 'Kutu ile dönüştür') { throw "$ext verb is $($item.GetValue('MUIVerb'))" }
+            $subs = [string]$item.GetValue('SubCommands')
+            foreach ($id in $ids) {
+              if ($subs -notlike "*$id*") { throw "$ext missing $id ($subs)" }
+            }
+          }
+          $jpeg = (Get-Item 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\CommandStore\shell\Kutu.ToJpeg\command').GetValue('')
+          $expected = "`"$lite`" --convert-to jpeg `"%1`""
+          if ($jpeg -ne $expected) { throw "jpeg command:`n$jpeg`nexpected:`n$expected" }
+          Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+          Stop-Kutu
+          if (Test-Path $log) { throw "menu registration wrote kutu.log:`n$(Get-Content $log -Raw)" }
+          $dir = Join-Path $env:TEMP ("kutu-menu-" + [guid]::NewGuid().ToString('N'))
+          New-Item -ItemType Directory -Path $dir | Out-Null
+          $source = Join-Path $dir 'in.png'
+          [IO.File]::WriteAllBytes($source, [Convert]::FromBase64String('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='))
+          $out = Join-Path $dir 'in.jpg'
+          $convert = Start-Process -FilePath $lite -ArgumentList @('--convert-to','jpeg',$source) -PassThru
+          $deadline = (Get-Date).AddSeconds(30)
+          do {
+            Start-Sleep -Seconds 1
+            if (Test-Path $out) { break }
+          } while ((Get-Date) -lt $deadline)
+          Stop-Process -Id $convert.Id -Force -ErrorAction SilentlyContinue
+          Stop-Kutu
+          if (-not (Test-Path $out)) { throw "context menu command did not write $out" }
+          $bytes = [IO.File]::ReadAllBytes($out)
+          if ($bytes.Length -lt 2 -or $bytes[0] -ne 0xFF -or $bytes[1] -ne 0xD8) { throw 'context menu output is not a jpeg' }
+          Write-Host "context menu command wrote $($bytes.Length) bytes"
+
       - name: Upload exe artifact
         uses: actions/upload-artifact@v4
         with:

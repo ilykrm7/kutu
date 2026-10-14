@@ -5,7 +5,6 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Windows.Threading;
 using Kutu.Core.Color;
 using Kutu.Core.Models;
 using Kutu.Sdk.Hosting;
@@ -117,9 +116,8 @@ public sealed class ColorLensWindow : Window
     private IntPtr _mouseHook;
     private IntPtr _keyHook;
     private RgbColor _color;
-    private int _pendingX;
-    private int _pendingY;
-    private int _flushing;
+    private int _lastX = int.MinValue;
+    private int _lastY = int.MinValue;
     private IntPtr _screenDc;
     private IntPtr _memDc;
     private IntPtr _dib;
@@ -170,12 +168,15 @@ public sealed class ColorLensWindow : Window
         Loaded += (_, _) =>
         {
             EnsureSample();
+            CompositionTarget.Rendering += OnFrame;
+            OnFrame(this, EventArgs.Empty);
             _mouseHook = SetWindowsHookEx(14, _mouseProc, GetModuleHandle(null), 0);
             _keyHook = SetWindowsHookEx(13, _keyProc, GetModuleHandle(null), 0);
             Activate();
         };
         Closed += (_, _) =>
         {
+            CompositionTarget.Rendering -= OnFrame;
             if (_mouseHook != IntPtr.Zero)
                 UnhookWindowsHookEx(_mouseHook);
             if (_keyHook != IntPtr.Zero)
@@ -195,18 +196,10 @@ public sealed class ColorLensWindow : Window
         if (nCode >= 0)
         {
             var msg = wParam.ToInt32();
-            if (msg is 0x0200 or 0x0201)
+            if (msg == 0x0201)
             {
-                GetCursorPos(out var point);
-                _pendingX = point.X;
-                _pendingY = point.Y;
-                if (Interlocked.CompareExchange(ref _flushing, 1, 0) == 0)
-                    Dispatcher.BeginInvoke(FlushSample, DispatcherPriority.Background);
-                if (msg == 0x0201)
-                {
-                    Dispatcher.BeginInvoke(Pick);
-                    return (IntPtr)1;
-                }
+                Dispatcher.BeginInvoke(Pick);
+                return (IntPtr)1;
             }
 
             if (msg == 0x0204)
@@ -234,20 +227,11 @@ public sealed class ColorLensWindow : Window
         return CallNextHookEx(_keyHook, nCode, wParam, lParam);
     }
 
-    private void FlushSample()
+    private void OnFrame(object? sender, EventArgs e)
     {
-        var x = _pendingX;
-        var y = _pendingY;
-        try
-        {
-            PaintSample(x, y);
-        }
-        finally
-        {
-            Interlocked.Exchange(ref _flushing, 0);
-            if ((_pendingX != x || _pendingY != y) && Interlocked.CompareExchange(ref _flushing, 1, 0) == 0)
-                Dispatcher.BeginInvoke(FlushSample, DispatcherPriority.Background);
-        }
+        if (!GetCursorPos(out var point))
+            return;
+        PaintSample(point.X, point.Y);
     }
 
     private void PaintSample(int x, int y)
@@ -263,24 +247,50 @@ public sealed class ColorLensWindow : Window
             _pixels[i] = 255;
         var mid = (n / 2) * n + (n / 2);
         var center = mid * 4;
-        _color = new RgbColor(_pixels[center + 2], _pixels[center + 1], _pixels[center]);
+        var color = new RgbColor(_pixels[center + 2], _pixels[center + 1], _pixels[center]);
         _pixels[center] = 255;
         _pixels[center + 1] = 255;
         _pixels[center + 2] = 255;
         _pixels[center + 3] = 255;
         _magnifier.WritePixels(new Int32Rect(0, 0, n, n), _pixels, n * 4, 0);
-        _hex.Text = _color.Hex;
-        _detail.Text = _color.Rgb + "   " + _color.Hsl;
-        _swatchBrush.Color = Color.FromRgb(_color.R, _color.G, _color.B);
-        _swatch.Background = _swatchBrush;
-        double left = x + 28;
-        double top = y + 28;
-        if (left + Width > SystemParameters.VirtualScreenLeft + SystemParameters.VirtualScreenWidth)
-            left = x - Width - 28;
-        if (top + Height > SystemParameters.VirtualScreenTop + SystemParameters.VirtualScreenHeight)
-            top = y - Height - 28;
+        if (color != _color || _hex.Text.Length == 0)
+        {
+            _color = color;
+            _hex.Text = _color.Hex;
+            _detail.Text = _color.Rgb + "   " + _color.Hsl;
+            _swatchBrush.Color = Color.FromRgb(_color.R, _color.G, _color.B);
+            _swatch.Background = _swatchBrush;
+        }
+
+        if (x == _lastX && y == _lastY)
+            return;
+        _lastX = x;
+        _lastY = y;
+        var dip = ToDip(x, y);
+        double left = dip.X + 28;
+        double top = dip.Y + 28;
+        var boundsLeft = SystemParameters.VirtualScreenLeft;
+        var boundsTop = SystemParameters.VirtualScreenTop;
+        var boundsRight = boundsLeft + SystemParameters.VirtualScreenWidth;
+        var boundsBottom = boundsTop + SystemParameters.VirtualScreenHeight;
+        if (left + Width > boundsRight)
+            left = dip.X - Width - 28;
+        if (top + Height > boundsBottom)
+            top = dip.Y - Height - 28;
+        if (left < boundsLeft)
+            left = boundsLeft;
+        if (top < boundsTop)
+            top = boundsTop;
         Left = left;
         Top = top;
+    }
+
+    private Point ToDip(int x, int y)
+    {
+        var target = PresentationSource.FromVisual(this)?.CompositionTarget;
+        if (target is null)
+            return new Point(x, y);
+        return target.TransformFromDevice.Transform(new Point(x, y));
     }
 
     private void EnsureSample()

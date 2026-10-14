@@ -29,6 +29,23 @@ public sealed class TrayService : IDisposable
         _icon.DoubleClick += (_, _) => Run(_host.ShowAndActivate);
     }
 
+    public void ShowNotice(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+            return;
+
+        try
+        {
+            _icon.BalloonTipTitle = "Kutu";
+            _icon.BalloonTipText = message.Length > 240 ? message[..240] : message;
+            _icon.ShowBalloonTip(4000);
+        }
+        catch
+        {
+            // The tray icon can be unavailable while the app is closing.
+        }
+    }
+
     public void Dispose()
     {
         _icon.Visible = false;

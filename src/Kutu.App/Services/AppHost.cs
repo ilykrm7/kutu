@@ -19,6 +19,7 @@ public sealed class AppHost : IKutuHost
     private readonly Action _exit;
     private readonly Action _rebindHotkeys;
     private MainWindow? _window;
+    private Action<string>? _notifyTray;
     private bool _restoreAfterCapture;
 
     public AppHost(SettingsService settings, ClipboardHistoryService clipboard, IReadOnlyList<IKutuTool> tools, Action exit, Action rebindHotkeys)
@@ -40,10 +41,27 @@ public sealed class AppHost : IKutuHost
 
     public void Attach(MainWindow window) => _window = window;
 
+    public void AttachTray(Action<string> notify) => _notifyTray = notify;
+
     public Task SaveSettingsAsync(CancellationToken cancellationToken = default) =>
         SettingsStore.SaveAsync(cancellationToken);
 
     public void Toast(string message) => _window?.ShowToast(message);
+
+    public void NotifyTray(string message)
+    {
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher is not null && !dispatcher.CheckAccess())
+        {
+            dispatcher.BeginInvoke(() => NotifyTray(message));
+            return;
+        }
+
+        if (_notifyTray is not null)
+            _notifyTray(message);
+        else
+            Toast(message);
+    }
 
     public void CopyText(string text)
     {
@@ -242,10 +260,9 @@ public sealed class AppHost : IKutuHost
         {
             Toast(L.Get("Image_HeifMissing"));
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            AppLog.Write(ex);
-            Toast(ex.Message);
+            Toast(L.Get("Image_Failed"));
         }
     }
 }

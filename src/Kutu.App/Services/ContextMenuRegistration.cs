@@ -38,8 +38,67 @@ public static class ContextMenuRegistration
         }
 
         var modern = TryInstallSparse(exe);
+        StampSparse(exe, modern);
         Notify();
         return modern;
+    }
+
+    public static void EnsureClassic(string? exe)
+    {
+        if (string.IsNullOrWhiteSpace(exe) || ClassicCurrent(exe))
+            return;
+
+        SetClassic(true, exe);
+        Notify();
+    }
+
+    public static void EnsureSparse(string? exe)
+    {
+        if (string.IsNullOrWhiteSpace(exe))
+            return;
+
+        var dir = Path.GetDirectoryName(exe);
+        if (string.IsNullOrWhiteSpace(dir))
+            return;
+
+        var stamp = Path.Combine(dir, "kutu.sparse.txt");
+        try
+        {
+            if (File.Exists(stamp) && File.ReadAllText(stamp).StartsWith(exe + "\n", StringComparison.OrdinalIgnoreCase))
+                return;
+        }
+        catch
+        {
+            return;
+        }
+
+        StampSparse(exe, TryInstallSparse(exe));
+    }
+
+    public static string CommandLine(string exe, string format) =>
+        $"\"{exe}\" --convert-to {format} \"%1\"";
+
+    private static bool ClassicCurrent(string exe)
+    {
+        using var command = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Explorer\CommandStore\shell\Kutu.ToJpeg\command");
+        using var shell = Registry.CurrentUser.OpenSubKey(@"Software\Classes\SystemFileAssociations\.png\shell\Kutu");
+        return shell is not null && command?.GetValue("") as string == CommandLine(exe, "jpeg");
+    }
+
+    private static void StampSparse(string exe, string result)
+    {
+        var dir = Path.GetDirectoryName(exe);
+        if (string.IsNullOrWhiteSpace(dir))
+            return;
+
+        try
+        {
+            File.WriteAllText(Path.Combine(dir, "kutu.sparse.txt"), exe + "\n" + result);
+        }
+        catch
+        {
+            // A read-only folder still keeps the classic menu.
+        }
     }
 
     private static void SetClassic(bool enabled, string exe)
@@ -56,13 +115,15 @@ public static class ContextMenuRegistration
             using var key = Registry.CurrentUser.CreateSubKey(store);
             key?.SetValue("MUIVerb", format.Title);
             using var command = key?.CreateSubKey("command");
-            command?.SetValue("", $"\"{exe}\" --convert-to {format.Format} \"%1\"");
+            command?.SetValue("", CommandLine(exe, format.Format));
         }
 
         var subCommands = string.Join(';', Formats.Select(item => item.Id));
         foreach (var extension in Extensions)
         {
-            var path = $@"Software\Classes\SystemFileAssociations\{extension}\shell\Kutu.Convert";
+            var legacy = $@"Software\Classes\SystemFileAssociations\{extension}\shell\Kutu.Convert";
+            var path = $@"Software\Classes\SystemFileAssociations\{extension}\shell\Kutu";
+            Registry.CurrentUser.DeleteSubKeyTree(legacy, throwOnMissingSubKey: false);
             if (!enabled)
             {
                 Registry.CurrentUser.DeleteSubKeyTree(path, throwOnMissingSubKey: false);

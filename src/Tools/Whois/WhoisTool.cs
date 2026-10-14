@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Http;
 using System.Windows;
 using System.Windows.Controls;
 using DnsClient;
@@ -33,16 +35,19 @@ public sealed class WhoisView : UserControl
     private readonly TextBox _domain;
     private readonly TextBlock _status;
     private readonly StackPanel _result;
+    private CancellationTokenSource? _pending;
 
     public WhoisView(IKutuHost host)
     {
         _domain = Chrome.Input("ornek.com");
+        _domain.TextChanged += (_, _) => ScheduleLookup();
         _domain.KeyDown += async (_, e) =>
         {
             if (e.Key == System.Windows.Input.Key.Enter)
             {
                 e.Handled = true;
-                await LookupAsync();
+                _pending?.Cancel();
+                await LookupAsync(explicitRequest: true);
             }
         };
 
@@ -50,7 +55,11 @@ public sealed class WhoisView : UserControl
         _domain.Width = 360;
         _domain.Margin = new Thickness(0, 0, 8, 0);
         row.Children.Add(_domain);
-        row.Children.Add(Chrome.Primary(L.Get("Action_Lookup"), SymbolRegular.Search24, async (_, _) => await LookupAsync()));
+        row.Children.Add(Chrome.Primary(L.Get("Action_Lookup"), SymbolRegular.Search24, async (_, _) =>
+        {
+            _pending?.Cancel();
+            await LookupAsync(explicitRequest: true);
+        }));
 
         _status = Chrome.Hint("");
         _result = new StackPanel();
@@ -62,21 +71,45 @@ public sealed class WhoisView : UserControl
         Content = new ScrollViewer { Content = stack, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
     }
 
-    private async Task LookupAsync()
+    private void ScheduleLookup()
+    {
+        _pending?.Cancel();
+        var pending = new CancellationTokenSource();
+        _pending = pending;
+        _ = DebouncedLookupAsync(pending.Token);
+    }
+
+    private async Task DebouncedLookupAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Task.Delay(400, cancellationToken);
+            await LookupAsync(explicitRequest: false, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            // A newer keystroke replaced this query.
+        }
+    }
+
+    private async Task LookupAsync(bool explicitRequest, CancellationToken cancellationToken = default)
     {
         var domain = DomainName.Normalize(_domain.Text);
-        _result.Children.Clear();
-        if (string.IsNullOrWhiteSpace(domain) || !domain.Contains('.'))
+        if (!DomainName.IsComplete(domain))
         {
-            _status.Text = L.Get("Whois_Empty");
+            _result.Children.Clear();
+            _status.Text = explicitRequest ? L.Get("Whois_Empty") : "";
             return;
         }
 
+        _result.Children.Clear();
         _status.Text = L.Get("Common_Working");
         try
         {
-            var summary = await RdapClient.LookupAsync(domain);
-            var dns = await DnsLookup.QueryAsync(domain);
+            var summary = await RdapClient.LookupAsync(domain, cancellationToken);
+            var dns = await DnsLookup.QueryAsync(domain, cancellationToken);
+            if (cancellationToken.IsCancellationRequested)
+                return;
             _status.Text = "";
             AddCard(
             [
@@ -111,6 +144,14 @@ public sealed class WhoisView : UserControl
             }
 
             _result.Children.Add(Chrome.Card(dnsBody));
+        }
+        catch (OperationCanceledException)
+        {
+            // A newer keystroke replaced this query.
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+        {
+            _status.Text = L.Get("Whois_Empty");
         }
         catch (Exception ex)
         {

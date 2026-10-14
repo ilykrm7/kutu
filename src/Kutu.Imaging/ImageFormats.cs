@@ -52,7 +52,35 @@ public static class ImageFormats
     public static string OutputPath(string inputPath, KutuImageFormat format)
     {
         var directory = Path.GetDirectoryName(inputPath) ?? "";
+        var name = CleanStem(inputPath);
+        var extension = Extension(format);
+        var candidate = Path.Combine(directory, name + extension);
+        if (!Collides(candidate, inputPath))
+            return candidate;
+
+        for (var index = 2; index < 10000; index++)
+        {
+            candidate = Path.Combine(directory, name + "-" + index + extension);
+            if (!Collides(candidate, inputPath))
+                return candidate;
+        }
+
+        return Path.Combine(directory, name + "-" + Guid.NewGuid().ToString("N") + extension);
+    }
+
+    private static string CleanStem(string inputPath)
+    {
         var name = Path.GetFileNameWithoutExtension(inputPath);
-        return Path.Combine(directory, name + ".kutu" + Extension(format));
+        while (name.EndsWith(".kutu", StringComparison.OrdinalIgnoreCase))
+            name = name[..^5];
+        return name.Length == 0 ? "kutu" : name;
+    }
+
+    private static bool Collides(string candidate, string inputPath)
+    {
+        var full = Path.GetFullPath(candidate);
+        if (full.Equals(Path.GetFullPath(inputPath), StringComparison.OrdinalIgnoreCase))
+            return true;
+        return File.Exists(full);
     }
 }

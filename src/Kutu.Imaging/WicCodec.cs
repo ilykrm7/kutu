@@ -61,6 +61,29 @@ internal static class WicCodec
                 return;
             }
 
+            if (format == KutuImageFormat.Webp)
+            {
+                try
+                {
+                    Encode(factory, current, outputPath, FormatWebp, quality, out encoder, out stream, out encoded, out bag);
+                }
+                catch (Exception)
+                {
+                    Release(bag);
+                    bag = null;
+                    Release(encoded);
+                    encoded = null;
+                    Release(encoder);
+                    encoder = null;
+                    Release(stream);
+                    stream = null;
+                    TryDelete(outputPath);
+                    WriteWebp(current, outputPath, quality, width, height);
+                }
+
+                return;
+            }
+
             if (format == KutuImageFormat.Pdf)
             {
                 var jpegPath = Path.Combine(Path.GetTempPath(), "kutu-" + Guid.NewGuid().ToString("N") + ".jpg");
@@ -155,9 +178,7 @@ internal static class WicCodec
 
         var hr = factory.CreateEncoder(ref container, IntPtr.Zero, out encoderObj);
         if (hr < 0)
-            throw new InvalidOperationException(container == FormatWebp
-                ? "WebP encoder is not available on this Windows install."
-                : "Encoder failed: 0x" + hr.ToString("X8"));
+            throw new InvalidOperationException("image");
 
         hr = factory.CreateStream(out streamObj);
         Check(hr, "stream");
@@ -192,6 +213,34 @@ internal static class WicCodec
         if (hr < 0)
             return hr;
         return AsEncoder(encoderObj!).Initialize(stream, cache);
+    }
+
+    private static void WriteWebp(IWICBitmapSource source, string outputPath, int quality, uint width, uint height)
+    {
+        var stride = checked((int)width * 4);
+        var size = checked(stride * (int)height);
+        var pixels = new byte[size];
+        var handle = GCHandle.Alloc(pixels, GCHandleType.Pinned);
+        try
+        {
+            Check(source.CopyPixels(IntPtr.Zero, (uint)stride, (uint)size, handle.AddrOfPinnedObject()), "pixels");
+        }
+        finally
+        {
+            handle.Free();
+        }
+
+        for (var i = 0; i < pixels.Length; i += 4)
+        {
+            var alpha = pixels[i + 3];
+            if (alpha is 0 or 255)
+                continue;
+            pixels[i] = (byte)Math.Min(255, pixels[i] * 255 / alpha);
+            pixels[i + 1] = (byte)Math.Min(255, pixels[i + 1] * 255 / alpha);
+            pixels[i + 2] = (byte)Math.Min(255, pixels[i + 2] * 255 / alpha);
+        }
+
+        LibWebp.Write(pixels, (int)width, (int)height, stride, Math.Clamp(quality, 1, 100), outputPath);
     }
 
     private static void Encode(IWICImagingFactory factory, IWICBitmapSource source, string outputPath, Guid container, int quality, out object? a, out object? b)

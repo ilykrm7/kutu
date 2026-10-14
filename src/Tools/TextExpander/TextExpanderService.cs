@@ -3,6 +3,7 @@ using System.Text;
 using System.Windows;
 using Kutu.Core.Text;
 using Kutu.Sdk.Hosting;
+using Kutu.Sdk.Windows;
 
 namespace Kutu.Tools.TextExpander;
 
@@ -11,6 +12,7 @@ public sealed class TextExpanderService : IDisposable
     private const int WhKeyboardLl = 13;
     private const int WmKeyDown = 0x0100;
     private const int WmQuit = 0x0012;
+    private const int WmTimer = 0x0113;
     private const int WmApp = 0x8000;
     private readonly IKutuHost _host;
     private readonly StringBuilder _buffer = new();
@@ -53,14 +55,18 @@ public sealed class TextExpanderService : IDisposable
         OleInitialize(IntPtr.Zero);
         _threadId = GetCurrentThreadId();
         _hook = SetWindowsHookEx(WhKeyboardLl, _proc, GetModuleHandle(null), 0);
+        SetTimer(IntPtr.Zero, (IntPtr)1, 1500, IntPtr.Zero);
         while (GetMessage(out var message, IntPtr.Zero, 0, 0) > 0)
         {
             if (message.MsgId == WmApp)
                 ReplacePending();
+            else if (message.MsgId == WmTimer)
+                NoteElevation();
             TranslateMessage(ref message);
             DispatchMessage(ref message);
         }
 
+        KillTimer(IntPtr.Zero, (IntPtr)1);
         if (_hook != IntPtr.Zero)
             UnhookWindowsHookEx(_hook);
         OleUninitialize();
@@ -126,17 +132,25 @@ public sealed class TextExpanderService : IDisposable
         if (string.IsNullOrEmpty(body) || length <= 0)
             return;
 
+        if (ForegroundElevation.BlocksTyping())
+        {
+            ForegroundElevation.NotifyOnce(_host);
+            return;
+        }
+
         Interlocked.Exchange(ref _injecting, 1);
         try
         {
             _host.SuppressClipboard(TimeSpan.FromMilliseconds(900));
             var backup = Snapshot();
-            SendBackspaces(length);
+            var deleted = SendBackspaces(length);
             Thread.Sleep(40);
             Clipboard.SetText(body);
-            SendCtrlV();
+            var pasted = SendCtrlV();
             Thread.Sleep(80);
             Restore(backup);
+            if ((!deleted || !pasted) && ForegroundElevation.BlocksTyping())
+                ForegroundElevation.NotifyOnce(_host);
         }
         catch
         {
@@ -216,7 +230,20 @@ public sealed class TextExpanderService : IDisposable
         }
     }
 
-    private static void SendBackspaces(int count)
+    private void NoteElevation()
+    {
+        try
+        {
+            if (_host.Settings.TextExpanderEnabled && ForegroundElevation.BlocksTyping())
+                ForegroundElevation.NotifyOnce(_host);
+        }
+        catch
+        {
+            // Elevation checks must not stop the hook thread.
+        }
+    }
+
+    private static bool SendBackspaces(int count)
     {
         var inputs = new Input[count * 2];
         for (var i = 0; i < count; i++)
@@ -225,13 +252,13 @@ public sealed class TextExpanderService : IDisposable
             inputs[(i * 2) + 1] = KeyInput(0x08, true);
         }
 
-        SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<Input>());
+        return SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<Input>()) == (uint)inputs.Length;
     }
 
-    private static void SendCtrlV()
+    private static bool SendCtrlV()
     {
         Input[] inputs = [KeyInput(0x11, false), KeyInput(0x56, false), KeyInput(0x56, true), KeyInput(0x11, true)];
-        SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<Input>());
+        return SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<Input>()) == (uint)inputs.Length;
     }
 
     private static Input KeyInput(ushort vk, bool up) => new()
@@ -338,6 +365,12 @@ public sealed class TextExpanderService : IDisposable
 
     [DllImport("user32.dll")]
     private static extern bool PostThreadMessage(uint id, int msg, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr SetTimer(IntPtr hwnd, IntPtr id, uint milliseconds, IntPtr callback);
+
+    [DllImport("user32.dll")]
+    private static extern bool KillTimer(IntPtr hwnd, IntPtr id);
 
     [DllImport("kernel32.dll")]
     private static extern uint GetCurrentThreadId();

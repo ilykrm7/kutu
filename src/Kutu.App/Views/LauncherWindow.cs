@@ -17,6 +17,7 @@ public sealed class LauncherWindow : Window
     private readonly StackPanel _results;
     private readonly List<IKutuTool> _matches = [];
     private int _selected;
+    private bool _isClosing;
 
     public LauncherWindow(IKutuHost host)
     {
@@ -63,14 +64,33 @@ public sealed class LauncherWindow : Window
             if (Content is FrameworkElement element)
                 Motion.Enter(element, distance: 8);
         };
-        Deactivated += (_, _) => Close();
+        Closing += (_, _) => _isClosing = true;
+        Deactivated += (_, _) =>
+        {
+            if (_isClosing)
+                return;
+            Hide();
+        };
+    }
+
+    public void Present()
+    {
+        if (_isClosing)
+            return;
+
+        _search.Text = "";
+        _selected = 0;
+        Render();
+        Show();
+        Activate();
+        _search.Focus();
     }
 
     private void OnSearchKey(object sender, KeyEventArgs e)
     {
         if (e.Key == Key.Escape)
         {
-            Close();
+            Dismiss();
             e.Handled = true;
             return;
         }
@@ -168,8 +188,16 @@ public sealed class LauncherWindow : Window
     {
         if (tool.Id == "upload")
             return;
-        Close();
+        Dismiss();
         _host.OpenTool(tool.Id);
+    }
+
+    private void Dismiss()
+    {
+        if (_isClosing)
+            return;
+        _isClosing = true;
+        Close();
     }
 
     private static bool Match(IKutuTool tool, string query)
