@@ -266,6 +266,12 @@ public class CoreLogicTests
         await off.SaveAsync();
         var raw = File.ReadAllText(path);
         Assert.Contains("\"contextMenuRegistered\": true", raw);
+
+        File.WriteAllText(path, "");
+        var broken = new SettingsService(new TestProtector(), path);
+        await broken.LoadAsync();
+        Assert.True(broken.Current.ContextMenuRegistered);
+        Assert.True(broken.ContextMenuDirty);
         Directory.Delete(dir, recursive: true);
     }
 

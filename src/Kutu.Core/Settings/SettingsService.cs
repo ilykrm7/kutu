@@ -42,9 +42,21 @@ public sealed class SettingsService
             return;
         }
 
-        using var stream = File.OpenRead(_path);
-        var document = await JsonSerializer.DeserializeAsync<SettingsDocument>(stream, JsonOptions, cancellationToken)
-            .ConfigureAwait(false);
+        SettingsDocument? document;
+        try
+        {
+            using var stream = File.OpenRead(_path);
+            document = await JsonSerializer.DeserializeAsync<SettingsDocument>(stream, JsonOptions, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (JsonException)
+        {
+            document = null;
+        }
+        catch (IOException)
+        {
+            document = null;
+        }
         if (document is null)
         {
             Current = new AppSettings();
@@ -70,8 +82,13 @@ public sealed class SettingsService
     {
         Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
         var document = ToDocument(Current);
-        using var stream = File.Create(_path);
-        await JsonSerializer.SerializeAsync(stream, document, JsonOptions, cancellationToken).ConfigureAwait(false);
+        var temp = _path + ".tmp";
+        using (var stream = File.Create(temp))
+            await JsonSerializer.SerializeAsync(stream, document, JsonOptions, cancellationToken).ConfigureAwait(false);
+        if (File.Exists(_path))
+            File.Replace(temp, _path, null);
+        else
+            File.Move(temp, _path);
         ContextMenuDirty = false;
     }
 
