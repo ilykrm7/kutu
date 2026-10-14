@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net48;net8.0</TargetFrameworks>
+    <RootNamespace>Kutu.Imaging</RootNamespace>
+    <Description>Image convert and resize through the Windows Imaging Component.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Kutu.Core\Kutu.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="native\kutuwebp.dll" LogicalName="kutuwebp.dll" />
+  </ItemGroup>
+</Project>

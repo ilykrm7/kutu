@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="App_Name" xml:space="preserve"><value>Kutu</value></data>
+  <data name="App_Tagline" xml:space="preserve"><value>Küçük araçlar, tek yerde.</value></data>
+  <data name="Nav_Dashboard" xml:space="preserve"><value>Araçlar</value></data>
+  <data name="Nav_Settings" xml:space="preserve"><value>Ayarlar</value></data>
+  <data name="Dash_SearchPlaceholder" xml:space="preserve"><value>Araç ara veya Alt+Space</value></data>
+  <data name="Dash_Hint" xml:space="preserve"><value>Kısayol: {0}</value></data>
+  <data name="Dash_Greeting" xml:space="preserve"><value>Ne yapmak istersin?</value></data>
+  <data name="Tool_Image_Title" xml:space="preserve"><value>Görsel dönüştür</value></data>
+  <data name="Tool_Image_Desc" xml:space="preserve"><value>PNG, JPG, WebP, HEIC, ICO, PDF ve BMP.</value></data>
+  <data name="Tool_Resize_Title" xml:space="preserve"><value>Boyut ve sıkıştır</value></data>
+  <data name="Tool_Resize_Desc" xml:space="preserve"><value>Toplu yeniden boyutlandır, kaliteyi düşür.</value></data>
+  <data name="Tool_Shot_Title" xml:space="preserve"><value>Ekran görüntüsü</value></data>
+  <data name="Tool_Shot_Desc" xml:space="preserve"><value>Bölge seç, donmuş ekranda işaretle, kopyala veya kaydet.</value></data>
+  <data name="Tool_Color_Title" xml:space="preserve"><value>Renk seçici</value></data>
+  <data name="Tool_Color_Desc" xml:space="preserve"><value>HEX, RGB ve HSL. Geçmiş tutulur.</value></data>
+  <data name="Tool_Clip_Title" xml:space="preserve"><value>Pano geçmişi</value></data>
+  <data name="Tool_Clip_Desc" xml:space="preserve"><value>Son kopyalar, arama ve sabitleme.</value></data>
+  <data name="Tool_Expand_Title" xml:space="preserve"><value>Metin genişletici</value></data>
+  <data name="Tool_Expand_Desc" xml:space="preserve"><value>:imza gibi tetikleyiciler her yerde yapışır.</value></data>
+  <data name="Tool_Whois_Title" xml:space="preserve"><value>WHOIS ve DNS</value></data>
+  <data name="Tool_Whois_Desc" xml:space="preserve"><value>RDAP kaydı ve DNS kayıtları.</value></data>
+  <data name="Tool_Ip_Title" xml:space="preserve"><value>IP itibarı</value></data>
+  <data name="Tool_Ip_Desc" xml:space="preserve"><value>Birden fazla sağlayıcı, DNSBL ve TOR. Anahtar yoksa konum yine gelir.</value></data>
+  <data name="Tool_Upload_Title" xml:space="preserve"><value>Bağlantıya yükle</value></data>
+  <data name="Tool_Upload_Desc" xml:space="preserve"><value>Metin veya görseli paylaşılabilir bağlantıya çevir.</value></data>
+  <data name="Tool_Translate_Title" xml:space="preserve"><value>Çeviri</value></data>
+  <data name="Tool_Translate_Desc" xml:space="preserve"><value>Seçili metni İngilizceye çevirir. DeepL, sonra Google, sonra MyMemory.</value></data>
+  <data name="Action_Back" xml:space="preserve"><value>Geri</value></data>
+  <data name="Action_Copy" xml:space="preserve"><value>Kopyala</value></data>
+  <data name="Action_Save" xml:space="preserve"><value>Kaydet</value></data>
+  <data name="Action_Upload" xml:space="preserve"><value>Yükle</value></data>
+  <data name="Action_Cancel" xml:space="preserve"><value>Vazgeç</value></data>
+  <data name="Action_Close" xml:space="preserve"><value>Kapat</value></data>
+  <data name="Action_Open" xml:space="preserve"><value>Aç</value></data>
+  <data name="Action_Exit" xml:space="preserve"><value>Çıkış</value></data>
+  <data name="Action_Convert" xml:space="preserve"><value>Dönüştür</value></data>
+  <data name="Action_Browse" xml:space="preserve"><value>Dosya seç</value></data>
+  <data name="Action_Clear" xml:space="preserve"><value>Temizle</value></data>
+  <data name="Action_Delete" xml:space="preserve"><value>Sil</value></data>
+  <data name="Action_Pin" xml:space="preserve"><value>Sabitle</value></data>
+  <data name="Action_Unpin" xml:space="preserve"><value>Sabiti kaldır</value></data>
+  <data name="Action_Add" xml:space="preserve"><value>Ekle</value></data>
+  <data name="Action_Lookup" xml:space="preserve"><value>Sorgula</value></data>
+  <data name="Action_Check" xml:space="preserve"><value>Kontrol et</value></data>
+  <data name="Action_Translate" xml:space="preserve"><value>Çevir</value></data>
+  <data name="Action_TranslateClipboard" xml:space="preserve"><value>Panoyu çevir</value></data>
+  <data name="Action_PickColor" xml:space="preserve"><value>Renk seç</value></data>
+  <data name="Action_TakeShot" xml:space="preserve"><value>Ekran görüntüsü al</value></data>
+  <data name="Action_Apply" xml:space="preserve"><value>Uygula</value></data>
+  <data name="Action_Copied" xml:space="preserve"><value>Kopyalandı</value></data>
+  <data name="Settings_General" xml:space="preserve"><value>Genel</value></data>
+  <data name="Settings_Hotkeys" xml:space="preserve"><value>Kısayollar</value></data>
+  <data name="Settings_Api" xml:space="preserve"><value>API anahtarları</value></data>
+  <data name="Settings_Integration" xml:space="preserve"><value>Entegrasyon</value></data>
+  <data name="Settings_StartWithWindows" xml:space="preserve"><value>Windows ile başlat</value></data>
+  <data name="Settings_ContextMenu" xml:space="preserve"><value>Sağ tık menüsü: Kutu ile dönüştür</value></data>
+  <data name="Settings_Language" xml:space="preserve"><value>Dil</value></data>
+  <data name="Settings_ScreenshotHotkey" xml:space="preserve"><value>Ekran görüntüsü</value></data>
+  <data name="Settings_LauncherHotkey" xml:space="preserve"><value>Başlatıcı</value></data>
+  <data name="Settings_ColorHotkey" xml:space="preserve"><value>Renk seçici</value></data>
+  <data name="Settings_ClipboardHotkey" xml:space="preserve"><value>Pano geçmişi</value></data>
+  <data name="Settings_TranslateHotkey" xml:space="preserve"><value>Hızlı çeviri</value></data>
+  <data name="Settings_AbuseKey" xml:space="preserve"><value>AbuseIPDB anahtarı</value></data>
+  <data name="Settings_DeepLKey" xml:space="preserve"><value>DeepL anahtarı</value></data>
+  <data name="Settings_DeepLEndpoint" xml:space="preserve"><value>DeepL adresi</value></data>
+  <data name="Settings_UploadEndpoint" xml:space="preserve"><value>Yükleme adresi</value></data>
+  <data name="Settings_UploadKey" xml:space="preserve"><value>Yükleme anahtarı</value></data>
+  <data name="Settings_Saved" xml:space="preserve"><value>Ayarlar kaydedildi.</value></data>
+  <data name="Settings_RestartHint" xml:space="preserve"><value>Dil değişimi pencereyi yeniden açınca tam uygulanır.</value></data>
+  <data name="Settings_KeysHint" xml:space="preserve"><value>Anahtarlar bu bilgisayarda DPAPI ile şifrelenir. Koda yazılmaz.</value></data>
+  <data name="Settings_HotkeyHint" xml:space="preserve"><value>Kutuya tıkla ve kısayolu bas. Esc temizler.</value></data>
+  <data name="Tray_Open" xml:space="preserve"><value>Kutu'yu aç</value></data>
+  <data name="Tray_Shot" xml:space="preserve"><value>Ekran görüntüsü</value></data>
+  <data name="Tray_Exit" xml:space="preserve"><value>Çıkış</value></data>
+  <data name="Launcher_Placeholder" xml:space="preserve"><value>Araç yaz: ss, renk, whois, çevir…</value></data>
+  <data name="Launcher_Empty" xml:space="preserve"><value>Eşleşen araç yok.</value></data>
+  <data name="Drop_Hint" xml:space="preserve"><value>Görselleri buraya bırak veya dosya seç.</value></data>
+  <data name="Image_Format" xml:space="preserve"><value>Biçim</value></data>
+  <data name="Image_Quality" xml:space="preserve"><value>Kalite</value></data>
+  <data name="Image_Done" xml:space="preserve"><value>{0} dosya dönüştürüldü.</value></data>
+  <data name="Image_Working" xml:space="preserve"><value>Dönüştürülüyor…</value></data>
+  <data name="Image_None" xml:space="preserve"><value>Önce bir görsel ekle.</value></data>
+  <data name="Resize_Mode" xml:space="preserve"><value>Ölçü</value></data>
+  <data name="Resize_LongEdge" xml:space="preserve"><value>Uzun kenar</value></data>
+  <data name="Resize_Width" xml:space="preserve"><value>Genişlik</value></data>
+  <data name="Resize_Height" xml:space="preserve"><value>Yükseklik</value></data>
+  <data name="Resize_Percent" xml:space="preserve"><value>Yüzde</value></data>
+  <data name="Resize_Value" xml:space="preserve"><value>Değer</value></data>
+  <data name="Resize_Done" xml:space="preserve"><value>{0} görsel kaydedildi.</value></data>
+  <data name="Resize_Working" xml:space="preserve"><value>İşleniyor…</value></data>
+  <data name="Shot_Hint" xml:space="preserve"><value>Kısayolla bölge seç. Donmuş ekranda işaretle, kopyala veya kaydet. Esc vazgeçer.</value></data>
+  <data name="Shot_Arrow" xml:space="preserve"><value>Ok</value></data>
+  <data name="Shot_Rect" xml:space="preserve"><value>Dikdörtgen</value></data>
+  <data name="Shot_Pen" xml:space="preserve"><value>Kalem</value></data>
+  <data name="Shot_Text" xml:space="preserve"><value>Yazı</value></data>
+  <data name="Shot_Blur" xml:space="preserve"><value>Bulanık</value></data>
+  <data name="Shot_Highlight" xml:space="preserve"><value>Vurgu</value></data>
+  <data name="Shot_Line" xml:space="preserve"><value>Çizgi</value></data>
+  <data name="Shot_Ellipse" xml:space="preserve"><value>Elips</value></data>
+  <data name="Shot_Marker" xml:space="preserve"><value>İşaret</value></data>
+  <data name="Shot_Thin" xml:space="preserve"><value>İnce</value></data>
+  <data name="Shot_Medium" xml:space="preserve"><value>Orta</value></data>
+  <data name="Shot_Thick" xml:space="preserve"><value>Kalın</value></data>
+  <data name="Shot_Color" xml:space="preserve"><value>Renk</value></data>
+  <data name="Shot_Custom" xml:space="preserve"><value>Özel</value></data>
+  <data name="Shot_Undo" xml:space="preserve"><value>Geri al</value></data>
+  <data name="Shot_Select" xml:space="preserve"><value>Ekranda bir bölge sürükle. Esc iptal.</value></data>
+  <data name="Shot_TextPrompt" xml:space="preserve"><value>Metin</value></data>
+  <data name="Shot_Saved" xml:space="preserve"><value>Görüntü kaydedildi.</value></data>
+  <data name="Shot_Uploaded" xml:space="preserve"><value>Bağlantı kopyalandı.</value></data>
+  <data name="Color_Hint" xml:space="preserve"><value>İmlecin altındaki renk. Tıkla, kopyala, geçmişe ekle.</value></data>
+  <data name="Color_History" xml:space="preserve"><value>Geçmiş</value></data>
+  <data name="Color_Copied" xml:space="preserve"><value>{0} kopyalandı.</value></data>
+  <data name="Color_Empty" xml:space="preserve"><value>Henüz renk yok.</value></data>
+  <data name="Clip_Search" xml:space="preserve"><value>Panoda ara</value></data>
+  <data name="Clip_Empty" xml:space="preserve"><value>Pano geçmişi boş.</value></data>
+  <data name="Clip_Pinned" xml:space="preserve"><value>Sabit</value></data>
+  <data name="Clip_Cleared" xml:space="preserve"><value>Sabit olmayanlar silindi.</value></data>
+  <data name="Expand_Trigger" xml:space="preserve"><value>Tetikleyici</value></data>
+  <data name="Expand_Body" xml:space="preserve"><value>Yapıştırılacak metin</value></data>
+  <data name="Expand_Hint" xml:space="preserve"><value>Tetikleyici tam yazılınca hemen genişler; boşluk beklenmez. Örnek: :adm veya mail:imza. Yönetici pencerelerinde çalışmaz.</value></data>
+  <data name="Hook_Elevated" xml:space="preserve"><value>Kutu yönetici penceresine yazamıyor. Kutu'yu yönetici olarak çalıştırın.</value></data>
+  <data name="Expand_Saved" xml:space="preserve"><value>Parçacıklar kaydedildi.</value></data>
+  <data name="Expand_Invalid" xml:space="preserve"><value>Tetikleyici ve metin gerekli.</value></data>
+  <data name="Expand_Debug" xml:space="preserve"><value>Klavye günlüğü (expander.log)</value></data>
+  <data name="Whois_Domain" xml:space="preserve"><value>Alan adı</value></data>
+  <data name="Whois_Registrar" xml:space="preserve"><value>Kayıt şirketi</value></data>
+  <data name="Whois_Created" xml:space="preserve"><value>Kayıt</value></data>
+  <data name="Whois_Expires" xml:space="preserve"><value>Bitiş</value></data>
+  <data name="Whois_Updated" xml:space="preserve"><value>Güncelleme</value></data>
+  <data name="Whois_Status" xml:space="preserve"><value>Durum</value></data>
+  <data name="Whois_Nameservers" xml:space="preserve"><value>Ad sunucuları</value></data>
+  <data name="Whois_Dns" xml:space="preserve"><value>DNS kayıtları</value></data>
+  <data name="Whois_Empty" xml:space="preserve"><value>Sonuç yok.</value></data>
+  <data name="Ip_Address" xml:space="preserve"><value>IP adresi</value></data>
+  <data name="Ip_Score" xml:space="preserve"><value>İtibar skoru</value></data>
+  <data name="Ip_Reports" xml:space="preserve"><value>Rapor</value></data>
+  <data name="Ip_Country" xml:space="preserve"><value>Ülke</value></data>
+  <data name="Ip_City" xml:space="preserve"><value>Şehir</value></data>
+  <data name="Ip_Isp" xml:space="preserve"><value>ISS</value></data>
+  <data name="Ip_Asn" xml:space="preserve"><value>ASN</value></data>
+  <data name="Ip_Usage" xml:space="preserve"><value>Kullanım</value></data>
+  <data name="Ip_NeedKey" xml:space="preserve"><value>AbuseIPDB anahtarı yok. Yalnızca konum gösteriliyor. Anahtarı Ayarlar'a ekle.</value></data>
+  <data name="Ip_Invalid" xml:space="preserve"><value>Geçerli bir IP yaz.</value></data>
+  <data name="Upload_Text" xml:space="preserve"><value>Metin</value></data>
+  <data name="Upload_File" xml:space="preserve"><value>Dosya</value></data>
+  <data name="Upload_Placeholder" xml:space="preserve"><value>Paylaşmak istediğin metin</value></data>
+  <data name="Upload_Result" xml:space="preserve"><value>Bağlantı</value></data>
+  <data name="Upload_NeedConfig" xml:space="preserve"><value>Ayarlar'dan yükleme adresi ve anahtarını gir.</value></data>
+  <data name="Upload_Drop" xml:space="preserve"><value>Dosyayı buraya bırak.</value></data>
+  <data name="Upload_Ok" xml:space="preserve"><value>Yüklendi. Bağlantı kopyalandı.</value></data>
+  <data name="Translate_Source" xml:space="preserve"><value>Kaynak</value></data>
+  <data name="Translate_Target" xml:space="preserve"><value>Hedef</value></data>
+  <data name="Translate_Input" xml:space="preserve"><value>Metin</value></data>
+  <data name="Translate_Output" xml:space="preserve"><value>Çeviri</value></data>
+  <data name="Translate_Auto" xml:space="preserve"><value>Otomatik</value></data>
+  <data name="Translate_Fallback" xml:space="preserve"><value>DeepL anahtarı yok, ücretsiz yedek kullanıldı.</value></data>
+  <data name="Translate_Empty" xml:space="preserve"><value>Çevrilecek metin yok.</value></data>
+  <data name="Translate_PopupHint" xml:space="preserve"><value>Panodaki metin</value></data>
+  <data name="Common_Error" xml:space="preserve"><value>Bir sorun oluştu.</value></data>
+  <data name="Common_Working" xml:space="preserve"><value>Çalışıyor…</value></data>
+  <data name="Common_Files" xml:space="preserve"><value>{0} dosya</value></data>
+  <data name="Lang_Tr" xml:space="preserve"><value>Türkçe</value></data>
+  <data name="Lang_En" xml:space="preserve"><value>English</value></data>
+  <data name="Alias_Image" xml:space="preserve"><value>çevir,convert,png,jpg</value></data>
+  <data name="Common_None" xml:space="preserve"><value>—</value></data>
+  <data name="Nav_Favorites" xml:space="preserve"><value>Favoriler</value></data>
+  <data name="Dash_All" xml:space="preserve"><value>Tümü</value></data>
+  <data name="Dash_Image" xml:space="preserve"><value>Görsel</value></data>
+  <data name="Dash_Text" xml:space="preserve"><value>Metin</value></data>
+  <data name="Dash_Net" xml:space="preserve"><value>Ağ</value></data>
+  <data name="Dash_Soon" xml:space="preserve"><value>Yakında</value></data>
+  <data name="Dash_Pin" xml:space="preserve"><value>Sabitle</value></data>
+  <data name="Dash_Unpin" xml:space="preserve"><value>Kaldır</value></data>
+  <data name="Dash_FavEmpty" xml:space="preserve"><value>Yıldızla sabitlediğin araçlar burada durur.</value></data>
+  <data name="Dash_LauncherHint" xml:space="preserve"><value>Alt+Space</value></data>
+  <data name="Menu_ModernFail" xml:space="preserve"><value>Modern menü kurulamadı. Klasik menü Daha fazla seçenek altında duruyor.</value></data>
+  <data name="Settings_VirusTotalKey" xml:space="preserve"><value>VirusTotal anahtarı</value></data>
+  <data name="Settings_IpqsKey" xml:space="preserve"><value>IPQualityScore anahtarı</value></data>
+  <data name="Settings_OtxKey" xml:space="preserve"><value>AlienVault OTX anahtarı</value></data>
+  <data name="Settings_GreyNoiseKey" xml:space="preserve"><value>GreyNoise anahtarı</value></data>
+  <data name="Settings_ShodanKey" xml:space="preserve"><value>Shodan anahtarı</value></data>
+  <data name="Settings_IpInfoKey" xml:space="preserve"><value>IPinfo anahtarı</value></data>
+  <data name="Ip_MyIp" xml:space="preserve"><value>IP'mi kullan</value></data>
+  <data name="Ip_Working" xml:space="preserve"><value>Sağlayıcılar sorgulanıyor…</value></data>
+  <data name="Ip_Summary" xml:space="preserve"><value>Özet</value></data>
+  <data name="Ip_RiskHigh" xml:space="preserve"><value>Yüksek risk</value></data>
+  <data name="Ip_RiskMedium" xml:space="preserve"><value>Orta risk</value></data>
+  <data name="Ip_RiskLow" xml:space="preserve"><value>Düşük risk</value></data>
+  <data name="Ip_RiskInfo" xml:space="preserve"><value>Bilgi</value></data>
+  <data name="Ip_AddKey" xml:space="preserve"><value>anahtar ekle</value></data>
+  <data name="Ip_NoRecord" xml:space="preserve"><value>Kayıt yok</value></data>
+  <data name="Ip_Clean" xml:space="preserve"><value>Temiz</value></data>
+  <data name="Translate_ToEnglish" xml:space="preserve"><value>Kaynak otomatik, hedef İngilizce.</value></data>
+  <data name="Translate_Working" xml:space="preserve"><value>Çevriliyor…</value></data>
+  <data name="Translate_NoSelection" xml:space="preserve"><value>Seçili metin yok.</value></data>
+  <data name="Image_HeifMissing" xml:space="preserve"><value>HEIC için Microsoft Store'dan “HEIF Image Extensions” kurulmalı.</value></data>
+  <data name="Image_Failed" xml:space="preserve"><value>Görsel kaydedilemedi.</value></data>
+  <data name="Image_FailedFile" xml:space="preserve"><value>{0} kaydedilemedi.</value></data>
+  <data name="Shot_CopyFailed" xml:space="preserve"><value>Panoya kopyalanamadı.</value></data>
+  <data name="Shot_Move" xml:space="preserve"><value>Taşı</value></data>
+</root>
