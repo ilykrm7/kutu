@@ -11,7 +11,6 @@ using Kutu.Tools.ClipboardHistory;
 using Kutu.Tools.ColorPicker;
 using Kutu.Tools.Screenshot;
 using Kutu.Tools.Translate;
-using Kutu.Imaging;
 using Kutu.Tools.Upload;
 
 namespace Kutu.App.Services;
@@ -235,7 +234,7 @@ public sealed class AppHost : IKutuHost
         {
             var format = args[convertTo + 1];
             var targets = args.Skip(convertTo + 2).Where(arg => !arg.StartsWith('-')).Select(arg => arg.Trim('"')).ToList();
-            _ = ConvertToAsync(format, targets);
+            Toast(ConvertCommand.Execute(format, targets, Settings.JpegQuality));
             return;
         }
 
@@ -255,56 +254,6 @@ public sealed class AppHost : IKutuHost
 
         if (files.Count > 0)
             OpenTool("image-converter", files);
-    }
-
-    private async Task ConvertToAsync(string formatName, List<string> files)
-    {
-        var format = formatName.ToLowerInvariant() switch
-        {
-            "jpeg" or "jpg" => KutuImageFormat.Jpeg,
-            "png" => KutuImageFormat.Png,
-            "webp" => KutuImageFormat.Webp,
-            "ico" => KutuImageFormat.Ico,
-            "pdf" => KutuImageFormat.Pdf,
-            "bmp" => KutuImageFormat.Bmp,
-            _ => (KutuImageFormat?)null
-        };
-        if (format is null || files.Count == 0)
-            return;
-
-        var done = 0;
-        var failed = new List<string>();
-        var heif = false;
-        foreach (var file in files.Where(File.Exists))
-        {
-            try
-            {
-                await ImagePipeline.ConvertAsync(file, ImageFormats.OutputPath(file, format.Value), format.Value, Settings.JpegQuality);
-                done++;
-            }
-            catch (HeifCodecMissingException ex)
-            {
-                heif = true;
-                failed.Add(Path.GetFileName(file));
-                AppLog.Write(file + Environment.NewLine + ex);
-            }
-            catch (Exception ex)
-            {
-                failed.Add(Path.GetFileName(file));
-                AppLog.Write(file + Environment.NewLine + ex);
-            }
-        }
-
-        if (failed.Count == 0)
-        {
-            Toast(string.Format(L.Get("Image_Done"), done));
-            return;
-        }
-
-        var text = string.Format(L.Get("Image_FailedFile"), string.Join(", ", failed));
-        if (heif)
-            text = L.Get("Image_HeifMissing") + " " + text;
-        Toast(text);
     }
 
     private static BitmapSource ToClipboardBitmap(BitmapSource image)

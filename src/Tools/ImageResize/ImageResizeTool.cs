@@ -1,10 +1,10 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Interop;
 using Kutu.Imaging;
 using Kutu.Sdk.Hosting;
 using Kutu.Sdk.Localization;
 using Kutu.Sdk.Ui;
-using Microsoft.Win32;
 using Wpf.Ui.Controls;
 using TextBox = Wpf.Ui.Controls.TextBox;
 
@@ -187,24 +187,21 @@ public sealed class ImageResizeView : UserControl
 
     private void Browse()
     {
-        var dialog = new OpenFileDialog
-        {
-            Multiselect = true,
-            Filter = "Images|*.png;*.jpg;*.jpeg;*.webp;*.bmp;*.gif;*.tif;*.tiff;*.ico;*.heic;*.heif"
-        };
-        if (dialog.ShowDialog() == true)
-            AddFiles(dialog.FileNames);
+        var files = ImageFilePicker.Pick(OwnerHandle());
+        if (files is { Length: > 0 })
+            AddFiles(files);
     }
 
     private void AddFiles(IEnumerable<string> files)
     {
-        foreach (var file in files)
-        {
-            if (ImageFormats.IsSupported(file) && !_files.Contains(file, StringComparer.OrdinalIgnoreCase))
-                _files.Add(file);
-        }
-
+        ImageFileList.AddDistinct(_files, files);
         Refresh();
+    }
+
+    private IntPtr OwnerHandle()
+    {
+        var window = Window.GetWindow(this);
+        return window is null ? IntPtr.Zero : new WindowInteropHelper(window).Handle;
     }
 
     private void Refresh() => _count.Text = string.Format(L.Get("Common_Files"), _files.Count);

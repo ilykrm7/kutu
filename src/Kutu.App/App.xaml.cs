@@ -36,6 +36,11 @@ public partial class App : Application
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
         DispatcherUnhandledException += OnDispatcherException;
 
+        // Explorer starts one process per selected file. Those must convert
+        // beside an already running Kutu and must not open a window.
+        if (HeadlessConvert.TryStart(e.Args))
+            return;
+
         _mutex = new Mutex(initiallyOwned: true, SingleInstance.MutexName, out var created);
         if (!created)
         {

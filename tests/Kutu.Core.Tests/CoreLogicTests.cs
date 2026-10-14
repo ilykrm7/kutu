@@ -1,4 +1,5 @@
 using Kutu.Core.Color;
+using Kutu.Core.Commands;
 using Kutu.Core.Hotkeys;
 using Kutu.Core.Models;
 using Kutu.Core.Network;
@@ -51,6 +52,73 @@ public class CoreLogicTests
         Assert.Equal("administrator", SnippetMatcher.Match(":adm", snippets)?.Body);
         Assert.Null(SnippetMatcher.Match(":ad", snippets));
         Assert.Equal("administrator", SnippetMatcher.Match("xx:adm", snippets)?.Body);
+    }
+
+    [Fact]
+    public void Expander_resets_on_enter_then_matches_colon_adm()
+    {
+        var buffer = new ExpanderBuffer();
+        var snippets = new[] { new Snippet { Trigger = ":adm", Body = "administrator" } };
+        buffer.Type("r", snippets, win: true);
+        Assert.Equal("", buffer.Text);
+        buffer.Type("notepad", snippets);
+        Assert.Equal("notepad", buffer.Text);
+        buffer.Enter();
+        buffer.FocusChanged();
+        Assert.Equal("", buffer.Text);
+        Assert.Null(buffer.Type(":", snippets));
+        Assert.Equal(":", buffer.Text);
+        Assert.Null(buffer.Type("a", snippets));
+        Assert.Null(buffer.Type("d", snippets));
+        var match = buffer.Type("m", snippets);
+        Assert.Equal("administrator", match?.Body);
+        Assert.Equal(":adm", buffer.Text);
+        buffer.MouseClick();
+        Assert.Equal("", buffer.Text);
+        buffer.Type("keep", snippets);
+        buffer.FocusChanged();
+        Assert.Equal("", buffer.Text);
+        buffer.Tab();
+        buffer.Escape();
+        Assert.Equal("", buffer.Text);
+    }
+
+    [Fact]
+    public void Expander_log_shows_only_the_trigger_suffix()
+    {
+        Assert.Null(ExpanderLogText.VisibleBuffer("notepad"));
+        Assert.Equal(":adm", ExpanderLogText.VisibleBuffer("notepad:adm"));
+        Assert.Equal(":", ExpanderLogText.VisibleBuffer(":"));
+    }
+
+    [Fact]
+    public void Selection_keeps_same_stem_with_different_extensions()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "kutu-pick", Guid.NewGuid().ToString("N"));
+        var selected = ImageFileList.CombineSelection([dir, "photo.jpg", "photo.png", "photo.webp"]);
+        Assert.Equal(
+            [
+                Path.GetFullPath(Path.Combine(dir, "photo.jpg")),
+                Path.GetFullPath(Path.Combine(dir, "photo.png")),
+                Path.GetFullPath(Path.Combine(dir, "photo.webp"))
+            ],
+            selected);
+        var list = new List<string>();
+        ImageFileList.AddDistinct(list, selected);
+        ImageFileList.AddDistinct(list, [selected[0]]);
+        Assert.Equal(3, list.Count);
+    }
+
+    [Fact]
+    public void Convert_to_is_headless_and_keeps_every_path()
+    {
+        var args = new[] { "--convert-to", "jpeg", @"C:\photos\photo.jpg", @"C:\photos\photo.png", @"C:\photos\photo.webp" };
+        Assert.True(ConvertArgs.IsHeadless(args));
+        Assert.False(ConvertArgs.IsHeadless(["--screenshot"]));
+        Assert.True(ConvertArgs.TryParse(args, out var format, out var files));
+        Assert.Equal("jpeg", format);
+        Assert.Equal(3, files.Count);
+        Assert.Equal(@"C:\photos\photo.webp", files[2]);
     }
 
     [Fact]

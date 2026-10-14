@@ -196,25 +196,46 @@ jobs:
           if (Test-Path $store) { throw 'HKCU CommandStore is ignored by Explorer SubCommands and must not be registered' }
           $json = Get-Content $settings -Raw
           if ($json -notmatch '"contextMenuRegistered"\s*:\s*true') { throw "settings flag:`n$json" }
-          Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
-          Stop-Kutu
+          if ($proc.HasExited) { throw "Kutu-lite exited during menu registration with $($proc.ExitCode)" }
           if (Test-Path $log) { throw "menu registration wrote kutu.log:`n$(Get-Content $log -Raw)" }
           $dir = Join-Path $env:TEMP ("kutu-menu-" + [guid]::NewGuid().ToString('N'))
           New-Item -ItemType Directory -Path $dir | Out-Null
+          $png = [Convert]::FromBase64String('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==')
           $source = Join-Path $dir 'in.png'
-          [IO.File]::WriteAllBytes($source, [Convert]::FromBase64String('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='))
+          $sourceB = Join-Path $dir 'b.png'
+          [IO.File]::WriteAllBytes($source, $png)
+          [IO.File]::WriteAllBytes($sourceB, $png)
           $out = Join-Path $dir 'in.jpg'
+          $outB = Join-Path $dir 'b.jpg'
+          # The main instance is still running. Explorer starts one process per file;
+          # both must convert and exit without taking the single-instance mutex.
+          if ($proc.HasExited) { throw 'Kutu-lite exited before the convert-to check' }
           $convert = Start-Process -FilePath $lite -ArgumentList @('--convert-to','jpeg',$source) -PassThru
+          $convertB = Start-Process -FilePath $lite -ArgumentList @('--convert-to','jpeg',$sourceB) -PassThru
           $deadline = (Get-Date).AddSeconds(30)
           do {
             Start-Sleep -Seconds 1
-            if (Test-Path $out) { break }
+            if ((Test-Path $out) -and (Test-Path $outB)) { break }
           } while ((Get-Date) -lt $deadline)
-          Stop-Process -Id $convert.Id -Force -ErrorAction SilentlyContinue
+          $exitDeadline = (Get-Date).AddSeconds(8)
+          while ((-not $convert.HasExited -or -not $convertB.HasExited) -and (Get-Date) -lt $exitDeadline) { Start-Sleep -Milliseconds 200 }
+          if (-not $convert.HasExited -or -not $convertB.HasExited) { throw 'convert-to stayed running instead of exiting headless' }
+          if ($proc.HasExited) { throw 'headless convert-to took down the already running instance' }
+          Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
           Stop-Kutu
-          if (-not (Test-Path $out)) { throw "context menu command did not write $out" }
+          if (-not (Test-Path $out) -or -not (Test-Path $outB)) { throw "context menu command did not write both outputs" }
           $bytes = [IO.File]::ReadAllBytes($out)
           if ($bytes.Length -lt 2 -or $bytes[0] -ne 0xFF -or $bytes[1] -ne 0xD8) { throw 'context menu output is not a jpeg' }
+          Remove-Item $out -Force
+          $alone = Start-Process -FilePath $lite -ArgumentList @('--convert-to','jpeg',$source) -PassThru
+          $aloneDeadline = (Get-Date).AddSeconds(20)
+          do {
+            Start-Sleep -Milliseconds 200
+            if ($alone.HasExited -and (Test-Path $out)) { break }
+          } while ((Get-Date) -lt $aloneDeadline)
+          if (-not $alone.HasExited) { throw 'convert-to with Kutu closed opened a window instead of exiting' }
+          Get-Process -Name Kutu,Kutu-lite -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+          if (-not (Test-Path $out)) { throw 'convert-to with Kutu closed did not write the jpeg' }
           Write-Host "context menu command wrote $($bytes.Length) bytes"
 
       - name: Upload exe artifact

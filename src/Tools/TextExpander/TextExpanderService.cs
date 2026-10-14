@@ -19,14 +19,21 @@ public sealed class TextExpanderService : IDisposable
     private const int WmQuit = 0x0012;
     private const int WmTimer = 0x0113;
     private const int WmApp = 0x8000;
+    private const int WhMouseLl = 14;
     private readonly IKutuHost _host;
-    private readonly StringBuilder _buffer = new();
+    private readonly ExpanderBuffer _buffer = new();
     private readonly LowLevelKeyboardProc _proc;
+    private readonly LowLevelKeyboardProc _mouseProc;
     private IntPtr _hook;
+    private IntPtr _mouseHook;
+    private IntPtr _foreground;
     private Thread? _thread;
     private uint _threadId;
     private int _injecting;
     private bool _shift;
+    private bool _ctrl;
+    private bool _alt;
+    private bool _win;
     private string? _pendingBody;
     private int _pendingLength;
 
@@ -34,6 +41,7 @@ public sealed class TextExpanderService : IDisposable
     {
         _host = host;
         _proc = Hook;
+        _mouseProc = MouseHook;
     }
 
     public void Start()
@@ -61,12 +69,14 @@ public sealed class TextExpanderService : IDisposable
         OleInitialize(IntPtr.Zero);
         _threadId = GetCurrentThreadId();
         PeekMessage(out _, IntPtr.Zero, 0, 0, 0);
+        _foreground = GetForegroundWindow();
         var module = HookModule();
         _hook = SetWindowsHookEx(WhKeyboardLl, _proc, module, 0);
         if (_hook == IntPtr.Zero)
-            DebugLog("hook failed error=" + Marshal.GetLastWin32Error() + " module=" + module);
-        else
+            DebugLog("hook failed error=" + Marshal.GetLastWin32Error() + " module=" + module, force: true);
+        else if (_host.Settings.ExpanderDebug)
             DebugLog("hook installed module=" + module);
+        _mouseHook = SetWindowsHookEx(WhMouseLl, _mouseProc, module, 0);
         SetTimer(IntPtr.Zero, (IntPtr)1, 1500, IntPtr.Zero);
         while (GetMessage(out var message, IntPtr.Zero, 0, 0) > 0)
         {
@@ -81,6 +91,8 @@ public sealed class TextExpanderService : IDisposable
         KillTimer(IntPtr.Zero, (IntPtr)1);
         if (_hook != IntPtr.Zero)
             UnhookWindowsHookEx(_hook);
+        if (_mouseHook != IntPtr.Zero)
+            UnhookWindowsHookEx(_mouseHook);
         OleUninitialize();
     }
 
@@ -90,39 +102,89 @@ public sealed class TextExpanderService : IDisposable
         {
             var data = Marshal.PtrToStructure<KbdLlHook>(lParam);
             var down = wParam == WmKeyDown || wParam == WmSysKeyDown;
-            if (data.VkCode is 0x10 or 0xA0 or 0xA1)
-                _shift = down;
-
+            TrackModifier(data.VkCode, down);
+            NoteFocus();
             var injecting = Volatile.Read(ref _injecting) != 0;
             if (down && wParam == WmKeyDown && _host.Settings.TextExpanderEnabled && ExpanderHook.ShouldHandle(data.Flags, injecting) && !IsOwnProcess())
-                HandleKey(data.VkCode, data.ScanCode, data.Flags);
-            else if (down && wParam == WmKeyDown && DebugOn())
-                DebugLog($"skip vk={data.VkCode:X} flags={data.Flags:X} injecting={injecting}");
+                HandleKey(data.VkCode, data.ScanCode);
         }
 
         return CallNextHookEx(_hook, nCode, wParam, lParam);
     }
 
-    private void HandleKey(uint vk, uint scan, uint flags)
+    private IntPtr MouseHook(int nCode, IntPtr wParam, IntPtr lParam)
+    {
+        if (nCode >= 0 && (wParam == (IntPtr)0x0201 || wParam == (IntPtr)0x0204 || wParam == (IntPtr)0x0207 || wParam == (IntPtr)0x020B))
+        {
+            _buffer.MouseClick();
+            NoteFocus();
+        }
+
+        return CallNextHookEx(_mouseHook, nCode, wParam, lParam);
+    }
+
+    private void NoteFocus()
+    {
+        var hwnd = GetForegroundWindow();
+        if (hwnd == _foreground)
+            return;
+        _foreground = hwnd;
+        _buffer.FocusChanged();
+        ReleaseModifiers();
+    }
+
+    private void ReleaseModifiers()
+    {
+        _ctrl = false;
+        _alt = false;
+        _win = false;
+    }
+
+    private void TrackModifier(uint vk, bool down)
+    {
+        if (vk is 0x10 or 0xA0 or 0xA1)
+            _shift = down;
+        else if (vk is 0x11 or 0xA2 or 0xA3)
+            _ctrl = down;
+        else if (vk is 0x12 or 0xA4 or 0xA5)
+            _alt = down;
+        else if (vk is 0x5B or 0x5C)
+            _win = down;
+    }
+
+    private void HandleKey(uint vk, uint scan)
     {
         if (vk == 0x08)
         {
-            if (_buffer.Length > 0)
-                _buffer.Length -= 1;
+            _buffer.Backspace();
             return;
         }
 
         if (vk is 0x10 or 0xA0 or 0xA1 or 0x11 or 0xA2 or 0xA3 or 0x12 or 0xA4 or 0xA5 or 0x5B or 0x5C)
             return;
 
-        if ((GetAsyncKeyState(0x11) & 0x8000) != 0 || (GetAsyncKeyState(0x12) & 0x8000) != 0 || (GetAsyncKeyState(0x5B) & 0x8000) != 0)
+        if (vk is 0x0D)
         {
-            if (vk is not (0x10 or 0xA0 or 0xA1))
-                _buffer.Clear();
+            _buffer.Enter();
+            ReleaseModifiers();
             return;
         }
 
-        if (vk is 0x25 or 0x26 or 0x27 or 0x28 or 0x1B or 0x24 or 0x23 or 0x09)
+        if (vk is 0x09)
+        {
+            _buffer.Tab();
+            ReleaseModifiers();
+            return;
+        }
+
+        if (vk is 0x1B)
+        {
+            _buffer.Escape();
+            ReleaseModifiers();
+            return;
+        }
+
+        if (vk is 0x25 or 0x26 or 0x27 or 0x28 or 0x24 or 0x23)
         {
             _buffer.Clear();
             return;
@@ -130,17 +192,9 @@ public sealed class TextExpanderService : IDisposable
 
         var text = ToChar(vk, scan);
         if (string.IsNullOrEmpty(text))
-        {
-            DebugLog($"vk={vk:X} scan={scan:X} flags={flags:X} ch= shift={_shift}");
-            return;
-        }
-
-        _buffer.Append(text);
-        if (_buffer.Length > 128)
-            _buffer.Remove(0, _buffer.Length - 128);
-
-        var match = SnippetMatcher.Match(_buffer.ToString(), _host.Settings.Snippets);
-        DebugLog($"vk={vk:X} scan={scan:X} flags={flags:X} ch={text} shift={_shift} buf={_buffer} match={match?.Trigger}");
+            text = FallbackChar(vk);
+        var match = _buffer.Type(text, _host.Settings.Snippets, _win, _ctrl, _alt);
+        LogTrigger(text, match?.Trigger);
         if (match is null || string.IsNullOrEmpty(match.Body) || string.IsNullOrEmpty(match.Trigger))
             return;
 
@@ -148,6 +202,16 @@ public sealed class TextExpanderService : IDisposable
         _pendingBody = match.Body;
         _buffer.Clear();
         PostThreadMessage(_threadId, WmApp, IntPtr.Zero, IntPtr.Zero);
+    }
+
+    private void LogTrigger(string? text, string? trigger)
+    {
+        if (!_host.Settings.ExpanderDebug)
+            return;
+        var visible = ExpanderLogText.VisibleBuffer(_buffer.Text);
+        if (visible is null && string.IsNullOrEmpty(trigger))
+            return;
+        DebugLog($"ch={(visible is null ? "*" : text)} buf={visible ?? "*"} match={trigger}");
     }
 
     private void ReplacePending()
@@ -212,19 +276,27 @@ public sealed class TextExpanderService : IDisposable
         return written > 0 ? buffer.ToString() : null;
     }
 
-    private bool DebugOn()
+    private string? FallbackChar(uint vk)
     {
-        if (_host.Settings.ExpanderDebug)
-            return true;
+        if (vk is >= 0x41 and <= 0x5A)
+        {
+            var letter = (char)('a' + (vk - 0x41));
+            var caps = (GetKeyState(0x14) & 1) != 0;
+            if (_shift ^ caps)
+                letter = char.ToUpperInvariant(letter);
+            return letter.ToString();
+        }
 
-        var env = Environment.GetEnvironmentVariable("KUTU_EXPANDER_DEBUG");
-        return env is "1" or "true" or "TRUE";
+        if (vk is >= 0x30 and <= 0x39 && !_shift)
+            return ((char)vk).ToString();
+        if (vk == 0xBE)
+            return _shift ? ":" : ".";
+        return null;
     }
 
-    private void DebugLog(string line)
+    private void DebugLog(string line, bool force = false)
     {
-        var hookLine = line.StartsWith("hook ", StringComparison.Ordinal);
-        if (!hookLine && !DebugOn())
+        if (!force && !_host.Settings.ExpanderDebug)
             return;
 
         try
