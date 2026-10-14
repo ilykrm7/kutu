@@ -24,6 +24,8 @@ public interface IKutuHost
 
     void CopyImage(BitmapSource image);
 
+    void Log(string message);
+
     Task<string?> UploadAsync(byte[] data, string fileName, string contentType, CancellationToken cancellationToken = default);
 
     void SuppressClipboard(TimeSpan duration);

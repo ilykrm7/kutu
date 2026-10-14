@@ -25,6 +25,10 @@ public sealed class SettingsService
 
     public AppSettings Current { get; private set; } = new();
 
+    public bool ContextMenuDirty { get; private set; }
+
+    public bool ContextMenuExplicitOff { get; private set; }
+
     public static string AppDirectory =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Kutu");
 
@@ -33,13 +37,33 @@ public sealed class SettingsService
         if (!File.Exists(_path))
         {
             Current = new AppSettings();
+            ContextMenuDirty = true;
+            ContextMenuExplicitOff = false;
             return;
         }
 
         await using var stream = File.OpenRead(_path);
         var document = await JsonSerializer.DeserializeAsync<SettingsDocument>(stream, JsonOptions, cancellationToken)
             .ConfigureAwait(false);
-        Current = document is null ? new AppSettings() : FromDocument(document);
+        if (document is null)
+        {
+            Current = new AppSettings();
+            ContextMenuDirty = true;
+            ContextMenuExplicitOff = false;
+            return;
+        }
+
+        Current = FromDocument(document);
+        ContextMenuExplicitOff = document.ContextMenuUserSet == true && !document.ContextMenuRegistered;
+        ContextMenuDirty = !ContextMenuExplicitOff && !document.ContextMenuRegistered;
+    }
+
+    public void CorrectContextMenuOn()
+    {
+        if (!Current.ContextMenuRegistered)
+            ContextMenuDirty = true;
+        Current.ContextMenuRegistered = true;
+        ContextMenuExplicitOff = false;
     }
 
     public async Task SaveAsync(CancellationToken cancellationToken = default)
@@ -48,6 +72,7 @@ public sealed class SettingsService
         var document = ToDocument(Current);
         await using var stream = File.Create(_path);
         await JsonSerializer.SerializeAsync(stream, document, JsonOptions, cancellationToken).ConfigureAwait(false);
+        ContextMenuDirty = false;
     }
 
     public SettingsDocument ToDocument(AppSettings settings) => new()
@@ -79,6 +104,7 @@ public sealed class SettingsService
         TranslateSource = settings.TranslateSource,
         TranslateTarget = settings.TranslateTarget,
         TextExpanderEnabled = settings.TextExpanderEnabled,
+        ExpanderDebug = settings.ExpanderDebug,
         ClipboardHistoryEnabled = settings.ClipboardHistoryEnabled,
         FavoriteTools = settings.FavoriteTools
     };
@@ -113,6 +139,7 @@ public sealed class SettingsService
         TranslateSource = string.IsNullOrWhiteSpace(document.TranslateSource) ? "auto" : document.TranslateSource,
         TranslateTarget = string.IsNullOrWhiteSpace(document.TranslateTarget) ? "EN" : document.TranslateTarget,
         TextExpanderEnabled = document.TextExpanderEnabled ?? true,
+        ExpanderDebug = document.ExpanderDebug,
         ClipboardHistoryEnabled = document.ClipboardHistoryEnabled ?? true,
         FavoriteTools = document.FavoriteTools ?? []
     };

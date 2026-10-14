@@ -54,6 +54,8 @@ public sealed class AppSettings
 
     public bool TextExpanderEnabled { get; set; } = true;
 
+    public bool ExpanderDebug { get; set; }
+
     public bool ClipboardHistoryEnabled { get; set; } = true;
 
     public List<string> FavoriteTools { get; set; } = [];

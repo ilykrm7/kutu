@@ -18,12 +18,17 @@ public static class ContextMenuRegistration
 
     private static readonly (string Id, string Format, string Title)[] Formats =
     [
-        ("Kutu.ToJpeg", "jpeg", "JPEG"),
-        ("Kutu.ToPng", "png", "PNG"),
-        ("Kutu.ToWebp", "webp", "WebP"),
-        ("Kutu.ToIco", "ico", "ICO"),
-        ("Kutu.ToPdf", "pdf", "PDF"),
-        ("Kutu.ToBmp", "bmp", "BMP")
+        ("01jpeg", "jpeg", "JPEG"),
+        ("02png", "png", "PNG"),
+        ("03webp", "webp", "WebP"),
+        ("04ico", "ico", "ICO"),
+        ("05pdf", "pdf", "PDF"),
+        ("06bmp", "bmp", "BMP")
+    ];
+
+    private static readonly string[] LegacyStoreIds =
+    [
+        "Kutu.ToJpeg", "Kutu.ToPng", "Kutu.ToWebp", "Kutu.ToIco", "Kutu.ToPdf", "Kutu.ToBmp"
     ];
 
     public static string SetEnabled(bool enabled)
@@ -50,6 +55,25 @@ public static class ContextMenuRegistration
 
         SetClassic(true, exe);
         Notify();
+    }
+
+    public static void RemoveClassic()
+    {
+        SetClassic(false, "");
+        Notify();
+    }
+
+    public static bool HasClassicMenu()
+    {
+        try
+        {
+            using var shell = Registry.CurrentUser.OpenSubKey(@"Software\Classes\SystemFileAssociations\.png\shell\Kutu");
+            return shell is not null;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     public static void EnsureSparse(string? exe)
@@ -80,9 +104,10 @@ public static class ContextMenuRegistration
 
     private static bool ClassicCurrent(string exe)
     {
-        using var command = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Explorer\CommandStore\shell\Kutu.ToJpeg\command");
         using var shell = Registry.CurrentUser.OpenSubKey(@"Software\Classes\SystemFileAssociations\.png\shell\Kutu");
-        return shell is not null && command?.GetValue("") as string == CommandLine(exe, "jpeg");
+        using var command = Registry.CurrentUser.OpenSubKey(@"Software\Classes\SystemFileAssociations\.png\shell\Kutu\shell\01jpeg\command");
+        return shell?.GetValue("SubCommands") as string == ""
+            && command?.GetValue("") as string == CommandLine(exe, "jpeg");
     }
 
     private static void StampSparse(string exe, string result)
@@ -103,38 +128,36 @@ public static class ContextMenuRegistration
 
     private static void SetClassic(bool enabled, string exe)
     {
-        foreach (var format in Formats)
-        {
-            var store = $@"Software\Microsoft\Windows\CurrentVersion\Explorer\CommandStore\shell\{format.Id}";
-            if (!enabled)
-            {
-                Registry.CurrentUser.DeleteSubKeyTree(store, throwOnMissingSubKey: false);
-                continue;
-            }
+        foreach (var id in LegacyStoreIds)
+            Registry.CurrentUser.DeleteSubKeyTree($@"Software\Microsoft\Windows\CurrentVersion\Explorer\CommandStore\shell\{id}", throwOnMissingSubKey: false);
 
-            using var key = Registry.CurrentUser.CreateSubKey(store);
-            key?.SetValue("MUIVerb", format.Title);
-            using var command = key?.CreateSubKey("command");
-            command?.SetValue("", CommandLine(exe, format.Format));
-        }
-
-        var subCommands = string.Join(';', Formats.Select(item => item.Id));
         foreach (var extension in Extensions)
         {
             var legacy = $@"Software\Classes\SystemFileAssociations\{extension}\shell\Kutu.Convert";
             var path = $@"Software\Classes\SystemFileAssociations\{extension}\shell\Kutu";
             Registry.CurrentUser.DeleteSubKeyTree(legacy, throwOnMissingSubKey: false);
-            if (!enabled)
-            {
-                Registry.CurrentUser.DeleteSubKeyTree(path, throwOnMissingSubKey: false);
+            Registry.CurrentUser.DeleteSubKeyTree(path, throwOnMissingSubKey: false);
+            if (!enabled || string.IsNullOrWhiteSpace(exe))
                 continue;
-            }
 
             using var key = Registry.CurrentUser.CreateSubKey(path);
-            key?.DeleteSubKeyTree("command", throwOnMissingSubKey: false);
-            key?.SetValue("MUIVerb", "Kutu ile dönüştür");
-            key?.SetValue("Icon", $"\"{exe}\",0");
-            key?.SetValue("SubCommands", subCommands);
+            if (key is null)
+                continue;
+
+            key.SetValue("MUIVerb", "Kutu ile dönüştür");
+            key.SetValue("Icon", $"\"{exe}\",0");
+            // Empty SubCommands tells Explorer to enumerate shell\Kutu\shell.
+            // A non-empty list is resolved only from HKLM CommandStore, which a
+            // per-user install cannot write, so the submenu would be empty.
+            key.SetValue("SubCommands", "", RegistryValueKind.String);
+            using var verbs = key.CreateSubKey("shell");
+            foreach (var format in Formats)
+            {
+                using var verb = verbs?.CreateSubKey(format.Id);
+                verb?.SetValue("MUIVerb", format.Title);
+                using var command = verb?.CreateSubKey("command");
+                command?.SetValue("", CommandLine(exe, format.Format));
+            }
         }
     }
 

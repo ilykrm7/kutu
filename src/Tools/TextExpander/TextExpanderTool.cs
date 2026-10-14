@@ -33,10 +33,23 @@ public sealed class TextExpanderView : UserControl
     private readonly TextBox _body;
     private readonly StackPanel _list;
     private readonly TextBlock _status;
+    private readonly ToggleSwitch _debug;
+    private bool _loading = true;
 
     public TextExpanderView(IKutuHost host)
     {
         _host = host;
+        _debug = new ToggleSwitch { Content = L.Get("Expand_Debug"), IsChecked = host.Settings.ExpanderDebug };
+        _debug.Checked += async (_, _) =>
+        {
+            if (!_loading)
+                await SetDebugAsync(true);
+        };
+        _debug.Unchecked += async (_, _) =>
+        {
+            if (!_loading)
+                await SetDebugAsync(false);
+        };
         _trigger = Chrome.Input(":imza");
         _trigger.Width = 220;
         _body = Chrome.Input(L.Get("Expand_Body"), multiline: true);
@@ -51,6 +64,8 @@ public sealed class TextExpanderView : UserControl
         buttons.Children.Add(Chrome.Primary(L.Get("Action_Add"), SymbolRegular.Add24, async (_, _) => await AddAsync()));
         var stack = new StackPanel();
         stack.Children.Add(Chrome.Hint(L.Get("Expand_Hint")));
+        stack.Children.Add(_debug);
+        stack.Children.Add(new Border { Height = 8 });
         stack.Children.Add(add);
         stack.Children.Add(Chrome.Label(L.Get("Expand_Body")));
         stack.Children.Add(_body);
@@ -60,6 +75,13 @@ public sealed class TextExpanderView : UserControl
         stack.Children.Add(_list);
         Content = new ScrollViewer { Content = stack, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
         Render();
+        _loading = false;
+    }
+
+    private async Task SetDebugAsync(bool enabled)
+    {
+        _host.Settings.ExpanderDebug = enabled;
+        await _host.SaveSettingsAsync();
     }
 
     private async Task AddAsync()

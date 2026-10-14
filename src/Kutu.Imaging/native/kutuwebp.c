@@ -2,6 +2,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "webp/encode.h"
+#include "webp/decode.h"
 
 __declspec(dllexport) int KutuWebpEncode(const uint8_t *bgra, int width, int height, int stride, float quality, uint8_t **output, size_t *size)
 {
@@ -16,6 +17,33 @@ __declspec(dllexport) int KutuWebpEncode(const uint8_t *bgra, int width, int hei
 
     *output = bytes;
     *size = written;
+    return 1;
+}
+
+__declspec(dllexport) int KutuWebpDecode(const uint8_t *data, size_t size, uint8_t **bgra, int *width, int *height)
+{
+    int w = 0;
+    int h = 0;
+    uint8_t *pixels;
+    if (bgra == NULL || width == NULL || height == NULL)
+        return 0;
+
+    *bgra = NULL;
+    *width = 0;
+    *height = 0;
+    if (data == NULL || size == 0)
+        return 0;
+
+    pixels = WebPDecodeBGRA(data, size, &w, &h);
+    if (pixels == NULL || w <= 0 || h <= 0)
+    {
+        WebPFree(pixels);
+        return 0;
+    }
+
+    *bgra = pixels;
+    *width = w;
+    *height = h;
     return 1;
 }
 

@@ -20,6 +20,7 @@ internal static class WicCodec
 
         var factory = CreateFactory();
         object? decoder = null;
+        string? scratch = null;
         object? frame = null;
         object? converted = null;
         object? scaled = null;
@@ -30,6 +31,14 @@ internal static class WicCodec
         try
         {
             var hr = factory.CreateDecoderFromFilename(inputPath, IntPtr.Zero, 0x80000000, 1, out decoder);
+            if (hr < 0 && IsWebp(inputPath))
+            {
+                Release(decoder);
+                decoder = null;
+                scratch = DecodeWebpToBmp(inputPath);
+                hr = factory.CreateDecoderFromFilename(scratch, IntPtr.Zero, 0x80000000, 1, out decoder);
+            }
+
             if (hr < 0)
                 throw DecodeError(hr, inputPath);
 
@@ -125,7 +134,49 @@ internal static class WicCodec
             Release(frame);
             Release(decoder);
             Release(factory);
+            if (scratch is not null)
+                TryDelete(scratch);
         }
+    }
+
+    private static bool IsWebp(string path) =>
+        Path.GetExtension(path).Equals(".webp", StringComparison.OrdinalIgnoreCase);
+
+    private static string DecodeWebpToBmp(string inputPath)
+    {
+        var pixels = LibWebp.DecodeBgra(File.ReadAllBytes(inputPath), out var width, out var height);
+        var path = Path.Combine(Path.GetTempPath(), "kutu-" + Guid.NewGuid().ToString("N") + ".bmp");
+        WriteBgraBmp(path, pixels, width, height);
+        return path;
+    }
+
+    private static void WriteBgraBmp(string path, byte[] bgra, int width, int height)
+    {
+        var stride = checked(width * 4);
+        var pixelBytes = checked(stride * height);
+        if (bgra.Length < pixelBytes)
+            throw new InvalidOperationException("image");
+
+        using var stream = File.Create(path);
+        using var writer = new BinaryWriter(stream);
+        writer.Write((byte)'B');
+        writer.Write((byte)'M');
+        writer.Write(checked(54 + pixelBytes));
+        writer.Write(0);
+        writer.Write(54);
+        writer.Write(40);
+        writer.Write(width);
+        writer.Write(height);
+        writer.Write((short)1);
+        writer.Write((short)32);
+        writer.Write(0);
+        writer.Write(pixelBytes);
+        writer.Write(2835);
+        writer.Write(2835);
+        writer.Write(0);
+        writer.Write(0);
+        for (var y = height - 1; y >= 0; y--)
+            writer.Write(bgra, y * stride, stride);
     }
 
     private static void SaveIco(IWICImagingFactory factory, IWICBitmapSource source, string outputPath)

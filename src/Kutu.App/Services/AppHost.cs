@@ -1,5 +1,8 @@
+using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using Kutu.Core.Diagnostics;
 using Kutu.Core.Models;
 using Kutu.Core.Settings;
 using Kutu.Sdk.Hosting;
@@ -71,9 +74,33 @@ public sealed class AppHost : IKutuHost
 
     public void CopyImage(BitmapSource image)
     {
-        _clipboard.Suppress(TimeSpan.FromMilliseconds(500));
-        System.Windows.Clipboard.SetImage(image);
+        _clipboard.Suppress(TimeSpan.FromMilliseconds(800));
+        var frozen = ToClipboardBitmap(image);
+        Exception? last = null;
+        for (var attempt = 0; attempt < 8; attempt++)
+        {
+            try
+            {
+                var data = new DataObject();
+                data.SetImage(frozen);
+                System.Windows.Clipboard.SetDataObject(data, copy: true);
+                return;
+            }
+            catch (Exception ex) when (IsClipboardBusy(ex) && attempt < 7)
+            {
+                last = ex;
+                Thread.Sleep(40 * (attempt + 1));
+            }
+            catch (Exception ex) when (IsClipboardBusy(ex))
+            {
+                last = ex;
+            }
+        }
+
+        throw last ?? new ExternalException("CLIPBRD_E_CANT_OPEN", unchecked((int)0x800401D0));
     }
+
+    public void Log(string message) => AppLog.Write(message);
 
     public async Task<string?> UploadAsync(byte[] data, string fileName, string contentType, CancellationToken cancellationToken = default)
     {
@@ -246,40 +273,73 @@ public sealed class AppHost : IKutuHost
             return;
 
         var done = 0;
-        try
+        var failed = new List<string>();
+        var heif = false;
+        foreach (var file in files.Where(File.Exists))
         {
-            foreach (var file in files.Where(File.Exists))
+            try
             {
                 await ImagePipeline.ConvertAsync(file, ImageFormats.OutputPath(file, format.Value), format.Value, Settings.JpegQuality);
                 done++;
             }
+            catch (HeifCodecMissingException ex)
+            {
+                heif = true;
+                failed.Add(Path.GetFileName(file));
+                AppLog.Write(file + Environment.NewLine + ex);
+            }
+            catch (Exception ex)
+            {
+                failed.Add(Path.GetFileName(file));
+                AppLog.Write(file + Environment.NewLine + ex);
+            }
+        }
 
+        if (failed.Count == 0)
+        {
             Toast(string.Format(L.Get("Image_Done"), done));
+            return;
         }
-        catch (HeifCodecMissingException)
-        {
-            Toast(L.Get("Image_HeifMissing"));
-        }
-        catch (Exception)
-        {
-            Toast(L.Get("Image_Failed"));
-        }
-    }
-}
 
-public static class AppLog
-{
-    public static void Write(Exception exception)
+        var text = string.Format(L.Get("Image_FailedFile"), string.Join(", ", failed));
+        if (heif)
+            text = L.Get("Image_HeifMissing") + " " + text;
+        Toast(text);
+    }
+
+    private static BitmapSource ToClipboardBitmap(BitmapSource image)
     {
-        try
+        BitmapSource source = image;
+        if (image.Format != PixelFormats.Bgra32)
         {
-            var dir = SettingsService.AppDirectory;
-            Directory.CreateDirectory(dir);
-            File.AppendAllText(Path.Combine(dir, "kutu.log"), $"{DateTimeOffset.Now:u} {exception}{Environment.NewLine}");
+            var converted = new FormatConvertedBitmap();
+            converted.BeginInit();
+            converted.Source = image;
+            converted.DestinationFormat = PixelFormats.Bgra32;
+            converted.EndInit();
+            converted.Freeze();
+            source = converted;
         }
-        catch
+
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(source));
+        using var stream = new MemoryStream();
+        encoder.Save(stream);
+        stream.Position = 0;
+        var decoder = new PngBitmapDecoder(stream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
+        var frame = decoder.Frames[0];
+        frame.Freeze();
+        return frame;
+    }
+
+    private static bool IsClipboardBusy(Exception exception)
+    {
+        for (Exception? current = exception; current is not null; current = current.InnerException)
         {
-            // Logging must not crash the app.
+            if (unchecked((uint)current.HResult) == 0x800401D0)
+                return true;
         }
+
+        return false;
     }
 }

@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Threading;
 using Kutu.App.Services;
+using Kutu.Core.Diagnostics;
 using Kutu.Core.Settings;
 using Kutu.Sdk.Hosting;
 using Kutu.Sdk.Localization;
@@ -55,15 +56,7 @@ public partial class App : Application
         {
             var settings = new SettingsService(new DpapiProtector());
             settings.LoadAsync().GetAwaiter().GetResult();
-            try
-            {
-                if (settings.Current.ContextMenuRegistered)
-                    ContextMenuRegistration.EnsureClassic(Environment.ProcessPath);
-            }
-            catch
-            {
-                // Menu registration must not stop startup.
-            }
+            SyncContextMenu(settings);
 
             L.SetCulture(settings.Current.Language);
             ApplicationThemeManager.Apply(ApplicationTheme.Dark, Wpf.Ui.Controls.WindowBackdropType.Mica, false);
@@ -164,6 +157,33 @@ public partial class App : Application
 
         if (_hotkeys?.Register(gesture, action) == false)
             _host?.Toast(gesture);
+    }
+
+    private static void SyncContextMenu(SettingsService settings)
+    {
+        try
+        {
+            var exe = Environment.ProcessPath;
+            var staleOff = settings.ContextMenuExplicitOff && ContextMenuRegistration.HasClassicMenu();
+            if (settings.ContextMenuExplicitOff && !staleOff)
+            {
+                ContextMenuRegistration.RemoveClassic();
+            }
+            else
+            {
+                if (!settings.Current.ContextMenuRegistered || staleOff)
+                    settings.CorrectContextMenuOn();
+                if (settings.Current.ContextMenuRegistered)
+                    ContextMenuRegistration.EnsureClassic(exe);
+            }
+
+            if (settings.ContextMenuDirty)
+                settings.SaveAsync().GetAwaiter().GetResult();
+        }
+        catch
+        {
+            // Menu registration must not stop startup or look like a crash.
+        }
     }
 
     private void ExitApplication()

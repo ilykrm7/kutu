@@ -1,6 +1,8 @@
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows;
+using Kutu.Core.Settings;
 using Kutu.Core.Text;
 using Kutu.Sdk.Hosting;
 using Kutu.Sdk.Windows;
@@ -11,6 +13,9 @@ public sealed class TextExpanderService : IDisposable
 {
     private const int WhKeyboardLl = 13;
     private const int WmKeyDown = 0x0100;
+    private const int WmKeyUp = 0x0101;
+    private const int WmSysKeyDown = 0x0104;
+    private const int WmSysKeyUp = 0x0105;
     private const int WmQuit = 0x0012;
     private const int WmTimer = 0x0113;
     private const int WmApp = 0x8000;
@@ -21,6 +26,7 @@ public sealed class TextExpanderService : IDisposable
     private Thread? _thread;
     private uint _threadId;
     private int _injecting;
+    private bool _shift;
     private string? _pendingBody;
     private int _pendingLength;
 
@@ -54,7 +60,13 @@ public sealed class TextExpanderService : IDisposable
     {
         OleInitialize(IntPtr.Zero);
         _threadId = GetCurrentThreadId();
-        _hook = SetWindowsHookEx(WhKeyboardLl, _proc, GetModuleHandle(null), 0);
+        PeekMessage(out _, IntPtr.Zero, 0, 0, 0);
+        var module = HookModule();
+        _hook = SetWindowsHookEx(WhKeyboardLl, _proc, module, 0);
+        if (_hook == IntPtr.Zero)
+            DebugLog("hook failed error=" + Marshal.GetLastWin32Error() + " module=" + module);
+        else
+            DebugLog("hook installed module=" + module);
         SetTimer(IntPtr.Zero, (IntPtr)1, 1500, IntPtr.Zero);
         while (GetMessage(out var message, IntPtr.Zero, 0, 0) > 0)
         {
@@ -74,17 +86,24 @@ public sealed class TextExpanderService : IDisposable
 
     private IntPtr Hook(int nCode, IntPtr wParam, IntPtr lParam)
     {
-        if (nCode >= 0 && wParam == WmKeyDown && Volatile.Read(ref _injecting) == 0 && _host.Settings.TextExpanderEnabled)
+        if (nCode >= 0 && (wParam == WmKeyDown || wParam == WmKeyUp || wParam == WmSysKeyDown || wParam == WmSysKeyUp))
         {
             var data = Marshal.PtrToStructure<KbdLlHook>(lParam);
-            if ((data.Flags & 0x12) == 0 && !IsOwnProcess())
-                HandleKey(data.VkCode, data.ScanCode);
+            var down = wParam == WmKeyDown || wParam == WmSysKeyDown;
+            if (data.VkCode is 0x10 or 0xA0 or 0xA1)
+                _shift = down;
+
+            var injecting = Volatile.Read(ref _injecting) != 0;
+            if (down && wParam == WmKeyDown && _host.Settings.TextExpanderEnabled && ExpanderHook.ShouldHandle(data.Flags, injecting) && !IsOwnProcess())
+                HandleKey(data.VkCode, data.ScanCode, data.Flags);
+            else if (down && wParam == WmKeyDown && DebugOn())
+                DebugLog($"skip vk={data.VkCode:X} flags={data.Flags:X} injecting={injecting}");
         }
 
         return CallNextHookEx(_hook, nCode, wParam, lParam);
     }
 
-    private void HandleKey(uint vk, uint scan)
+    private void HandleKey(uint vk, uint scan, uint flags)
     {
         if (vk == 0x08)
         {
@@ -92,6 +111,9 @@ public sealed class TextExpanderService : IDisposable
                 _buffer.Length -= 1;
             return;
         }
+
+        if (vk is 0x10 or 0xA0 or 0xA1 or 0x11 or 0xA2 or 0xA3 or 0x12 or 0xA4 or 0xA5 or 0x5B or 0x5C)
+            return;
 
         if ((GetAsyncKeyState(0x11) & 0x8000) != 0 || (GetAsyncKeyState(0x12) & 0x8000) != 0 || (GetAsyncKeyState(0x5B) & 0x8000) != 0)
         {
@@ -108,13 +130,17 @@ public sealed class TextExpanderService : IDisposable
 
         var text = ToChar(vk, scan);
         if (string.IsNullOrEmpty(text))
+        {
+            DebugLog($"vk={vk:X} scan={scan:X} flags={flags:X} ch= shift={_shift}");
             return;
+        }
 
         _buffer.Append(text);
         if (_buffer.Length > 128)
             _buffer.Remove(0, _buffer.Length - 128);
 
         var match = SnippetMatcher.Match(_buffer.ToString(), _host.Settings.Snippets);
+        DebugLog($"vk={vk:X} scan={scan:X} flags={flags:X} ch={text} shift={_shift} buf={_buffer} match={match?.Trigger}");
         if (match is null || string.IsNullOrEmpty(match.Body) || string.IsNullOrEmpty(match.Trigger))
             return;
 
@@ -162,27 +188,75 @@ public sealed class TextExpanderService : IDisposable
         }
     }
 
-    private static string? ToChar(uint vk, uint scan)
+    private string? ToChar(uint vk, uint scan)
     {
         var state = new byte[256];
-        void Mark(int key)
+        var shift = _shift || (GetAsyncKeyState(0x10) & 0x8000) != 0 || (GetAsyncKeyState(0xA0) & 0x8000) != 0 || (GetAsyncKeyState(0xA1) & 0x8000) != 0;
+        if (shift)
         {
-            if ((GetAsyncKeyState(key) & 0x8000) != 0)
-                state[key] = 0x80;
+            state[0x10] = 0x80;
+            state[0xA0] = 0x80;
         }
 
-        Mark(0x10);
-        Mark(0xA0);
-        Mark(0xA1);
-        Mark(0x14);
         if ((GetKeyState(0x14) & 1) != 0)
             state[0x14] = 0x01;
+        if (vk < 256)
+            state[vk] = 0x80;
         var foreground = GetForegroundWindow();
         var thread = GetWindowThreadProcessId(foreground, out _);
         var layout = GetKeyboardLayout(thread);
         var buffer = new StringBuilder(8);
-        var written = ToUnicodeEx(vk, scan, state, buffer, buffer.Capacity, 4, layout);
+        var written = ToUnicodeEx(vk, scan, state, buffer, buffer.Capacity, 0, layout);
+        if (written < 0)
+            ToUnicodeEx(vk, scan, state, buffer, buffer.Capacity, 0, layout);
         return written > 0 ? buffer.ToString() : null;
+    }
+
+    private bool DebugOn()
+    {
+        if (_host.Settings.ExpanderDebug)
+            return true;
+
+        var env = Environment.GetEnvironmentVariable("KUTU_EXPANDER_DEBUG");
+        return env is "1" or "true" or "TRUE";
+    }
+
+    private void DebugLog(string line)
+    {
+        var hookLine = line.StartsWith("hook ", StringComparison.Ordinal);
+        if (!hookLine && !DebugOn())
+            return;
+
+        try
+        {
+            var dir = SettingsService.AppDirectory;
+            Directory.CreateDirectory(dir);
+            File.AppendAllText(Path.Combine(dir, "expander.log"), $"{DateTimeOffset.Now:HH:mm:ss.fff} {line}{Environment.NewLine}");
+        }
+        catch
+        {
+            // Debug logging must not stop the hook.
+        }
+    }
+
+    private static IntPtr HookModule()
+    {
+        try
+        {
+            var name = Process.GetCurrentProcess().MainModule?.ModuleName;
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                var handle = GetModuleHandle(name);
+                if (handle != IntPtr.Zero)
+                    return handle;
+            }
+        }
+        catch
+        {
+            // Single-file hosts can hide the module name.
+        }
+
+        return GetModuleHandle(null);
     }
 
     private static IDataObject? Snapshot()
@@ -353,6 +427,9 @@ public sealed class TextExpanderService : IDisposable
 
     [DllImport("user32.dll")]
     private static extern short GetKeyState(int vKey);
+
+    [DllImport("user32.dll")]
+    private static extern bool PeekMessage(out Msg message, IntPtr hwnd, uint min, uint max, uint remove);
 
     [DllImport("user32.dll")]
     private static extern int GetMessage(out Msg message, IntPtr hwnd, uint min, uint max);

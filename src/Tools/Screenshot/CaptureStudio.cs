@@ -504,8 +504,18 @@ public sealed class CaptureStudio : Window
         var image = RenderResult();
         if (image is null)
             return;
-        _host.CopyImage(image);
-        _host.Toast(L.Get("Action_Copied"));
+
+        try
+        {
+            _host.CopyImage(image);
+            _host.Toast(L.Get("Action_Copied"));
+        }
+        catch (Exception ex)
+        {
+            _host.Log(ex.ToString());
+            _host.Toast(L.Get("Shot_CopyFailed"));
+        }
+
         Close();
     }
 

@@ -215,8 +215,16 @@ public sealed class EditorWindow : Window
 
     private void Copy()
     {
-        _host.CopyImage(RenderFinal());
-        _host.Toast(L.Get("Action_Copied"));
+        try
+        {
+            _host.CopyImage(RenderFinal());
+            _host.Toast(L.Get("Action_Copied"));
+        }
+        catch (Exception ex)
+        {
+            _host.Log(ex.ToString());
+            _host.Toast(L.Get("Shot_CopyFailed"));
+        }
     }
 
     private void Save()

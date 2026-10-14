@@ -37,6 +37,25 @@ internal static class LibWebp
         }
     }
 
+    public static byte[] DecodeBgra(byte[] encoded, out int width, out int height)
+    {
+        var ok = KutuWebpDecode(encoded, (nuint)encoded.Length, out var ptr, out width, out height);
+        if (ok == 0 || ptr == IntPtr.Zero || width <= 0 || height <= 0)
+            throw new InvalidOperationException("image");
+
+        try
+        {
+            var length = checked(width * height * 4);
+            var pixels = new byte[length];
+            Marshal.Copy(ptr, pixels, 0, length);
+            return pixels;
+        }
+        finally
+        {
+            KutuWebpFree(ptr);
+        }
+    }
+
     private static IntPtr Resolve(string library, Assembly assembly, DllImportSearchPath? path)
     {
         if (!library.Equals("kutuwebp", StringComparison.OrdinalIgnoreCase))
@@ -85,6 +104,9 @@ internal static class LibWebp
 
     [DllImport("kutuwebp", CallingConvention = CallingConvention.Cdecl)]
     private static extern int KutuWebpEncode(byte[] bgra, int width, int height, int stride, float quality, out IntPtr output, out nuint size);
+
+    [DllImport("kutuwebp", CallingConvention = CallingConvention.Cdecl)]
+    private static extern int KutuWebpDecode(byte[] data, nuint size, out IntPtr bgra, out int width, out int height);
 
     [DllImport("kutuwebp", CallingConvention = CallingConvention.Cdecl)]
     private static extern void KutuWebpFree(IntPtr ptr);

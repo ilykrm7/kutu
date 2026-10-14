@@ -45,6 +45,25 @@ public class CoreLogicTests
     }
 
     [Fact]
+    public void Snippet_expands_colon_adm_without_trailing_space()
+    {
+        var snippets = new[] { new Snippet { Trigger = ":adm", Body = "administrator" } };
+        Assert.Equal("administrator", SnippetMatcher.Match(":adm", snippets)?.Body);
+        Assert.Null(SnippetMatcher.Match(":ad", snippets));
+        Assert.Equal("administrator", SnippetMatcher.Match("xx:adm", snippets)?.Body);
+    }
+
+    [Fact]
+    public void Expander_accepts_remote_injected_keys()
+    {
+        Assert.True(ExpanderHook.ShouldHandle(0x10, injecting: false));
+        Assert.True(ExpanderHook.ShouldHandle(0x02, injecting: false));
+        Assert.True(ExpanderHook.ShouldHandle(0, injecting: false));
+        Assert.False(ExpanderHook.ShouldHandle(0x10, injecting: true));
+        Assert.False(ExpanderHook.ShouldHandle(0, injecting: true));
+    }
+
+    [Fact]
     public void Hotkey_parse_roundtrip()
     {
         Assert.True(HotkeyGesture.TryParse("Ctrl+Shift+S", out var gesture));
@@ -130,6 +149,38 @@ public class CoreLogicTests
     }
 
     [Fact]
+    public async Task Settings_marks_unconfirmed_context_menu_for_persist()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "kutu-tests", Guid.NewGuid().ToString("N"));
+        var path = Path.Combine(dir, "settings.json");
+        var missing = new SettingsService(new TestProtector(), path);
+        await missing.LoadAsync();
+        Assert.True(missing.Current.ContextMenuRegistered);
+        Assert.True(missing.ContextMenuDirty);
+        Assert.False(missing.ContextMenuExplicitOff);
+
+        Directory.CreateDirectory(dir);
+        await File.WriteAllTextAsync(path, """{"contextMenuRegistered":false}""");
+        var unset = new SettingsService(new TestProtector(), path);
+        await unset.LoadAsync();
+        Assert.True(unset.Current.ContextMenuRegistered);
+        Assert.True(unset.ContextMenuDirty);
+
+        await File.WriteAllTextAsync(path, """{"contextMenuRegistered":false,"contextMenuUserSet":true}""");
+        var off = new SettingsService(new TestProtector(), path);
+        await off.LoadAsync();
+        Assert.False(off.Current.ContextMenuRegistered);
+        Assert.True(off.ContextMenuExplicitOff);
+        Assert.False(off.ContextMenuDirty);
+        off.CorrectContextMenuOn();
+        Assert.True(off.ContextMenuDirty);
+        await off.SaveAsync();
+        var raw = await File.ReadAllTextAsync(path);
+        Assert.Contains("\"contextMenuRegistered\": true", raw);
+        Directory.Delete(dir, recursive: true);
+    }
+
+    [Fact]
     public void Ip_risk_weights_the_strongest_signal()
     {
         Assert.Equal("high", IpRisk.Level(IpRisk.Combine([80], 0, false)));
@@ -160,7 +211,12 @@ public class CoreLogicTests
 
         var path = Path.Combine(dir, "solid.webp");
         LibWebp.Write(pixels, 8, 8, 32, 70, path);
-        Assert.Equal("RIFF", System.Text.Encoding.ASCII.GetString(File.ReadAllBytes(path)[..4]));
+        var encoded = File.ReadAllBytes(path);
+        Assert.Equal("RIFF", System.Text.Encoding.ASCII.GetString(encoded[..4]));
+        var decoded = LibWebp.DecodeBgra(encoded, out var width, out var height);
+        Assert.Equal(8, width);
+        Assert.Equal(8, height);
+        Assert.Equal(8 * 8 * 4, decoded.Length);
         Directory.Delete(dir, recursive: true);
     }
 
@@ -208,6 +264,8 @@ public class CoreLogicTests
         await ImagePipeline.ConvertAsync(source, jpg, KutuImageFormat.Jpeg, 80);
         var webp = Path.Combine(dir, "out.webp");
         await ImagePipeline.ConvertAsync(source, webp, KutuImageFormat.Webp, 70);
+        var fromWebp = Path.Combine(dir, "from-webp.png");
+        await ImagePipeline.ConvertAsync(webp, fromWebp, KutuImageFormat.Png, 90);
 
         var ico = Path.Combine(dir, "out.ico");
         await ImagePipeline.ConvertAsync(source, ico, KutuImageFormat.Ico, 90);
@@ -219,6 +277,7 @@ public class CoreLogicTests
         Assert.True(new FileInfo(jpg).Length > 0);
         Assert.Equal(new byte[] { 0xFF, 0xD8 }, File.ReadAllBytes(jpg)[..2]);
         Assert.Equal("RIFF", System.Text.Encoding.ASCII.GetString(File.ReadAllBytes(webp)[..4]));
+        Assert.Equal(new byte[] { 137, 80, 78, 71 }, File.ReadAllBytes(fromWebp)[..4]);
         Assert.Equal(0, File.ReadAllBytes(ico)[0]);
         Assert.Equal(1, File.ReadAllBytes(ico)[2]);
         Assert.StartsWith("%PDF", System.Text.Encoding.ASCII.GetString(File.ReadAllBytes(pdf)[..4]));

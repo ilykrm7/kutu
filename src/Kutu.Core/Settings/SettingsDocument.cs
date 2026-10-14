@@ -58,6 +58,8 @@ public sealed class SettingsDocument
 
     public bool? TextExpanderEnabled { get; set; }
 
+    public bool ExpanderDebug { get; set; }
+
     public bool? ClipboardHistoryEnabled { get; set; }
 
     public List<string> FavoriteTools { get; set; } = [];

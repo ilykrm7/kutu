@@ -141,32 +141,61 @@ jobs:
           if (Test-Path $log) { Remove-Item $log -Force }
           $lite = (Resolve-Path 'artifacts\lite\Kutu-lite.exe').Path
           $proc = Start-Process -FilePath $lite -PassThru
-          $extensions = '.png','.jpg','.jpeg','.webp','.bmp','.gif','.tif','.heic'
-          $ids = 'Kutu.ToJpeg','Kutu.ToPng','Kutu.ToWebp','Kutu.ToIco','Kutu.ToPdf','Kutu.ToBmp'
+          $extensions = '.png','.jpg','.jpeg','.jfif','.webp','.bmp','.gif','.tif','.tiff','.ico','.heic','.heif'
+          $verbs = @(
+            @{ Name = '01jpeg'; Format = 'jpeg'; Title = 'JPEG' },
+            @{ Name = '02png'; Format = 'png'; Title = 'PNG' },
+            @{ Name = '03webp'; Format = 'webp'; Title = 'WebP' },
+            @{ Name = '04ico'; Format = 'ico'; Title = 'ICO' },
+            @{ Name = '05pdf'; Format = 'pdf'; Title = 'PDF' },
+            @{ Name = '06bmp'; Format = 'bmp'; Title = 'BMP' }
+          )
+          $settings = Join-Path $env:APPDATA 'Kutu\settings.json'
+          $store = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\CommandStore\shell\Kutu.ToJpeg'
           $deadline = (Get-Date).AddSeconds(20)
           $ready = $false
           do {
             Start-Sleep -Seconds 1
             $ready = $true
             foreach ($ext in $extensions) {
-              if (-not (Test-Path "HKCU:\Software\Classes\SystemFileAssociations\$ext\shell\Kutu")) { $ready = $false; break }
+              $base = "HKCU:\Software\Classes\SystemFileAssociations\$ext\shell\Kutu"
+              if (-not (Test-Path $base)) { $ready = $false; break }
+              $item = Get-Item $base
+              $subs = $item.GetValue('SubCommands')
+              # Explorer resolves a non-empty SubCommands list only in HKLM CommandStore.
+              # An empty string makes it enumerate this key's shell subkeys instead.
+              if ($item.GetValue('MUIVerb') -ne 'Kutu ile dönüştür' -or $null -eq $subs -or "$subs" -ne '') { $ready = $false; break }
+              if (Test-Path "$base\command") { $ready = $false; break }
+              foreach ($verb in $verbs) {
+                if (-not (Test-Path "$base\shell\$($verb.Name)\command")) { $ready = $false; break }
+              }
+              if (-not $ready) { break }
             }
-            $cmdKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\CommandStore\shell\Kutu.ToJpeg\command'
-            if (-not (Test-Path $cmdKey)) { $ready = $false }
-            elseif (((Get-Item $cmdKey).GetValue('')) -notlike "*$($lite)*") { $ready = $false }
+            if ($ready -and (Test-Path $store)) { $ready = $false }
+            if ($ready -and (-not (Test-Path $settings) -or (Get-Content $settings -Raw) -notmatch '"contextMenuRegistered"\s*:\s*true')) { $ready = $false }
           } while (-not $ready -and (Get-Date) -lt $deadline)
-          if (-not $ready) { throw 'classic context menu was not registered for Kutu-lite.exe' }
+          if (-not $ready) { throw 'nested context menu was not registered for Kutu-lite.exe' }
           foreach ($ext in $extensions) {
-            $item = Get-Item "HKCU:\Software\Classes\SystemFileAssociations\$ext\shell\Kutu"
-            if ($item.GetValue('MUIVerb') -ne 'Kutu ile dönüştür') { throw "$ext verb is $($item.GetValue('MUIVerb'))" }
-            $subs = [string]$item.GetValue('SubCommands')
-            foreach ($id in $ids) {
-              if ($subs -notlike "*$id*") { throw "$ext missing $id ($subs)" }
+            $base = "HKCU:\Software\Classes\SystemFileAssociations\$ext\shell\Kutu"
+            $item = Get-Item $base
+            $subs = $item.GetValue('SubCommands')
+            if ($null -eq $subs -or "$subs" -ne '') { throw "$ext SubCommands must be empty so Explorer lists child verbs, got '$subs'" }
+            if (Test-Path "$base\command") { throw "$ext parent must not have a command key" }
+            $icon = [string]$item.GetValue('Icon')
+            if ($icon -notlike "*$lite*") { throw "$ext icon is $icon" }
+            $children = @(Get-ChildItem "$base\shell")
+            if ($children.Count -ne $verbs.Count) { throw "$ext cascade has $($children.Count) verbs" }
+            foreach ($verb in $verbs) {
+              $key = Get-Item "$base\shell\$($verb.Name)"
+              if ($key.GetValue('MUIVerb') -ne $verb.Title) { throw "$ext $($verb.Name) title is $($key.GetValue('MUIVerb'))" }
+              $line = [string](Get-Item "$base\shell\$($verb.Name)\command").GetValue('')
+              $expected = "`"$lite`" --convert-to $($verb.Format) `"%1`""
+              if ($line -ne $expected) { throw "$ext $($verb.Name) command:`n$line`nexpected:`n$expected" }
             }
           }
-          $jpeg = (Get-Item 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\CommandStore\shell\Kutu.ToJpeg\command').GetValue('')
-          $expected = "`"$lite`" --convert-to jpeg `"%1`""
-          if ($jpeg -ne $expected) { throw "jpeg command:`n$jpeg`nexpected:`n$expected" }
+          if (Test-Path $store) { throw 'HKCU CommandStore is ignored by Explorer SubCommands and must not be registered' }
+          $json = Get-Content $settings -Raw
+          if ($json -notmatch '"contextMenuRegistered"\s*:\s*true') { throw "settings flag:`n$json" }
           Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
           Stop-Kutu
           if (Test-Path $log) { throw "menu registration wrote kutu.log:`n$(Get-Content $log -Raw)" }
