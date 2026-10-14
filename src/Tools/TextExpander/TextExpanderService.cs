@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Windows;
 using Kutu.Core.Settings;
 using Kutu.Core.Text;
 using Kutu.Sdk.Hosting;
@@ -18,7 +17,6 @@ public sealed class TextExpanderService : IDisposable
     private const int WmSysKeyUp = 0x0105;
     private const int WmQuit = 0x0012;
     private const int WmTimer = 0x0113;
-    private const int WmApp = 0x8000;
     private const int WhMouseLl = 14;
     private readonly IKutuHost _host;
     private readonly ExpanderBuffer _buffer = new();
@@ -29,13 +27,10 @@ public sealed class TextExpanderService : IDisposable
     private IntPtr _foreground;
     private Thread? _thread;
     private uint _threadId;
-    private int _injecting;
     private bool _shift;
     private bool _ctrl;
     private bool _alt;
     private bool _win;
-    private string? _pendingBody;
-    private int _pendingLength;
 
     public TextExpanderService(IKutuHost host)
     {
@@ -49,6 +44,7 @@ public sealed class TextExpanderService : IDisposable
         if (_thread is not null)
             return;
 
+        KeyInjector.Start();
         _thread = new Thread(Loop)
         {
             IsBackground = true,
@@ -80,9 +76,7 @@ public sealed class TextExpanderService : IDisposable
         SetTimer(IntPtr.Zero, (IntPtr)1, 1500, IntPtr.Zero);
         while (GetMessage(out var message, IntPtr.Zero, 0, 0) > 0)
         {
-            if (message.MsgId == WmApp)
-                ReplacePending();
-            else if (message.MsgId == WmTimer)
+            if (message.MsgId == WmTimer)
                 NoteElevation();
             TranslateMessage(ref message);
             DispatchMessage(ref message);
@@ -98,18 +92,28 @@ public sealed class TextExpanderService : IDisposable
 
     private IntPtr Hook(int nCode, IntPtr wParam, IntPtr lParam)
     {
-        if (nCode >= 0 && (wParam == WmKeyDown || wParam == WmKeyUp || wParam == WmSysKeyDown || wParam == WmSysKeyUp))
+        if (nCode < 0 || (wParam != WmKeyDown && wParam != WmKeyUp && wParam != WmSysKeyDown && wParam != WmSysKeyUp))
+            return CallNextHookEx(_hook, nCode, wParam, lParam);
+
+        KeyInjector.EnterHook();
+        try
         {
             var data = Marshal.PtrToStructure<KbdLlHook>(lParam);
-            var down = wParam == WmKeyDown || wParam == WmSysKeyDown;
-            TrackModifier(data.VkCode, down);
-            NoteFocus();
-            var injecting = Volatile.Read(ref _injecting) != 0;
-            if (down && wParam == WmKeyDown && _host.Settings.TextExpanderEnabled && ExpanderHook.ShouldHandle(data.Flags, injecting) && !IsOwnProcess())
-                HandleKey(data.VkCode, data.ScanCode);
-        }
+            if (ExpanderHook.ShouldHandle(data.Flags, KeyInjector.IsBusy, data.Extra))
+            {
+                var down = wParam == WmKeyDown || wParam == WmSysKeyDown;
+                TrackModifier(data.VkCode, down);
+                NoteFocus();
+                if (down && wParam == WmKeyDown && _host.Settings.TextExpanderEnabled && !IsOwnProcess())
+                    HandleKey(data.VkCode, data.ScanCode);
+            }
 
-        return CallNextHookEx(_hook, nCode, wParam, lParam);
+            return CallNextHookEx(_hook, nCode, wParam, lParam);
+        }
+        finally
+        {
+            KeyInjector.LeaveHook();
+        }
     }
 
     private IntPtr MouseHook(int nCode, IntPtr wParam, IntPtr lParam)
@@ -198,10 +202,11 @@ public sealed class TextExpanderService : IDisposable
         if (match is null || string.IsNullOrEmpty(match.Body) || string.IsNullOrEmpty(match.Trigger))
             return;
 
-        _pendingLength = match.Trigger.Trim().Length;
-        _pendingBody = match.Body;
+        var body = match.Body;
+        var delete = match.Trigger.Trim().Length;
         _buffer.Clear();
-        PostThreadMessage(_threadId, WmApp, IntPtr.Zero, IntPtr.Zero);
+        DebugLog($"scheduled delete={delete}");
+        KeyInjector.Run(() => ReplaceOnWorker(body, delete));
     }
 
     private void LogTrigger(string? text, string? trigger)
@@ -214,41 +219,45 @@ public sealed class TextExpanderService : IDisposable
         DebugLog($"ch={(visible is null ? "*" : text)} buf={visible ?? "*"} match={trigger}");
     }
 
-    private void ReplacePending()
+    private void ReplaceOnWorker(string body, int delete)
     {
-        var body = _pendingBody;
-        var length = _pendingLength;
-        _pendingBody = null;
-        if (string.IsNullOrEmpty(body) || length <= 0)
-            return;
-
-        if (ForegroundElevation.BlocksTyping())
-        {
-            ForegroundElevation.NotifyOnce(_host);
-            return;
-        }
-
-        Interlocked.Exchange(ref _injecting, 1);
         try
         {
-            _host.SuppressClipboard(TimeSpan.FromMilliseconds(900));
-            var backup = Snapshot();
-            var deleted = SendBackspaces(length);
-            Thread.Sleep(40);
-            Clipboard.SetText(body);
-            var pasted = SendCtrlV();
-            Thread.Sleep(80);
-            Restore(backup);
-            if ((!deleted || !pasted) && ForegroundElevation.BlocksTyping())
+            if (ForegroundElevation.BlocksTyping())
+            {
+                DebugLog("inject skipped elevated");
                 ForegroundElevation.NotifyOnce(_host);
+                return;
+            }
+
+            var released = KeyInjector.Send(KeyStrokePlan.ReleaseModifiers());
+            if (!released.Ok)
+                DebugLog($"modifiers result={released.AcceptedEvents} err={released.Win32Error}");
+
+            var deleted = KeyInjector.Send(KeyStrokePlan.Backspaces(delete));
+            DebugLog($"backspaces sent={deleted.KeyCount} result={deleted.AcceptedEvents} err={deleted.Win32Error}");
+            Thread.Sleep(30);
+            var typed = KeyInjector.Send(KeyStrokePlan.Unicode(body));
+            DebugLog($"unicode sent={typed.AcceptedEvents} result={typed.AcceptedEvents} err={typed.Win32Error}");
+            if (typed.Ok)
+                return;
+
+            _host.SuppressClipboard(TimeSpan.FromMilliseconds(900));
+            var backup = KeyInjector.Snapshot();
+            try
+            {
+                var pasted = KeyInjector.PasteText(body);
+                DebugLog($"paste result={pasted.AcceptedEvents} err={pasted.Win32Error}");
+                Thread.Sleep(80);
+            }
+            finally
+            {
+                KeyInjector.Restore(backup);
+            }
         }
-        catch
+        catch (Exception ex)
         {
-            // Leave the typed trigger in place if injection fails.
-        }
-        finally
-        {
-            Interlocked.Exchange(ref _injecting, 0);
+            DebugLog("inject failed " + ex.GetType().Name + " " + ex.Message, force: true);
         }
     }
 
@@ -331,51 +340,6 @@ public sealed class TextExpanderService : IDisposable
         return GetModuleHandle(null);
     }
 
-    private static IDataObject? Snapshot()
-    {
-        try
-        {
-            var data = Clipboard.GetDataObject();
-            if (data is null)
-                return null;
-            var copy = new DataObject();
-            foreach (var format in data.GetFormats() ?? [])
-            {
-                try
-                {
-                    var value = data.GetData(format);
-                    if (value is not null)
-                        copy.SetData(format, value);
-                }
-                catch
-                {
-                    // Some formats cannot be copied.
-                }
-            }
-
-            return copy;
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private static void Restore(IDataObject? data)
-    {
-        try
-        {
-            if (data is null)
-                Clipboard.Clear();
-            else
-                Clipboard.SetDataObject(data, true);
-        }
-        catch
-        {
-            // The previous clipboard contents could not be restored.
-        }
-    }
-
     private void NoteElevation()
     {
         try
@@ -388,30 +352,6 @@ public sealed class TextExpanderService : IDisposable
             // Elevation checks must not stop the hook thread.
         }
     }
-
-    private static bool SendBackspaces(int count)
-    {
-        var inputs = new Input[count * 2];
-        for (var i = 0; i < count; i++)
-        {
-            inputs[i * 2] = KeyInput(0x08, false);
-            inputs[(i * 2) + 1] = KeyInput(0x08, true);
-        }
-
-        return SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<Input>()) == (uint)inputs.Length;
-    }
-
-    private static bool SendCtrlV()
-    {
-        Input[] inputs = [KeyInput(0x11, false), KeyInput(0x56, false), KeyInput(0x56, true), KeyInput(0x11, true)];
-        return SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<Input>()) == (uint)inputs.Length;
-    }
-
-    private static Input KeyInput(ushort vk, bool up) => new()
-    {
-        Type = 1,
-        Union = new InputUnion { Keyboard = new KeyboardInput { Vk = vk, Flags = up ? 0x0002u : 0 } }
-    };
 
     private static bool IsOwnProcess()
     {
@@ -444,29 +384,6 @@ public sealed class TextExpanderService : IDisposable
         public int Y;
     }
 
-    [StructLayout(LayoutKind.Sequential)]
-    private struct Input
-    {
-        public uint Type;
-        public InputUnion Union;
-    }
-
-    [StructLayout(LayoutKind.Explicit)]
-    private struct InputUnion
-    {
-        [FieldOffset(0)] public KeyboardInput Keyboard;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct KeyboardInput
-    {
-        public ushort Vk;
-        public ushort Scan;
-        public uint Flags;
-        public uint Time;
-        public IntPtr Extra;
-    }
-
     [DllImport("user32.dll", SetLastError = true)]
     private static extern IntPtr SetWindowsHookEx(int idHook, LowLevelKeyboardProc lpfn, IntPtr hMod, uint dwThreadId);
 
@@ -484,9 +401,6 @@ public sealed class TextExpanderService : IDisposable
 
     [DllImport("user32.dll")]
     private static extern int ToUnicodeEx(uint wVirtKey, uint wScanCode, byte[] lpKeyState, StringBuilder pwszBuff, int cchBuff, uint wFlags, IntPtr dwhkl);
-
-    [DllImport("user32.dll")]
-    private static extern uint SendInput(uint nInputs, Input[] pInputs, int cbSize);
 
     [DllImport("user32.dll")]
     private static extern IntPtr GetForegroundWindow();

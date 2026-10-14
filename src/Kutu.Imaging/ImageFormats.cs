@@ -51,36 +51,50 @@ public static class ImageFormats
 
     public static string OutputPath(string inputPath, KutuImageFormat format)
     {
-        var directory = Path.GetDirectoryName(inputPath) ?? "";
-        var name = CleanStem(inputPath);
+        var directory = Path.GetDirectoryName(inputPath);
+        if (string.IsNullOrEmpty(directory))
+            directory = Directory.GetCurrentDirectory();
+        Directory.CreateDirectory(directory);
+        var name = Path.GetFileNameWithoutExtension(inputPath);
+        if (name.Length == 0)
+            name = "kutu";
         var extension = Extension(format);
-        var candidate = Path.Combine(directory, name + extension);
-        if (!Collides(candidate, inputPath))
-            return candidate;
-
-        for (var index = 2; index < 10000; index++)
+        var inputFull = Path.GetFullPath(inputPath);
+        for (var index = 1; index < 10000; index++)
         {
-            candidate = Path.Combine(directory, name + "-" + index + extension);
-            if (!Collides(candidate, inputPath))
+            var fileName = index == 1 ? name + extension : name + "-" + index + extension;
+            var candidate = Path.Combine(directory, fileName);
+            if (PathsEqual(candidate, inputFull))
+                continue;
+            try
+            {
+                using (new FileStream(candidate, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                {
+                }
+
                 return candidate;
+            }
+            catch (IOException)
+            {
+                // Another selected file already claimed this name.
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
         }
 
         return Path.Combine(directory, name + "-" + Guid.NewGuid().ToString("N") + extension);
     }
 
-    private static string CleanStem(string inputPath)
+    private static bool PathsEqual(string candidate, string inputFull)
     {
-        var name = Path.GetFileNameWithoutExtension(inputPath);
-        while (name.EndsWith(".kutu", StringComparison.OrdinalIgnoreCase))
-            name = name[..^5];
-        return name.Length == 0 ? "kutu" : name;
-    }
-
-    private static bool Collides(string candidate, string inputPath)
-    {
-        var full = Path.GetFullPath(candidate);
-        if (full.Equals(Path.GetFullPath(inputPath), StringComparison.OrdinalIgnoreCase))
-            return true;
-        return File.Exists(full);
+        try
+        {
+            return Path.GetFullPath(candidate).Equals(inputFull, StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return false;
+        }
     }
 }

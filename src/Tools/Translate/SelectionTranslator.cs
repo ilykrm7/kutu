@@ -2,6 +2,8 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using Kutu.Core.Settings;
+using Kutu.Core.Text;
 using Kutu.Sdk.Hosting;
 using Kutu.Sdk.Localization;
 using Kutu.Sdk.Windows;
@@ -22,36 +24,55 @@ public static class SelectionTranslator
         IDataObject? backup = null;
         try
         {
-            host.SuppressClipboard(TimeSpan.FromMilliseconds(1200));
-            backup = Snapshot();
-            try
+            host.SuppressClipboard(TimeSpan.FromMilliseconds(1500));
+            Trace(host, "translate scheduled");
+            var captured = await KeyInjector.RunAsync(() =>
             {
-                Clipboard.Clear();
-            }
-            catch
+                var previous = KeyInjector.Snapshot();
+                var text = KeyInjector.CaptureSelection();
+                return (previous, text);
+            });
+            backup = captured.previous;
+            if (string.IsNullOrWhiteSpace(captured.text))
             {
-                // The clipboard can be busy for a moment.
-            }
-
-            SendCtrl(0x43);
-            var text = await WaitForTextAsync();
-            if (string.IsNullOrWhiteSpace(text))
-            {
-                Restore(backup);
+                await KeyInjector.RunAsync(() => KeyInjector.Restore(backup));
+                backup = null;
                 toast.Set(L.Get("Translate_NoSelection"));
                 await Task.Delay(900);
                 return;
             }
 
-            var result = await TranslateClient.TranslateAsync(text, "auto", "EN", host.Settings.DeepLKey, host.Settings.DeepLEndpoint);
-            Clipboard.SetText(string.IsNullOrWhiteSpace(result.Text) ? text : result.Text);
-            SendCtrl(0x56);
-            await Task.Delay(120);
-            Restore(backup);
+            var result = await TranslateClient.TranslateAsync(captured.text, "auto", "EN", host.Settings.DeepLKey, host.Settings.DeepLEndpoint);
+            var translated = string.IsNullOrWhiteSpace(result.Text) ? captured.text : result.Text;
+            await KeyInjector.RunAsync(() =>
+            {
+                var typed = KeyInjector.Send(KeyStrokePlan.Unicode(translated));
+                Trace(host, $"translate unicode sent={typed.AcceptedEvents} result={typed.AcceptedEvents} err={typed.Win32Error}");
+                if (!typed.Ok)
+                {
+                    var pasted = KeyInjector.PasteText(translated);
+                    Trace(host, $"translate paste result={pasted.AcceptedEvents} err={pasted.Win32Error}");
+                }
+
+                Thread.Sleep(80);
+                KeyInjector.Restore(backup);
+            });
+            backup = null;
         }
         catch (Exception ex)
         {
-            Restore(backup);
+            if (backup is not null)
+            {
+                try
+                {
+                    await KeyInjector.RunAsync(() => KeyInjector.Restore(backup));
+                }
+                catch
+                {
+                    // The previous clipboard contents could not be restored.
+                }
+            }
+
             toast.Set(ex.Message.Length > 80 ? ex.Message[..80] : ex.Message);
             await Task.Delay(1200);
         }
@@ -61,101 +82,22 @@ public static class SelectionTranslator
         }
     }
 
-    private static async Task<string> WaitForTextAsync()
+    private static void Trace(IKutuHost host, string line)
     {
-        for (var i = 0; i < 8; i++)
-        {
-            await Task.Delay(40);
-            try
-            {
-                if (Clipboard.ContainsText())
-                {
-                    var text = Clipboard.GetText();
-                    if (!string.IsNullOrWhiteSpace(text))
-                        return text;
-                }
-            }
-            catch
-            {
-                // Retry while the clipboard is updating.
-            }
-        }
+        if (!host.Settings.ExpanderDebug)
+            return;
 
-        return "";
-    }
-
-    private static IDataObject? Snapshot()
-    {
         try
         {
-            return Clipboard.GetDataObject();
+            var dir = SettingsService.AppDirectory;
+            Directory.CreateDirectory(dir);
+            File.AppendAllText(Path.Combine(dir, "expander.log"), $"{DateTimeOffset.Now:HH:mm:ss.fff} {line}{Environment.NewLine}");
         }
         catch
         {
-            return null;
+            // Debug logging must not stop translation.
         }
     }
-
-    private static void Restore(IDataObject? data)
-    {
-        try
-        {
-            if (data is null)
-                return;
-            Clipboard.SetDataObject(data, true);
-        }
-        catch
-        {
-            // The previous clipboard contents could not be restored.
-        }
-    }
-
-    private static void SendCtrl(ushort key)
-    {
-        var inputs = new[]
-        {
-            Key(0x11, false),
-            Key(key, false),
-            Key(key, true),
-            Key(0x11, true)
-        };
-        SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<Input>());
-    }
-
-    private static Input Key(ushort vk, bool up) => new()
-    {
-        Type = 1,
-        Union = new InputUnion
-        {
-            Keyboard = new KeyboardInput { Vk = vk, Flags = up ? 2u : 0 }
-        }
-    };
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct Input
-    {
-        public uint Type;
-        public InputUnion Union;
-    }
-
-    [StructLayout(LayoutKind.Explicit)]
-    private struct InputUnion
-    {
-        [FieldOffset(0)] public KeyboardInput Keyboard;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct KeyboardInput
-    {
-        public ushort Vk;
-        public ushort Scan;
-        public uint Flags;
-        public uint Time;
-        public IntPtr Extra;
-    }
-
-    [DllImport("user32.dll")]
-    private static extern uint SendInput(uint nInputs, Input[] inputs, int size);
 
     [DllImport("user32.dll")]
     private static extern bool GetCursorPos(out WinPoint point);

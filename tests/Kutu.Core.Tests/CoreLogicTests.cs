@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Kutu.Core.Color;
 using Kutu.Core.Commands;
 using Kutu.Core.Hotkeys;
@@ -129,6 +130,24 @@ public class CoreLogicTests
         Assert.True(ExpanderHook.ShouldHandle(0, injecting: false));
         Assert.False(ExpanderHook.ShouldHandle(0x10, injecting: true));
         Assert.False(ExpanderHook.ShouldHandle(0, injecting: true));
+        Assert.False(ExpanderHook.ShouldHandle(0, injecting: false, ExpanderHook.InjectionMarker));
+    }
+
+    [Fact]
+    public void Replacement_deletes_the_trigger_then_types_unicode()
+    {
+        var strokes = KeyStrokePlan.Replace(4, "administrator");
+        Assert.Equal((4 * 2) + ("administrator".Length * 2), strokes.Length);
+        Assert.All(strokes, stroke => Assert.Equal(ExpanderHook.InjectionMarker, stroke.Extra));
+        Assert.Equal((ushort)0x08, strokes[0].Vk);
+        Assert.Equal(0u, strokes[0].Flags);
+        Assert.Equal(KeyStrokePlan.KeyUp, strokes[1].Flags);
+        var typed = strokes[8];
+        Assert.Equal((ushort)'a', typed.Scan);
+        Assert.Equal(0, typed.Vk);
+        Assert.Equal(KeyStrokePlan.UnicodeFlag, typed.Flags);
+        Assert.Equal(KeyStrokePlan.UnicodeFlag | KeyStrokePlan.KeyUp, strokes[9].Flags);
+        Assert.Equal(IntPtr.Size == 8 ? 40 : 28, Marshal.SizeOf<NativeInput>());
     }
 
     [Fact]
@@ -289,19 +308,20 @@ public class CoreLogicTests
     }
 
     [Fact]
-    public void Output_names_drop_stacked_suffix_and_do_not_collide()
+    public void Output_names_keep_the_source_base_name()
     {
         var dir = Path.Combine(Path.GetTempPath(), "kutu-names", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         var bmp = Path.Combine(dir, "test.kutu.bmp");
-        var jpg = Path.Combine(dir, "test.kutu.jpg");
         File.WriteAllBytes(bmp, [1]);
-        File.WriteAllBytes(jpg, [1]);
         var first = ImageFormats.OutputPath(bmp, KutuImageFormat.Jpeg);
-        File.WriteAllBytes(first, [2]);
-        var second = ImageFormats.OutputPath(jpg, KutuImageFormat.Jpeg);
-        Assert.Equal(Path.Combine(dir, "test.jpg"), first);
-        Assert.Equal(Path.Combine(dir, "test-2.jpg"), second);
+        Assert.Equal(Path.Combine(dir, "test.kutu.jpg"), first);
+        var png = Path.Combine(dir, "test.kutu.png");
+        File.WriteAllBytes(png, [1]);
+        var second = ImageFormats.OutputPath(png, KutuImageFormat.Jpeg);
+        Assert.Equal(Path.Combine(dir, "test.kutu-2.jpg"), second);
+        var same = ImageFormats.OutputPath(first, KutuImageFormat.Jpeg);
+        Assert.Equal(Path.Combine(dir, "test.kutu-3.jpg"), same);
         Directory.Delete(dir, recursive: true);
     }
 
