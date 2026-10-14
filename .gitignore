@@ -1,5 +1,11 @@
 bin/
 obj/
+src/Kutu.App/shell/*.exe
+src/Kutu.App/shell/*.obj
+src/Kutu.App/shell/*.exp
+src/Kutu.App/shell/*.lib
+src/Kutu.App/shell/*.pdb
+src/Kutu.App/shell/*.ci.dll
 artifacts/
 FodyWeavers.xsd
 .vs/

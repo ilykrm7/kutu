@@ -1,8 +1,11 @@
 using System.Diagnostics;
-using Kutu.Core;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text;
+using Kutu.Core;
+using Kutu.Core.Settings;
+using Kutu.Core.Shell;
 using Microsoft.Win32;
 
 namespace Kutu.App.Services;
@@ -36,6 +39,7 @@ public static class ContextMenuRegistration
     {
         var exe = HostProcess.Executable ?? "";
         SetClassic(enabled, exe);
+        RemoveLegacyNeighbors(exe);
         if (!enabled)
         {
             TryRemoveSparse();
@@ -43,10 +47,9 @@ public static class ContextMenuRegistration
             return "";
         }
 
-        var modern = TryInstallSparse(exe);
-        StampSparse(exe, modern);
+        var modern = Install(exe);
         Notify();
-        return modern;
+        return modern == "ok" ? "" : "classic-only";
     }
 
     public static void EnsureClassic(string? exe)
@@ -82,22 +85,18 @@ public static class ContextMenuRegistration
         if (string.IsNullOrWhiteSpace(exe))
             return;
 
-        var dir = Path.GetDirectoryName(exe);
-        if (string.IsNullOrWhiteSpace(dir))
-            return;
-
-        var stamp = Path.Combine(dir, "kutu.sparse.txt");
         try
         {
-            if (File.Exists(stamp) && File.ReadAllText(stamp).StartsWith(exe + "\n", StringComparison.OrdinalIgnoreCase))
+            RemoveLegacyNeighbors(exe);
+            if (StampMatches(exe))
                 return;
+
+            Install(exe);
         }
         catch
         {
-            return;
+            // The classic menu is already registered.
         }
-
-        StampSparse(exe, TryInstallSparse(exe));
     }
 
     public static string CommandLine(string exe, string format) =>
@@ -111,20 +110,159 @@ public static class ContextMenuRegistration
             && command?.GetValue("") as string == CommandLine(exe, "jpeg");
     }
 
-    private static void StampSparse(string exe, string result)
+    private static bool StampMatches(string exe)
+    {
+        var dir = ShellDirectory();
+        var stampPath = Path.Combine(dir, "kutu.sparse");
+        if (!File.Exists(stampPath) || !File.Exists(Path.Combine(dir, "KutuShell.dll")) || !File.Exists(Path.Combine(dir, "kutu.path")))
+            return false;
+
+        try
+        {
+            return ShellLayout.Matches(File.ReadAllText(stampPath), VersionLabel(), PayloadId(), exe);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static string Install(string exe)
+    {
+        string dir;
+        try
+        {
+            dir = ShellDirectory();
+            if (ShellLayout.SharesExecutableDirectory(dir, exe))
+                return "classic-only";
+
+            Directory.CreateDirectory(dir);
+        }
+        catch
+        {
+            return "classic-only";
+        }
+
+        // dllhost may still have the previous DLL mapped. Drop the package before replacing it.
+        TryRemoveSparse();
+        var result = "classic-only";
+        try
+        {
+            if (Extract(dir))
+            {
+                File.WriteAllText(Path.Combine(dir, "kutu.path"), exe, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+                var manifest = Path.Combine(dir, "AppxManifest.xml");
+                File.WriteAllText(manifest, Manifest(), new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+                if (RunInstaller(manifest, dir))
+                    result = "ok";
+            }
+        }
+        catch
+        {
+            result = "classic-only";
+        }
+
+        try
+        {
+            File.WriteAllText(Path.Combine(dir, "kutu.sparse"), ShellLayout.StampText(VersionLabel(), PayloadId(), exe, result), new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+            RemoveOldVersions(dir);
+        }
+        catch
+        {
+            // The classic menu does not need the stamp.
+        }
+
+        return result;
+    }
+
+    private static void RemoveLegacyNeighbors(string exe)
     {
         var dir = Path.GetDirectoryName(exe);
         if (string.IsNullOrWhiteSpace(dir))
             return;
 
-        try
+        foreach (var name in ShellLayout.LegacyNeighborNames)
         {
-            File.WriteAllText(Path.Combine(dir, "kutu.sparse.txt"), exe + "\n" + result);
+            try
+            {
+                var path = Path.Combine(dir, name);
+                if (File.Exists(path))
+                    File.Delete(path);
+            }
+            catch
+            {
+                // A read-only folder still keeps the classic menu.
+            }
         }
-        catch
+    }
+
+    private static void RemoveOldVersions(string current)
+    {
+        var root = Path.GetDirectoryName(current);
+        if (string.IsNullOrWhiteSpace(root) || !Directory.Exists(root))
+            return;
+
+        foreach (var child in Directory.GetDirectories(root))
         {
-            // A read-only folder still keeps the classic menu.
+            if (string.Equals(child, current, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            try
+            {
+                Directory.Delete(child, recursive: true);
+            }
+            catch
+            {
+                // dllhost can keep the previous DLL open until Explorer restarts.
+            }
         }
+    }
+
+    private static bool Extract(string dir)
+    {
+        var assembly = Assembly.GetExecutingAssembly();
+        if (!WriteResource(assembly, "KutuShell.dll", Path.Combine(dir, "KutuShell.dll")))
+            return false;
+        if (!WriteResource(assembly, "KutuShell.exe", Path.Combine(dir, "KutuShell.exe")))
+            return false;
+
+        using var logo = assembly.GetManifestResourceStream("KutuMark.png");
+        if (logo is null)
+            return false;
+
+        var logoBytes = ReadAll(logo);
+        File.WriteAllBytes(Path.Combine(dir, "StoreLogo.png"), logoBytes);
+        File.WriteAllBytes(Path.Combine(dir, "Square44x44Logo.png"), logoBytes);
+        File.WriteAllBytes(Path.Combine(dir, "Square150x150Logo.png"), logoBytes);
+        return true;
+    }
+
+    private static string ShellDirectory() => ShellLayout.VersionFolder(SettingsService.AppDirectory, VersionLabel());
+
+    private static string VersionLabel()
+    {
+        var version = Assembly.GetExecutingAssembly().GetName().Version ?? new Version(1, 1, 0, 0);
+        return version.ToString(3);
+    }
+
+    private static string PackageVersion()
+    {
+        var version = Assembly.GetExecutingAssembly().GetName().Version ?? new Version(1, 1, 0, 0);
+        return version.ToString(4);
+    }
+
+    private static string PayloadId()
+    {
+        var assembly = Assembly.GetExecutingAssembly();
+        using var dll = assembly.GetManifestResourceStream("KutuShell.dll");
+        using var host = assembly.GetManifestResourceStream("KutuShell.exe");
+        if (dll is null || host is null)
+            return "missing";
+
+        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        Append(hash, dll);
+        Append(hash, host);
+        return ToHex(hash.GetHashAndReset());
     }
 
     private static void SetClassic(bool enabled, string exe)
@@ -162,63 +300,36 @@ public static class ContextMenuRegistration
         }
     }
 
-    private static string TryInstallSparse(string exe)
-    {
-        var dir = Path.GetDirectoryName(exe);
-        if (string.IsNullOrWhiteSpace(dir))
-            return "classic-only";
-
-        try
-        {
-            var probe = Path.Combine(dir, ".kutu-write-test");
-            File.WriteAllText(probe, "ok");
-            File.Delete(probe);
-        }
-        catch
-        {
-            return "classic-only";
-        }
-
-        var assembly = Assembly.GetExecutingAssembly();
-        using var dll = assembly.GetManifestResourceStream("KutuShell.dll");
-        using var logo = assembly.GetManifestResourceStream("KutuMark.png");
-        if (dll is null || logo is null)
-            return "classic-only";
-
-        var logoBytes = ReadAll(logo);
-        WriteStream(dll, Path.Combine(dir, "KutuShell.dll"));
-        File.WriteAllBytes(Path.Combine(dir, "StoreLogo.png"), logoBytes);
-        File.WriteAllBytes(Path.Combine(dir, "Square44x44Logo.png"), logoBytes);
-        File.WriteAllBytes(Path.Combine(dir, "Square150x150Logo.png"), logoBytes);
-        File.WriteAllText(Path.Combine(dir, "kutu.path"), exe, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
-        var manifest = Path.Combine(dir, "AppxManifest.xml");
-        File.WriteAllText(manifest, Manifest(Path.GetFileName(exe)), new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
-        return RunInstaller(manifest, dir) ? "" : "classic-only";
-    }
-
     private static bool RunInstaller(string manifest, string dir)
     {
         var script = Path.Combine(dir, "kutu-shell.ps1");
+        var manifestArg = manifest.Replace("'", "''");
+        var dirArg = dir.Replace("'", "''");
         File.WriteAllText(script, $$"""
             $ErrorActionPreference = 'Stop'
             Get-AppxPackage -Name '{{PackageName}}' | Remove-AppxPackage -ErrorAction SilentlyContinue
             try {
-              Add-AppxPackage -Path '{{manifest.Replace("'", "''")}}' -ExternalLocation '{{dir.Replace("'", "''")}}' -AllowUnsigned
+              Add-AppxPackage -Path '{{manifestArg}}' -ExternalLocation '{{dirArg}}' -AllowUnsigned
             } catch {
-              Add-AppxPackage -Path '{{manifest.Replace("'", "''")}}' -ExternalLocation '{{dir.Replace("'", "''")}}'
+              try {
+                Add-AppxPackage -Path '{{manifestArg}}' -ExternalLocation '{{dirArg}}'
+              } catch {
+                [Console]::Error.WriteLine(($_ | Out-String))
+                exit 1
+              }
             }
             """);
-        return RunPowerShell(script);
+        return RunPowerShell(script, Path.Combine(dir, "kutu-shell.log"));
     }
 
     private static void TryRemoveSparse()
     {
         var script = Path.Combine(Path.GetTempPath(), "kutu-shell-remove.ps1");
         File.WriteAllText(script, $"Get-AppxPackage -Name '{PackageName}' | Remove-AppxPackage -ErrorAction SilentlyContinue");
-        RunPowerShell(script);
+        RunPowerShell(script, Path.Combine(Path.GetTempPath(), "kutu-shell-remove.log"));
     }
 
-    private static bool RunPowerShell(string script)
+    private static bool RunPowerShell(string script, string logPath)
     {
         try
         {
@@ -227,14 +338,40 @@ public static class ContextMenuRegistration
                 FileName = "powershell.exe",
                 Arguments = $"-NoProfile -ExecutionPolicy Bypass -File \"{script}\"",
                 UseShellExecute = false,
-                CreateNoWindow = true
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
             });
             if (process is null)
                 return false;
-            if (!process.WaitForExit(20000))
+
+            var stdout = process.StandardOutput.ReadToEndAsync();
+            var stderr = process.StandardError.ReadToEndAsync();
+            if (!process.WaitForExit(45000))
             {
-                process.Kill();
+                try
+                {
+                    process.Kill();
+                }
+                catch
+                {
+                    // The installer is already gone.
+                }
+
                 return false;
+            }
+
+            var text = stdout.GetAwaiter().GetResult() + stderr.GetAwaiter().GetResult();
+            if (process.ExitCode != 0)
+            {
+                try
+                {
+                    File.WriteAllText(logPath, string.IsNullOrWhiteSpace(text) ? "exit " + process.ExitCode : text);
+                }
+                catch
+                {
+                    // The stamp still records classic-only.
+                }
             }
 
             return process.ExitCode == 0;
@@ -245,7 +382,7 @@ public static class ContextMenuRegistration
         }
     }
 
-    private static string Manifest(string exeName)
+    private static string Manifest()
     {
         var items = string.Join("\n", Extensions.Select(ext =>
             $"""    <desktop5:ItemType Type="{ext}"><desktop5:Verb Id="KutuConvert" Clsid="{Clsid}" /></desktop5:ItemType>"""));
@@ -258,7 +395,7 @@ public static class ContextMenuRegistration
                      xmlns:desktop5="http://schemas.microsoft.com/appx/manifest/desktop/windows10/5"
                      xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
                      IgnorableNamespaces="uap uap10 desktop4 desktop5 com">
-              <Identity Name="{PackageName}" Publisher="CN=Kerim Eksi, O=Kutu, C=TR" Version="1.0.0.0" />
+              <Identity Name="{PackageName}" Publisher="CN=Kerim Eksi, O=Kutu, C=TR" Version="{PackageVersion()}" />
               <Properties>
                 <DisplayName>Kutu</DisplayName>
                 <PublisherDisplayName>Kerim Ekşi</PublisherDisplayName>
@@ -271,32 +408,37 @@ public static class ContextMenuRegistration
                 <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.22000.0" MaxVersionTested="10.0.26100.0" />
               </Dependencies>
               <Applications>
-                <Application Id="Kutu" Executable="{exeName}" uap10:TrustLevel="mediumIL" uap10:RuntimeBehavior="win32App">
-                  <uap:VisualElements DisplayName="Kutu" Description="Kutu" BackgroundColor="transparent" Square150x150Logo="Square150x150Logo.png" Square44x44Logo="Square44x44Logo.png" />
+                <Application Id="Kutu" Executable="KutuShell.exe" uap10:TrustLevel="mediumIL" uap10:RuntimeBehavior="win32App">
+                  <uap:VisualElements DisplayName="Kutu" Description="Kutu" BackgroundColor="transparent" Square150x150Logo="Square150x150Logo.png" Square44x44Logo="Square44x44Logo.png" AppListEntry="none" />
+                  <Extensions>
+                    <desktop4:Extension Category="windows.fileExplorerContextMenus">
+                      <desktop4:FileExplorerContextMenus>
+            {items}
+                      </desktop4:FileExplorerContextMenus>
+                    </desktop4:Extension>
+                    <com:Extension Category="windows.comServer">
+                      <com:ComServer>
+                        <com:SurrogateServer DisplayName="Kutu Shell">
+                          <com:Class Id="{Clsid}" Path="KutuShell.dll" ThreadingModel="STA" />
+                        </com:SurrogateServer>
+                      </com:ComServer>
+                    </com:Extension>
+                  </Extensions>
                 </Application>
               </Applications>
-              <Extensions>
-                <desktop4:Extension Category="windows.fileExplorerContextMenus">
-                  <desktop4:FileExplorerContextMenus>
-            {items}
-                  </desktop4:FileExplorerContextMenus>
-                </desktop4:Extension>
-                <com:Extension Category="windows.comServer">
-                  <com:ComServer>
-                    <com:SurrogateServer DisplayName="Kutu Shell">
-                      <com:Class Id="{Clsid}" Path="KutuShell.dll" ThreadingModel="STA" />
-                    </com:SurrogateServer>
-                  </com:ComServer>
-                </com:Extension>
-              </Extensions>
             </Package>
             """;
     }
 
-    private static void WriteStream(Stream source, string path)
+    private static bool WriteResource(Assembly assembly, string name, string path)
     {
+        using var source = assembly.GetManifestResourceStream(name);
+        if (source is null)
+            return false;
+
         using var file = File.Create(path);
         source.CopyTo(file);
+        return true;
     }
 
     private static byte[] ReadAll(Stream source)
@@ -305,6 +447,29 @@ public static class ContextMenuRegistration
         source.CopyTo(memory);
         return memory.ToArray();
     }
+
+    private static void Append(IncrementalHash hash, Stream source)
+    {
+        var buffer = new byte[8192];
+        int read;
+        while ((read = source.Read(buffer, 0, buffer.Length)) > 0)
+            hash.AppendData(buffer, 0, read);
+    }
+
+    private static string ToHex(byte[] bytes)
+    {
+        var chars = new char[bytes.Length * 2];
+        for (var i = 0; i < bytes.Length; i++)
+        {
+            var value = bytes[i];
+            chars[i * 2] = Hex(value >> 4);
+            chars[i * 2 + 1] = Hex(value & 0xF);
+        }
+
+        return new string(chars);
+    }
+
+    private static char Hex(int value) => (char)(value < 10 ? '0' + value : 'a' + value - 10);
 
     private static void Notify() => SHChangeNotify(0x08000000, 0, IntPtr.Zero, IntPtr.Zero);
 

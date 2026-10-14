@@ -36,7 +36,7 @@ Kısayollar, Windows ile başlatma ve sağ tık menüsü Ayarlar'dan açılıp k
 
 ## Exe nerede
 
-Her push'ta Actions çıktısı `Kutu-win-x64` tek dosyadır: `Kutu.exe`. .NET Framework 4.8 üzerine kuruludur. Windows 10, Windows 11 ve Windows Server 2019 bu çerçeveyi hazır getirir; ayrı bir çalışma zamanı kurulmaz. Bağımlılıklar ve `kutuwebp.dll` exe'nin içindedir.
+Her push'ta Actions çıktısı `Kutu-win-x64` yalnız iki dosyadır: `Kutu.exe` ve `Kutu.exe.sha256`. .NET Framework 4.8 üzerine kuruludur. Windows 10, Windows 11 ve Windows Server 2019 bu çerçeveyi hazır getirir; ayrı bir çalışma zamanı kurulmaz. Bağımlılıklar ve `kutuwebp.dll` exe'nin içindedir.
 
 Sürüm etiketi (`v*`) itilince `Kutu.exe` ve `Kutu.exe.sha256` GitHub Release'a eklenir. Kurulum yok. İlk açılışta Windows SmartScreen uyarabilir; imzasız bir topluluk aracı olduğu için bu beklenen bir durum. Uygulama içi güncelleme bu iki dosyayı indirir, özeti doğrular, çalışan exe'yi `Kutu.old.exe` yapar ve yeni dosyayla yeniden başlar.
 
@@ -47,7 +47,7 @@ Derleme sıkıştırmaz ve gizlemez. `kutuwebp.dll` yalnız WebP gerekirken `%LO
 Ayarlar'daki anahtar iki kayıt yazar, ikisi de kullanıcıya aittir, yönetici istemez:
 
 - Klasik menü: **Kutu ile dönüştür** alt menüsü (JPEG, PNG, WebP, ICO, PDF, BMP). Windows 11'de bu öğe çoğunlukla **Daha fazla seçenek** altındadır.
-- Modern menü: aynı alt menü, imzasız seyrek paket (`AllowUnsigned` + `ExternalLocation`) ve `KutuShell.dll`. Paket, çalışan `Kutu.exe` klasörüne yazılır. Klasör yazılamıyorsa yalnız klasik menü kalır. Windows 11 gerekir.
+- Modern menü: aynı alt menü, imzasız seyrek paket (`AllowUnsigned` + `ExternalLocation`) ve `KutuShell.dll`. Paket dosyaları exe'nin içindedir; ilk çalıştırmada veya menü kaydında `%AppData%\Kutu\shell\<sürüm>` altına açılır ve oradan kaydedilir. Sürüm değişince yeniden açılır. `Kutu.exe` klasörüne yazılmaz. Klasör yazılamıyorsa yalnız klasik menü kalır. Windows 11 gerekir.
 
 ## Geliştirme
 
