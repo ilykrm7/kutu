@@ -89,7 +89,8 @@ public static class SelectionTranslator
             }
 
             host.Log("translate: " + ex);
-            toast?.Set(ex.Message.Length > 80 ? ex.Message[..80] : ex.Message);
+            var note = ex.Message == "translate-failed" ? L.Get("Translate_Failed") : ex.Message;
+            toast?.Set(note.Length > 80 ? note[..80] : note);
             await Task.Delay(1200);
         }
         finally

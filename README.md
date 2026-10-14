@@ -20,7 +20,7 @@ Arayüz Türkçe. Metinler `src/Kutu.Sdk/Resources/Strings.resx` içinde. İngil
 - **Ping ve port** — gecikme, tek port, aralık, sık kullanılanlar ve **Tüm portlar** (1–65535). 3389 ve 22, aralıkta varsa önce taranır ve sonuçları tablonun en üstüne hemen yazılır. Açık portta banner ve RDP / HTTP / TLS yoklaması. Kopyala veya CSV.
 - **SSL kontrol** — yayıncı, konu, SAN, geçerlilik, kalan gün, zincir, TLS sürümü.
 - **Bağlantıya yükle** — kart soluk, düğme tıklanmaz, ipucu Yakında.
-- **Çeviri** — Türkçe metin İngilizceye, diğer diller Türkçeye. Yerel ipucu, sonra sağlayıcının algıladığı dil; Türkçeye gidip Türkçe dönerse İngilizceye yeniden sorulur. DeepL, sonra Google, sonra MyMemory. Ctrl+Alt+T seçili metni yerinde çevirir.
+- **Çeviri** — Türkçe metin İngilizceye, diğer diller Türkçeye. Yerel ipucu, sonra sağlayıcının algıladığı dil; Türkçeye gidip Türkçe dönerse İngilizceye yeniden sorulur. Önce Google, sonra DeepL, kısa metinde MyMemory. Uzun metin tek POST ile gider; bölünürse paragraf ve cümle sınırında, sırayı ve satır sonlarını koruyarak birleşir. Ctrl+Alt+T seçili metni yerinde çevirir.
 - **QR** — oluştur, PNG kopyala veya kaydet. Ekran bölgesi, dosya ve panodan oku.
 - **OCR** — ekran bölgesi veya görsel. Windows OCR (Türkçe / İngilizce dil paketi gerekir).
 - **Ekran çevirisi** — Ctrl+Alt+E. Bölge veya tam ekran, OCR, her satırın altında çeviri. Hedef dil Ayarlar'da, varsayılan Türkçe. Esc kapatır.

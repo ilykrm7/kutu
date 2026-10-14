@@ -30,7 +30,7 @@
   <data name="Tool_Upload_Title" xml:space="preserve"><value>Bağlantıya yükle</value></data>
   <data name="Tool_Upload_Desc" xml:space="preserve"><value>Metin veya görseli paylaşılabilir bağlantıya çevir.</value></data>
   <data name="Tool_Translate_Title" xml:space="preserve"><value>Çeviri</value></data>
-  <data name="Tool_Translate_Desc" xml:space="preserve"><value>Türkçe metni İngilizceye, diğer dillerini Türkçeye çevirir. DeepL, sonra Google, sonra MyMemory.</value></data>
+  <data name="Tool_Translate_Desc" xml:space="preserve"><value>Türkçe metni İngilizceye, diğer dillerini Türkçeye çevirir. Önce Google, sonra DeepL, kısa metinde MyMemory.</value></data>
   <data name="Action_Back" xml:space="preserve"><value>Geri</value></data>
   <data name="Action_Copy" xml:space="preserve"><value>Kopyala</value></data>
   <data name="Action_Save" xml:space="preserve"><value>Kaydet</value></data>
@@ -161,6 +161,8 @@
   <data name="Translate_Output" xml:space="preserve"><value>Çeviri</value></data>
   <data name="Translate_Auto" xml:space="preserve"><value>Otomatik</value></data>
   <data name="Translate_Fallback" xml:space="preserve"><value>DeepL anahtarı yok, ücretsiz yedek kullanıldı.</value></data>
+  <data name="Translate_Provider" xml:space="preserve"><value>Sağlayıcı: {0}</value></data>
+  <data name="Translate_Failed" xml:space="preserve"><value>Çeviri tamamlanamadı.</value></data>
   <data name="Translate_Empty" xml:space="preserve"><value>Çevrilecek metin yok.</value></data>
   <data name="Translate_PopupHint" xml:space="preserve"><value>Panodaki metin</value></data>
   <data name="Common_Error" xml:space="preserve"><value>Bir sorun oluştu.</value></data>

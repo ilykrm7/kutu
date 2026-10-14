@@ -67,22 +67,30 @@ public static class ScreenTranslateController
         var marked = ScreenLinePlan.Mark(texts, target);
         var pending = ScreenLinePlan.Pending(marked).ToList();
         var translated = new List<string>();
-        for (var offset = 0; offset < pending.Count; offset += 20)
+        try
         {
-            var slice = pending.Skip(offset).Take(20).ToList();
-            var packed = ScreenLinePlan.Pack(slice, slice.Count)[0];
-            var result = await TranslateClient.TranslateAsync(packed, "auto", target, host.Settings.DeepLKey, host.Settings.DeepLEndpoint);
-            var parts = ScreenLinePlan.Unpack(result.Text, slice.Count);
-            if (parts.All(string.IsNullOrWhiteSpace) && slice.Count > 1)
+            for (var offset = 0; offset < pending.Count; offset += 20)
             {
-                for (var i = 0; i < slice.Count; i++)
+                var slice = pending.Skip(offset).Take(20).ToList();
+                var packed = ScreenLinePlan.Pack(slice, slice.Count)[0];
+                var result = await TranslateClient.TranslateAsync(packed, "auto", target, host.Settings.DeepLKey, host.Settings.DeepLEndpoint);
+                var parts = ScreenLinePlan.Unpack(result.Text, slice.Count);
+                if (parts.All(string.IsNullOrWhiteSpace) && slice.Count > 1)
                 {
-                    var single = await TranslateClient.TranslateAsync(slice[i], "auto", target, host.Settings.DeepLKey, host.Settings.DeepLEndpoint);
-                    parts[i] = single.Text;
+                    for (var i = 0; i < slice.Count; i++)
+                    {
+                        var single = await TranslateClient.TranslateAsync(slice[i], "auto", target, host.Settings.DeepLKey, host.Settings.DeepLEndpoint);
+                        parts[i] = single.Text;
+                    }
                 }
-            }
 
-            translated.AddRange(parts);
+                translated.AddRange(parts);
+            }
+        }
+        catch (Exception ex)
+        {
+            host.Toast(ex.Message == "translate-failed" ? L.Get("Translate_Failed") : ex.Message);
+            return;
         }
 
         var pairs = new List<(OcrLineBox Line, string Translation)>();

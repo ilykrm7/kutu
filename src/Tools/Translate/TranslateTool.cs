@@ -80,11 +80,11 @@ public sealed class TranslateView : UserControl
             _status.Text = "";
             var result = await TranslateClient.TranslateAutoAsync(text, _host.Settings.DeepLKey, _host.Settings.DeepLEndpoint);
             _output.Text = result.Text;
-            _status.Text = "";
+            _status.Text = string.IsNullOrWhiteSpace(result.Provider) ? "" : string.Format(L.Get("Translate_Provider"), result.Provider);
         }
         catch (Exception ex)
         {
-            _status.Text = ex.Message;
+            _status.Text = ex.Message == "translate-failed" ? L.Get("Translate_Failed") : ex.Message;
         }
     }
 
@@ -160,11 +160,11 @@ public static class TranslatePopup
                     host.Settings.DeepLKey,
                     host.Settings.DeepLEndpoint);
                 output.Text = result.Text;
-                status.Text = "";
+                status.Text = string.IsNullOrWhiteSpace(result.Provider) ? "" : string.Format(L.Get("Translate_Provider"), result.Provider);
             }
             catch (Exception ex)
             {
-                status.Text = ex.Message;
+                status.Text = ex.Message == "translate-failed" ? L.Get("Translate_Failed") : ex.Message;
             }
         }));
         buttons.Children.Add(Chrome.Secondary(L.Get("Action_Copy"), SymbolRegular.Copy24, (_, _) =>

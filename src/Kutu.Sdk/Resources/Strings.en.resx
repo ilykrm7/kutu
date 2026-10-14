@@ -30,7 +30,7 @@
   <data name="Tool_Upload_Title" xml:space="preserve"><value>Upload to link</value></data>
   <data name="Tool_Upload_Desc" xml:space="preserve"><value>Turn text or an image into a shareable link.</value></data>
   <data name="Tool_Translate_Title" xml:space="preserve"><value>Translate</value></data>
-  <data name="Tool_Translate_Desc" xml:space="preserve"><value>Translates Turkish to English and anything else to Turkish. DeepL, then Google, then MyMemory.</value></data>
+  <data name="Tool_Translate_Desc" xml:space="preserve"><value>Translates Turkish to English and anything else to Turkish. Google first, then DeepL, and MyMemory only for short text.</value></data>
   <data name="Action_Back" xml:space="preserve"><value>Back</value></data>
   <data name="Action_Copy" xml:space="preserve"><value>Copy</value></data>
   <data name="Action_Save" xml:space="preserve"><value>Save</value></data>
@@ -161,6 +161,8 @@
   <data name="Translate_Output" xml:space="preserve"><value>Translation</value></data>
   <data name="Translate_Auto" xml:space="preserve"><value>Auto</value></data>
   <data name="Translate_Fallback" xml:space="preserve"><value>No DeepL key, used the free fallback.</value></data>
+  <data name="Translate_Provider" xml:space="preserve"><value>Provider: {0}</value></data>
+  <data name="Translate_Failed" xml:space="preserve"><value>The translation did not finish.</value></data>
   <data name="Translate_Empty" xml:space="preserve"><value>Nothing to translate.</value></data>
   <data name="Translate_PopupHint" xml:space="preserve"><value>Clipboard text</value></data>
   <data name="Common_Error" xml:space="preserve"><value>Something went wrong.</value></data>
