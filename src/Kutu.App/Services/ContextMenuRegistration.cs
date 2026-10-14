@@ -152,8 +152,17 @@ public static class ContextMenuRegistration
             {
                 File.WriteAllText(Path.Combine(dir, "kutu.path"), exe, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
                 var manifest = Path.Combine(dir, "AppxManifest.xml");
-                File.WriteAllText(manifest, Manifest(), new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
-                if (RunInstaller(manifest, dir))
+                var manifestText = Manifest();
+                File.WriteAllText(manifest, manifestText, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+                var package = Path.Combine(dir, "Kutu.msix");
+                File.WriteAllBytes(package, AppxPackage.Create(new (string, byte[])[]
+                {
+                    ("AppxManifest.xml", Encoding.UTF8.GetBytes(manifestText)),
+                    ("StoreLogo.png", File.ReadAllBytes(Path.Combine(dir, "StoreLogo.png"))),
+                    ("Square44x44Logo.png", File.ReadAllBytes(Path.Combine(dir, "Square44x44Logo.png"))),
+                    ("Square150x150Logo.png", File.ReadAllBytes(Path.Combine(dir, "Square150x150Logo.png")))
+                }));
+                if (RunInstaller(package, dir))
                     result = "ok";
             }
         }
@@ -300,36 +309,23 @@ public static class ContextMenuRegistration
         }
     }
 
-    private static bool RunInstaller(string manifest, string dir)
+    private static bool RunInstaller(string package, string dir)
     {
         var script = Path.Combine(dir, "kutu-shell.ps1");
-        var manifestArg = manifest.Replace("'", "''");
+        var packageArg = package.Replace("'", "''");
         var dirArg = dir.Replace("'", "''");
         File.WriteAllText(script, $$"""
             $ErrorActionPreference = 'Stop'
             Get-AppxPackage -Name '{{PackageName}}' | Remove-AppxPackage -ErrorAction SilentlyContinue
-            function Write-KutuAppxLog {
+            try {
+              Add-AppxPackage -Path '{{packageArg}}' -ExternalLocation '{{dirArg}}' -AllowUnsigned
+            } catch {
+              [Console]::Error.WriteLine(($_ | Out-String))
               try {
-                Get-WinEvent -LogName 'Microsoft-Windows-AppXDeploymentServer/Operational' -MaxEvents 8 -ErrorAction Stop |
-                  ForEach-Object { '{0} {1} {2}' -f $_.TimeCreated.ToString('o'), $_.Id, ($_.Message -replace '\s+', ' ') }
+                Get-AppxLog | Select-Object -Last 20 | ForEach-Object { [Console]::Error.WriteLine(($_.TimeCreated.ToString('o') + ' ' + $_.Id + ' ' + $_.Message)) }
               } catch {
-                Write-Output $_.Exception.Message
+                [Console]::Error.WriteLine(($_ | Out-String))
               }
-            }
-            $failures = @()
-            try {
-              Add-AppxPackage -Register '{{manifestArg}}' -ExternalLocation '{{dirArg}}' -AllowUnsigned
-              exit 0
-            } catch {
-              $failures += ($_ | Out-String)
-            }
-            try {
-              Add-AppxPackage -Register '{{manifestArg}}' -AllowUnsigned
-              exit 0
-            } catch {
-              $failures += ($_ | Out-String)
-              [Console]::Error.WriteLine(($failures -join "`n"))
-              Write-KutuAppxLog | ForEach-Object { [Console]::Error.WriteLine($_) }
               exit 1
             }
             """);
@@ -408,12 +404,14 @@ public static class ContextMenuRegistration
                      xmlns:desktop4="http://schemas.microsoft.com/appx/manifest/desktop/windows10/4"
                      xmlns:desktop5="http://schemas.microsoft.com/appx/manifest/desktop/windows10/5"
                      xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
-                     IgnorableNamespaces="uap uap10 desktop4 desktop5 com">
-              <Identity Name="{PackageName}" Publisher="CN=Kerim Eksi, O=Kutu, C=TR" Version="{PackageVersion()}" />
+                     xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+                     IgnorableNamespaces="uap uap10 desktop4 desktop5 com rescap">
+              <Identity Name="{PackageName}" Publisher="CN=Kerim Eksi, O=Kutu, C=TR" Version="{PackageVersion()}" ProcessorArchitecture="x64" />
               <Properties>
                 <DisplayName>Kutu</DisplayName>
                 <PublisherDisplayName>Kerim Eksi</PublisherDisplayName>
                 <Logo>StoreLogo.png</Logo>
+                <uap10:AllowExternalContent>true</uap10:AllowExternalContent>
               </Properties>
               <Resources>
                 <Resource Language="tr-tr" />
@@ -421,6 +419,10 @@ public static class ContextMenuRegistration
               <Dependencies>
                 <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.22000.0" MaxVersionTested="10.0.26100.0" />
               </Dependencies>
+              <Capabilities>
+                <rescap:Capability Name="runFullTrust" />
+                <rescap:Capability Name="unvirtualizedResources" />
+              </Capabilities>
               <Applications>
                 <Application Id="Kutu" Executable="KutuShell.exe" uap10:TrustLevel="mediumIL" uap10:RuntimeBehavior="win32App">
                   <uap:VisualElements DisplayName="Kutu" Description="Kutu" BackgroundColor="transparent" Square150x150Logo="Square150x150Logo.png" Square44x44Logo="Square44x44Logo.png" AppListEntry="none" />

@@ -300,7 +300,7 @@ jobs:
           $location = [IO.Path]::GetFullPath($pkg.InstallLocation).TrimEnd('\','/')
           $expected = [IO.Path]::GetFullPath($shell).TrimEnd('\','/')
           if ($location -ine $expected) { throw "sparse package location is $location, expected $expected" }
-          foreach ($name in 'KutuShell.dll','KutuShell.exe','Square44x44Logo.png','Square150x150Logo.png','StoreLogo.png','kutu.path','kutu-shell.ps1','kutu.sparse','AppxManifest.xml') {
+          foreach ($name in 'KutuShell.dll','KutuShell.exe','Kutu.msix','Square44x44Logo.png','Square150x150Logo.png','StoreLogo.png','kutu.path','kutu-shell.ps1','kutu.sparse','AppxManifest.xml') {
             if (-not (Test-Path (Join-Path $shell $name))) { throw "shell folder is missing $name" }
           }
           $pathText = (Get-Content (Join-Path $shell 'kutu.path') -Raw).Trim()
