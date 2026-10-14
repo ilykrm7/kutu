@@ -117,6 +117,7 @@ public sealed class ColorLensWindow : Window
     private readonly Image _grid;
     private IntPtr _mouseHook;
     private IntPtr _keyHook;
+    private int _armPick;
     private RgbColor _color;
     private int _lastX = int.MinValue;
     private int _lastY = int.MinValue;
@@ -210,15 +211,21 @@ public sealed class ColorLensWindow : Window
         if (nCode >= 0)
         {
             var msg = wParam.ToInt32();
-            if (msg == 0x0201)
+            // Left down/up/double-click, including non-client variants. The lens closes on
+            // release so this hook is still installed when the matching up arrives.
+            if (msg is 0x0201 or 0x0202 or 0x0203 or 0x00A1 or 0x00A2 or 0x00A3)
             {
-                Dispatcher.BeginInvoke(Pick);
+                if (msg is 0x0201 or 0x00A1)
+                    Interlocked.Exchange(ref _armPick, 1);
+                else if ((msg is 0x0202 or 0x00A2) && Interlocked.Exchange(ref _armPick, 0) == 1)
+                    Dispatcher.BeginInvoke(Pick);
                 return (IntPtr)1;
             }
 
-            if (msg == 0x0204)
+            if (msg is 0x0204 or 0x0205 or 0x00A4 or 0x00A5)
             {
-                Dispatcher.BeginInvoke(Close);
+                if (msg is 0x0205 or 0x00A5)
+                    Dispatcher.BeginInvoke(Close);
                 return (IntPtr)1;
             }
         }

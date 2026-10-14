@@ -45,7 +45,7 @@ public static class SelectionTranslator
             backup = captured.previous;
             if (string.IsNullOrWhiteSpace(captured.text))
             {
-                host.Log("translate: selection copy was empty");
+                host.Log("translate: selection copy was empty (" + SelectionGrab.LastDiagnostic + ")");
                 await KeyInjector.RunAsync(() => KeyInjector.Restore(backup));
                 backup = null;
                 toast?.Set(L.Get("Translate_NoSelection"));

@@ -80,75 +80,10 @@ public static class KeyInjector
         for (var i = 0; i < 300 && Volatile.Read(ref _hookDepth) != 0; i++)
             Thread.Sleep(1);
         Thread.Sleep(5);
-
-        var accepted = 0;
-        for (var offset = 0; offset < strokes.Count;)
-        {
-            var count = Math.Min(32, strokes.Count - offset);
-            var batch = new NativeInput[count];
-            for (var i = 0; i < count; i++)
-                batch[i] = NativeInput.Keyboard(strokes[offset + i]);
-
-            var sent = (int)SendInput((uint)count, batch, Marshal.SizeOf<NativeInput>());
-            if (sent != count)
-            {
-                var error = Marshal.GetLastWin32Error();
-                return new InjectResult(strokes.Count, accepted + Math.Max(sent, 0), error == 0 ? 87 : error);
-            }
-
-            accepted += sent;
-            offset += count;
-        }
-
-        return new InjectResult(strokes.Count, accepted, 0);
+        return InputPump.Send(strokes);
     }
 
-    public static string CaptureSelection()
-    {
-        Send(KeyStrokePlan.ReleaseModifiers());
-        Thread.Sleep(40);
-        try
-        {
-            Clipboard.Clear();
-        }
-        catch
-        {
-            // The clipboard can be busy for a moment.
-        }
-
-        var hwnd = GetForegroundWindow();
-        if (hwnd != IntPtr.Zero)
-            SendMessage(hwnd, 0x0301, IntPtr.Zero, IntPtr.Zero);
-
-        var copied = ReadClipboard();
-        if (!string.IsNullOrWhiteSpace(copied))
-            return copied;
-
-        Send(KeyStrokePlan.Chord(0x11, 0x43));
-        return ReadClipboard();
-    }
-
-    private static string ReadClipboard()
-    {
-        for (var i = 0; i < 12; i++)
-        {
-            Thread.Sleep(40);
-            try
-            {
-                if (!Clipboard.ContainsText())
-                    continue;
-                var text = Clipboard.GetText();
-                if (!string.IsNullOrWhiteSpace(text))
-                    return text;
-            }
-            catch
-            {
-                // Retry while the clipboard is updating.
-            }
-        }
-
-        return "";
-    }
+    public static string CaptureSelection() => SelectionGrab.Capture();
 
     public static InjectResult PasteText(string text)
     {
@@ -257,15 +192,6 @@ public static class KeyInjector
             OleUninitialize();
         }
     }
-
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern uint SendInput(uint nInputs, NativeInput[] inputs, int cbSize);
-
-    [DllImport("user32.dll")]
-    private static extern IntPtr GetForegroundWindow();
-
-    [DllImport("user32.dll")]
-    private static extern IntPtr SendMessage(IntPtr hwnd, int message, IntPtr wParam, IntPtr lParam);
 
     [DllImport("user32.dll")]
     private static extern bool PeekMessage(out Msg message, IntPtr hwnd, uint min, uint max, uint remove);
