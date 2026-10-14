@@ -29,6 +29,7 @@ public sealed class CaptureStudio : Window
     private readonly Rectangle _frame;
     private readonly TextBlock _size;
     private readonly AnnLayer _layer;
+    private readonly WrapPanel _tools;
     private readonly Border _toolbar;
     private readonly TextBox _text;
     private readonly List<Annotation> _items = [];
@@ -103,6 +104,7 @@ public sealed class CaptureStudio : Window
             Padding = new Thickness(6, 4, 6, 4)
         };
         _text.KeyDown += OnTextKey;
+        _tools = new WrapPanel { Orientation = Orientation.Horizontal };
         _toolbar = BuildToolbar();
         _overlay = new Canvas();
         foreach (var dim in new[] { _dimTop, _dimLeft, _dimRight, _dimBottom })
@@ -142,14 +144,49 @@ public sealed class CaptureStudio : Window
         MouseLeftButtonUp += OnSelectUp;
         PreviewKeyDown += (_, e) =>
         {
-            if (e.Key == Key.Z && Keyboard.Modifiers == ModifierKeys.Control && Keyboard.FocusedElement is not TextBox)
+            if (Keyboard.FocusedElement is TextBox)
+            {
+                if (e.Key == Key.Escape && !_text.IsKeyboardFocused)
+                {
+                    Close();
+                    e.Handled = true;
+                }
+
+                return;
+            }
+
+            if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.Z)
             {
                 Undo();
                 e.Handled = true;
                 return;
             }
 
-            if (e.Key != Key.Escape || _text.IsKeyboardFocused)
+            if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.C)
+            {
+                if (_editing)
+                    Copy();
+                e.Handled = true;
+                return;
+            }
+
+            if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.S)
+            {
+                if (_editing)
+                    Save();
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Key == Key.Enter)
+            {
+                if (_editing)
+                    Copy();
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Key != Key.Escape)
                 return;
             Close();
             e.Handled = true;
@@ -163,42 +200,42 @@ public sealed class CaptureStudio : Window
 
     private Border BuildToolbar()
     {
-        var tools = new WrapPanel { Orientation = Orientation.Horizontal };
-        tools.Children.Add(ToolButton(L.Get("Shot_Move"), SymbolRegular.ArrowMove24, null, move: true));
-        tools.Children.Add(ToolButton(L.Get("Shot_Pen"), SymbolRegular.InkStroke24, ShotTool.Pen, move: false));
-        tools.Children.Add(ToolButton(L.Get("Shot_Line"), SymbolRegular.Line24, ShotTool.Line, move: false));
-        tools.Children.Add(ToolButton(L.Get("Shot_Arrow"), SymbolRegular.ArrowRight24, ShotTool.Arrow, move: false));
-        tools.Children.Add(ToolButton(L.Get("Shot_Rect"), SymbolRegular.RectangleLandscape24, ShotTool.Rectangle, move: false));
-        tools.Children.Add(ToolButton(L.Get("Shot_Ellipse"), SymbolRegular.Oval24, ShotTool.Ellipse, move: false));
-        tools.Children.Add(ToolButton(L.Get("Shot_Text"), SymbolRegular.TextFont24, ShotTool.Text, move: false));
-        tools.Children.Add(ToolButton(L.Get("Shot_Marker"), SymbolRegular.Highlight24, ShotTool.Highlight, move: false));
-        tools.Children.Add(ToolButton(L.Get("Shot_Blur"), SymbolRegular.Blur24, ShotTool.Blur, move: false));
-        tools.Children.Add(ColorButton());
-        tools.Children.Add(WidthButton(L.Get("Shot_Thin"), 2));
-        tools.Children.Add(WidthButton(L.Get("Shot_Medium"), 4));
-        tools.Children.Add(WidthButton(L.Get("Shot_Thick"), 8));
-        tools.Children.Add(Chrome.Secondary(L.Get("Shot_Undo"), SymbolRegular.ArrowUndo24, (_, _) => Undo()));
+        _tools.Children.Add(ToolButton(L.Get("Shot_Move"), SymbolRegular.ArrowMove24, null, move: true));
+        _tools.Children.Add(ToolButton(L.Get("Shot_Pen"), SymbolRegular.InkStroke24, ShotTool.Pen, move: false));
+        _tools.Children.Add(ToolButton(L.Get("Shot_Line"), SymbolRegular.Line24, ShotTool.Line, move: false));
+        _tools.Children.Add(ToolButton(L.Get("Shot_Arrow"), SymbolRegular.ArrowRight24, ShotTool.Arrow, move: false));
+        _tools.Children.Add(ToolButton(L.Get("Shot_Rect"), SymbolRegular.RectangleLandscape24, ShotTool.Rectangle, move: false));
+        _tools.Children.Add(ToolButton(L.Get("Shot_Ellipse"), SymbolRegular.Oval24, ShotTool.Ellipse, move: false));
+        _tools.Children.Add(ToolButton(L.Get("Shot_Text"), SymbolRegular.TextFont24, ShotTool.Text, move: false));
+        _tools.Children.Add(ToolButton(L.Get("Shot_Marker"), SymbolRegular.Highlight24, ShotTool.Highlight, move: false));
+        _tools.Children.Add(ToolButton(L.Get("Shot_Blur"), SymbolRegular.Blur24, ShotTool.Blur, move: false));
+        _tools.Children.Add(ColorButton());
+        _tools.Children.Add(WidthButton(L.Get("Shot_Thin"), 2));
+        _tools.Children.Add(WidthButton(L.Get("Shot_Medium"), 4));
+        _tools.Children.Add(WidthButton(L.Get("Shot_Thick"), 8));
+        _tools.Children.Add(IconButton($"{L.Get("Shot_Undo")} (Ctrl+Z)", SymbolRegular.ArrowUndo24, (_, _) => Undo()));
         HighlightTools();
         HighlightWidth();
-        tools.Children.Add(Chrome.Secondary(L.Get("Action_Copy"), SymbolRegular.Copy24, (_, _) => Copy()));
-        tools.Children.Add(Chrome.Secondary(L.Get("Action_Save"), SymbolRegular.Save24, (_, _) => Save()));
-        tools.Children.Add(Chrome.Soon(L.Get("Action_Upload"), SymbolRegular.CloudArrowUp24));
-        var bar = new Border
+        _tools.Children.Add(IconButton($"{L.Get("Action_Copy")} (Ctrl+C)", SymbolRegular.Copy24, (_, _) => Copy()));
+        _tools.Children.Add(IconButton($"{L.Get("Action_Save")} (Ctrl+S)", SymbolRegular.Save24, (_, _) => Save()));
+        var upload = IconButton($"{L.Get("Action_Upload")} · {L.Get("Dash_Soon")}", SymbolRegular.CloudArrowUp24, (_, _) => { });
+        upload.IsEnabled = false;
+        _tools.Children.Add(upload);
+        return new Border
         {
             Background = new SolidColorBrush(Color.FromArgb(0xF2, 0x10, 0x18, 0x28)),
             BorderBrush = new SolidColorBrush(Color.FromRgb(0x2A, 0x3A, 0x58)),
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(12),
-            Padding = new Thickness(8),
-            Child = tools,
+            Padding = new Thickness(4),
+            Child = _tools,
             Visibility = Visibility.Collapsed
         };
-        return bar;
     }
 
     private Button ToolButton(string label, SymbolRegular symbol, ShotTool? tool, bool move)
     {
-        var button = Chrome.Secondary(label, symbol, (_, _) =>
+        var button = IconButton(label, symbol, (_, _) =>
         {
             _moving = move;
             if (tool is ShotTool chosen)
@@ -206,9 +243,28 @@ public sealed class CaptureStudio : Window
             Cursor = move ? Cursors.SizeAll : Cursors.Cross;
             HighlightTools();
         });
-        button.Margin = new Thickness(0, 0, 6, 6);
         button.Tag = (tool, move);
         _toolButtons.Add(button);
+        return button;
+    }
+
+    private static Button IconButton(string tip, SymbolRegular symbol, RoutedEventHandler click)
+    {
+        var button = new Button
+        {
+            Appearance = ControlAppearance.Secondary,
+            Icon = new SymbolIcon { Symbol = symbol, FontSize = 16 },
+            Padding = new Thickness(0),
+            Width = 34,
+            Height = 34,
+            MinWidth = 34,
+            MinHeight = 34,
+            Margin = new Thickness(2),
+            ToolTip = tip,
+            Cursor = Cursors.Hand
+        };
+        button.Click += click;
+        Motion.Pressable(button);
         return button;
     }
 
@@ -216,13 +272,13 @@ public sealed class CaptureStudio : Window
     {
         _swatch = new Border
         {
-            Width = 28,
-            Height = 28,
+            Width = 34,
+            Height = 34,
             CornerRadius = new CornerRadius(8),
             Background = new SolidColorBrush(_color),
             BorderBrush = Brushes.White,
             BorderThickness = new Thickness(1),
-            Margin = new Thickness(0, 4, 8, 6),
+            Margin = new Thickness(2),
             Cursor = Cursors.Hand,
             ToolTip = L.Get("Shot_Color")
         };
@@ -236,13 +292,35 @@ public sealed class CaptureStudio : Window
 
     private Button WidthButton(string label, double thickness)
     {
-        var button = Chrome.Secondary(label, SymbolRegular.LineThickness24, (_, _) =>
+        var mark = new Border
+        {
+            Width = 16,
+            Height = thickness <= 2.5 ? 2 : thickness <= 5 ? 3 : 5,
+            CornerRadius = new CornerRadius(2),
+            Background = Brushes.White,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        var button = new Button
+        {
+            Appearance = ControlAppearance.Secondary,
+            Content = mark,
+            Padding = new Thickness(0),
+            Width = 34,
+            Height = 34,
+            MinWidth = 34,
+            MinHeight = 34,
+            Margin = new Thickness(2),
+            ToolTip = label,
+            Cursor = Cursors.Hand,
+            Tag = thickness
+        };
+        button.Click += (_, _) =>
         {
             _thickness = thickness;
             HighlightWidth();
-        });
-        button.Margin = new Thickness(0, 0, 6, 6);
-        button.Tag = thickness;
+        };
+        Motion.Pressable(button);
         _widthButtons.Add(button);
         return button;
     }
@@ -571,6 +649,7 @@ public sealed class CaptureStudio : Window
         if (e.Key == Key.Escape)
         {
             _text.Visibility = Visibility.Collapsed;
+            Focus();
             e.Handled = true;
             return;
         }
@@ -585,6 +664,7 @@ public sealed class CaptureStudio : Window
         }
 
         _text.Visibility = Visibility.Collapsed;
+        Focus();
         e.Handled = true;
     }
 
@@ -661,16 +741,7 @@ public sealed class CaptureStudio : Window
         _layer.Visibility = showChrome ? Visibility.Visible : Visibility.Collapsed;
         _toolbar.Visibility = showChrome ? Visibility.Visible : Visibility.Collapsed;
         if (showChrome)
-        {
-            _toolbar.Measure(new Size(Width, Height));
-            var bar = _toolbar.DesiredSize;
-            var top = _sel.Bottom + 10;
-            if (top + bar.Height > Height)
-                top = Math.Max(8, _sel.Top - bar.Height - 10);
-            var left = Math.Min(_sel.X, Math.Max(8, Width - bar.Width - 8));
-            Canvas.SetLeft(_toolbar, left);
-            Canvas.SetTop(_toolbar, top);
-        }
+            PlaceToolbar();
 
         var spots = new[]
         {
@@ -690,6 +761,51 @@ public sealed class CaptureStudio : Window
             Canvas.SetTop(_handles[i], spots[i].Y - 5);
         }
     }
+
+    private void PlaceToolbar()
+    {
+        var monitor = CurrentMonitor();
+        var chrome = _toolbar.Padding.Left + _toolbar.Padding.Right + _toolbar.BorderThickness.Left + _toolbar.BorderThickness.Right;
+        var limit = ShotBarSlot.WidthLimit(monitor.Width, chrome);
+        _tools.MaxWidth = Math.Max(34, limit);
+        _toolbar.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        var bar = _toolbar.DesiredSize;
+        var slot = ShotBarSlot.Place(
+            _sel.X,
+            _sel.Y,
+            _sel.Width,
+            _sel.Height,
+            bar.Width,
+            bar.Height,
+            monitor.X,
+            monitor.Y,
+            monitor.Width,
+            monitor.Height);
+        Canvas.SetLeft(_toolbar, slot.X);
+        Canvas.SetTop(_toolbar, slot.Y);
+    }
+
+    private Rect CurrentMonitor()
+    {
+        try
+        {
+            var center = PointToScreen(new Point(_sel.X + (_sel.Width / 2), _sel.Y + (_sel.Height / 2)));
+            if (!MonitorBounds.TryGet((int)Math.Round(center.X), (int)Math.Round(center.Y), out var pixels))
+                return WindowBounds();
+            var origin = PointFromScreen(new Point(pixels.Left, pixels.Top));
+            var extent = PointFromScreen(new Point(pixels.Right, pixels.Bottom));
+            var x = Math.Min(origin.X, extent.X);
+            var y = Math.Min(origin.Y, extent.Y);
+            var rect = new Rect(x, y, Math.Abs(extent.X - origin.X), Math.Abs(extent.Y - origin.Y));
+            return rect.Width < 1 || rect.Height < 1 ? WindowBounds() : rect;
+        }
+        catch (InvalidOperationException)
+        {
+            return WindowBounds();
+        }
+    }
+
+    private Rect WindowBounds() => new(0, 0, Math.Max(0, Width), Math.Max(0, Height));
 
     private void HideSelection()
     {
@@ -743,7 +859,7 @@ public sealed class CaptureStudio : Window
         if (image is null)
             return;
         var dialog = new SaveFileDialog { Filter = "PNG|*.png", FileName = "kutu.png" };
-        if (dialog.ShowDialog() != true)
+        if (dialog.ShowDialog(this) != true)
             return;
         var encoder = new PngBitmapEncoder();
         encoder.Frames.Add(BitmapFrame.Create(image));

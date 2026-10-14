@@ -324,6 +324,31 @@ public class CoreLogicTests
     }
 
     [Fact]
+    public void Toolbar_stays_inside_a_narrow_monitor()
+    {
+        var limit = ShotBarSlot.WidthLimit(856, chrome: 18);
+        Assert.Equal(822, limit);
+        var below = ShotBarSlot.Place(40, 80, 500, 120, limit, 40, 0, 0, 856, 480);
+        Assert.Equal(new ShotBarSlot(26, 210), below);
+        Assert.True(below.X >= ShotBarSlot.Margin);
+        Assert.True(below.X + limit <= 856 - ShotBarSlot.Margin);
+
+        var flipped = ShotBarSlot.Place(40, 360, 400, 100, 700, 44, 0, 0, 856, 480);
+        Assert.Equal(new ShotBarSlot(40, 306), flipped);
+
+        var shifted = ShotBarSlot.Place(600, 40, 200, 80, 400, 44, 0, 0, 856, 480);
+        Assert.Equal(new ShotBarSlot(448, 130), shifted);
+
+        var inside = ShotBarSlot.Place(0, 0, 856, 480, 800, 100, 0, 0, 856, 480);
+        Assert.Equal(new ShotBarSlot(8, 370), inside);
+
+        var other = ShotBarSlot.Place(2600, 40, 100, 80, 500, 44, 1920, 0, 856, 480);
+        Assert.Equal(new ShotBarSlot(2268, 130), other);
+        Assert.True(other.X >= 1920 + ShotBarSlot.Margin);
+        Assert.True(other.X + 500 <= 1920 + 856 - ShotBarSlot.Margin);
+    }
+
+    [Fact]
     public void Output_names_keep_the_source_base_name()
     {
         var dir = Path.Combine(Path.GetTempPath(), "kutu-names", Guid.NewGuid().ToString("N"));
