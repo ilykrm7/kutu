@@ -27,6 +27,8 @@ Her push'ta Actions çıktısı `Kutu-win-x64` tek dosyadır: `Kutu.exe`. .NET F
 
 Sürüm etiketi (`v*`) itilince aynı dosya GitHub Release'a eklenir. Kurulum yok. İlk açılışta Windows SmartScreen uyarabilir; imzasız bir topluluk aracı olduğu için bu beklenen bir durum.
 
+Derleme sıkıştırmaz ve gizlemez. `kutuwebp.dll` yalnız WebP gerekirken `%LOCALAPPDATA%\Kutu\bin` altına sabit adla yazılır. Windows Defender yine de imzasız bir exe'yi sezgisel olarak işaretleyebilir. Yanlış alarmı [Microsoft'a bildirmek](https://www.microsoft.com/en-us/wdsi/filesubmission) için dosyayı “Software developer” olarak gönderin; algılama adı, dosya sürümü ve bu deponun adresini ekleyin. Açık kaynak imzası için [SignPath](https://signpath.io/) ücretsiz bir kuruluş hesabı verir. [Azure Trusted Signing](https://learn.microsoft.com/azure/trusted-signing/) (eski Artifact Signing) GitHub Actions ile kullanılabilir; kimlik doğrulaması ve ücret ister.
+
 ## Sağ tık menüsü
 
 Ayarlar'daki anahtar iki kayıt yazar, ikisi de kullanıcıya aittir, yönetici istemez:
@@ -60,7 +62,9 @@ Metin genişletici, Kutu'dan daha yetkili (yönetici) pencerelerde tuş görmez.
 
 ## English
 
-Kutu is a Windows tray utility: image convert and resize (WIC, including PDF; HEIC via the Windows HEIF codec), in-place annotated screenshots, a color picker, clipboard history, an Espanso-style expander, RDAP/DNS lookup, multi-provider IP reputation, and translation to English (DeepL, then Google, then MyMemory). Upload stays disabled. UI strings live in RESX (Turkish by default, English included). Secrets are DPAPI-encrypted in the user profile. GitHub Actions publishes one `Kutu.exe` for .NET Framework 4.8, which Windows 10, Windows 11, and Server 2019 already include. Dependencies and libwebp are embedded. The Windows 11 top-level context menu is a per-user unsigned sparse package; the classic submenu remains under Show more options. No administrator rights.
+Kutu is a Windows tray utility: image convert and resize (WIC, including PDF; HEIC via the Windows HEIF codec), in-place annotated screenshots, a color picker, clipboard history, an Espanso-style expander, RDAP/DNS lookup, multi-provider IP reputation, and translation to English (DeepL, then Google, then MyMemory). Upload stays disabled. UI strings live in RESX (Turkish by default, English included). Secrets are DPAPI-encrypted in the user profile. GitHub Actions publishes one `Kutu.exe` for .NET Framework 4.8, which Windows 10, Windows 11, and Server 2019 already include. Dependencies are embedded without compression or obfuscation. libwebp is written to `%LOCALAPPDATA%\Kutu\bin` only when a WebP encode or decode needs it. The Windows 11 top-level context menu is a per-user unsigned sparse package; the classic submenu remains under Show more options. No administrator rights.
+
+An unsigned executable can still trip a Defender machine-learning heuristic. Submit a false positive at the [Microsoft file submission portal](https://www.microsoft.com/en-us/wdsi/filesubmission) as a software developer, and include the detection name, the file version, and this repository. [SignPath](https://signpath.io/) signs open-source releases at no charge after the foundation reviews the project. [Azure Trusted Signing](https://learn.microsoft.com/azure/trusted-signing/) (formerly Artifact Signing) works from GitHub Actions once an organization identity check is done; it is a paid service.
 
 ## Lisans
 

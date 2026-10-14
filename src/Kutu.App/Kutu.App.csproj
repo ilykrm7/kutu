@@ -6,12 +6,23 @@
     <UseWindowsForms>true</UseWindowsForms>
     <RootNamespace>Kutu.App</RootNamespace>
     <AssemblyName>Kutu</AssemblyName>
-    <ApplicationIcon>Assets\kutu.ico</ApplicationIcon>
-    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <KutuIcon>Assets\kutu.ico</KutuIcon>
+    <KutuManifest>app.manifest</KutuManifest>
+    <ApplicationIcon />
+    <NoWin32Manifest>true</NoWin32Manifest>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <PlatformTarget>x64</PlatformTarget>
     <Prefer32Bit>false</Prefer32Bit>
+    <Company>Kerim Ekşi</Company>
+    <Product>Kutu</Product>
     <Description>Kutu — Windows için küçük araçlar.</Description>
+    <Copyright>Copyright © 2026 Kerim Ekşi</Copyright>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <InformationalVersion>1.0.0</InformationalVersion>
+    <Version>1.0.0</Version>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <Deterministic>true</Deterministic>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <DebugType>none</DebugType>
@@ -32,6 +43,12 @@
     <PackageReference Include="Costura.Fody" Version="5.7.0" PrivateAssets="all" />
     <PackageReference Include="Fody" Version="6.8.2" PrivateAssets="all" />
   </ItemGroup>
+  <Target Name="GenerateWin32Resources" BeforeTargets="CoreCompile">
+    <PropertyGroup>
+      <Win32Resource>$(IntermediateOutputPath)kutu.win32.res</Win32Resource>
+    </PropertyGroup>
+    <Exec Command="dotnet run --project &quot;$(MSBuildThisFileDirectory)../../build/Win32Res/Win32Res.csproj&quot; -c Release -- &quot;$(Win32Resource)&quot; &quot;$(MSBuildThisFileDirectory)$(KutuManifest)&quot; &quot;$(MSBuildThisFileDirectory)$(KutuIcon)&quot;" />
+  </Target>
   <Target Name="UnifyFacadeReferences" AfterTargets="Publish">
     <Exec Command="dotnet run --project &quot;$(MSBuildThisFileDirectory)../../build/UnifyRefs/UnifyRefs.csproj&quot; -c Release -- &quot;$(PublishDir)Kutu.exe&quot;" />
   </Target>

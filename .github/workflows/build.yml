@@ -69,6 +69,67 @@ jobs:
         shell: pwsh
         run: Get-Item artifacts/Kutu.exe | ForEach-Object { "{0}`t{1}" -f $_.Name, $_.Length }
 
+      - name: Defender scan
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $false
+          $mp = Join-Path $env:ProgramFiles 'Windows Defender\MpCmdRun.exe'
+          if (-not (Test-Path $mp)) { throw "MpCmdRun.exe was not found at $mp" }
+          $service = Get-Service WinDefend -ErrorAction SilentlyContinue
+          if ($service -and $service.Status -ne 'Running') { Start-Service WinDefend }
+          $updated = $false
+          foreach ($try in 1..3) {
+            & $mp -SignatureUpdate
+            Write-Host "signature update exit $LASTEXITCODE"
+            if ($LASTEXITCODE -eq 0) { $updated = $true; break }
+            Start-Sleep -Seconds 10
+          }
+          if (-not $updated) { throw 'Defender signature update failed' }
+          New-Item -ItemType Directory -Force -Path artifacts/ship | Out-Null
+          Copy-Item artifacts/Kutu.exe artifacts/ship/Kutu.exe -Force
+          $exe = (Resolve-Path 'artifacts\ship\Kutu.exe').Path
+          function Test-KutuScan($path) {
+            & $mp -Scan -ScanType 3 -File $path -DisableRemediation
+            Write-Host "scan exit $LASTEXITCODE"
+            if ($LASTEXITCODE -ne 0) { throw "Defender scan flagged $path (exit $LASTEXITCODE)" }
+          }
+          function Get-KutuThreats {
+            $json = & powershell.exe -NoProfile -NonInteractive -Command "Get-MpThreatDetection | ConvertTo-Json -Depth 5 -Compress"
+            if ($LASTEXITCODE -ne 0) { throw 'Get-MpThreatDetection failed' }
+            if ([string]::IsNullOrWhiteSpace($json) -or $json -eq 'null') { return @() }
+            return @($json | ConvertFrom-Json)
+          }
+          Test-KutuScan $exe
+          $log = Join-Path $env:APPDATA 'Kutu\kutu.log'
+          if (Test-Path $log) { Remove-Item $log -Force }
+          Get-Process -Name Kutu -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+          $proc = Start-Process -FilePath $exe -PassThru
+          $deadline = (Get-Date).AddSeconds(60)
+          do {
+            Start-Sleep -Seconds 2
+            if ($proc.HasExited) {
+              $body = if (Test-Path $log) { Get-Content $log -Raw } else { '' }
+              $threats = Get-KutuThreats | ConvertTo-Json -Depth 5 -Compress
+              throw "Kutu.exe exited during the Defender watch with $($proc.ExitCode).`n$body`n$threats"
+            }
+          } while ((Get-Date) -lt $deadline)
+          if (Test-Path $log) {
+            Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+            throw "Kutu.exe wrote kutu.log during the Defender watch:`n$(Get-Content $log -Raw)"
+          }
+          Stop-Process -Id $proc.Id -Force
+          Start-Sleep -Seconds 2
+          Test-KutuScan $exe
+          $hits = @(Get-KutuThreats | Where-Object {
+            $blob = ($_ | ConvertTo-Json -Depth 5 -Compress)
+            $blob -match 'Kutu|Bearfoos'
+          })
+          if ($hits.Count -gt 0) {
+            throw "Defender flagged Kutu:`n$($hits | ConvertTo-Json -Depth 5)"
+          }
+          Write-Host 'Defender: clean'
+
       - name: Smoke start
         shell: pwsh
         run: |

@@ -93,12 +93,16 @@ internal static class LibWebp
 
             using var stream = typeof(LibWebp).Assembly.GetManifestResourceStream("kutuwebp.dll")
                 ?? throw new InvalidOperationException("image");
-            var cache = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Kutu", "kutuwebp.dll");
+            var cache = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Kutu", "bin", "kutuwebp.dll");
             Directory.CreateDirectory(Path.GetDirectoryName(cache)!);
             if (!File.Exists(cache) || new FileInfo(cache).Length != stream.Length)
             {
-                using var file = File.Create(cache);
-                stream.CopyTo(file);
+                var temp = cache + ".tmp";
+                using (var file = File.Create(temp))
+                    stream.CopyTo(file);
+                if (File.Exists(cache))
+                    File.Delete(cache);
+                File.Move(temp, cache);
             }
 
             return _loadedFrom = cache;
