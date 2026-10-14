@@ -94,11 +94,12 @@ public static class Chrome
 
     public static TextBox Input(string placeholder, bool multiline = false)
     {
-        var box = new TextBox
+        var box = new QuietTextBox
         {
             PlaceholderText = placeholder,
             Padding = new Thickness(12, 8, 12, 8),
-            FontSize = 14
+            FontSize = 14,
+            ClearButtonEnabled = false
         };
         if (multiline)
         {
@@ -223,6 +224,31 @@ public static class Chrome
         return card;
     }
 
+    public static void BubbleWheel(UIElement element)
+    {
+        element.PreviewMouseWheel += (_, e) =>
+        {
+            if (FindScrollViewer(element) is not ScrollViewer viewer)
+                return;
+
+            viewer.ScrollToVerticalOffset(viewer.VerticalOffset - e.Delta);
+            e.Handled = true;
+        };
+    }
+
+    private static ScrollViewer? FindScrollViewer(DependencyObject start)
+    {
+        var node = VisualTreeHelper.GetParent(start);
+        while (node is not null)
+        {
+            if (node is ScrollViewer viewer)
+                return viewer;
+            node = VisualTreeHelper.GetParent(node);
+        }
+
+        return null;
+    }
+
     public static ScrollViewer ScrollPage(UIElement content, double maxWidth = 880)
     {
         var host = new PageHost { MaxContentWidth = maxWidth, Child = content };
@@ -266,6 +292,18 @@ public static class Chrome
 
     public static SymbolRegular Symbol(string name) =>
         Enum.TryParse<SymbolRegular>(name, out var symbol) ? symbol : SymbolRegular.Circle24;
+
+    private sealed class QuietTextBox : TextBox
+    {
+        protected override void OnGotFocus(RoutedEventArgs e)
+        {
+            var caret = CaretIndex;
+            var length = Text?.Length ?? 0;
+            base.OnGotFocus(e);
+            if (length > 0)
+                CaretIndex = Math.Min(Math.Max(caret, 0), length);
+        }
+    }
 
     private static Brush Brush(string key)
     {

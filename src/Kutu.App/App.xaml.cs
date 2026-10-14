@@ -4,6 +4,7 @@ using System.Windows.Threading;
 using Kutu.App.Services;
 using Kutu.Core;
 using Kutu.Core.Diagnostics;
+using Kutu.Core.Network;
 using Kutu.Core.Settings;
 using Kutu.Sdk.Hosting;
 using Kutu.Sdk.Localization;
@@ -34,6 +35,7 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        TlsPolicy.Enable();
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
         DispatcherUnhandledException += OnDispatcherException;
 

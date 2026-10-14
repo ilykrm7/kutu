@@ -1,8 +1,11 @@
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
+using Kutu.Core.Diagnostics;
 using Kutu.Core.Models;
 using Kutu.Core.Settings;
 using Kutu.Sdk.Hosting;
@@ -34,10 +37,24 @@ public sealed class ClipboardHistoryService : IClipboardHistory
 
     public void Start(Window window)
     {
-        var hwnd = new WindowInteropHelper(window).Handle;
-        _source = HwndSource.FromHwnd(hwnd);
+        try
+        {
+            _source = new HwndSource(new HwndSourceParameters("Kutu.Clipboard")
+            {
+                ParentWindow = new IntPtr(-3),
+                WindowStyle = 0
+            });
+        }
+        catch (Exception ex)
+        {
+            AppLog.Write("clipboard message window: " + ex.Message);
+            _source = HwndSource.FromHwnd(new WindowInteropHelper(window).Handle);
+        }
+
         _source?.AddHook(WndProc);
-        AddClipboardFormatListener(hwnd);
+        var handle = _source?.Handle ?? IntPtr.Zero;
+        if (handle == IntPtr.Zero || !AddClipboardFormatListener(handle))
+            AppLog.Write("AddClipboardFormatListener failed error=" + Marshal.GetLastWin32Error());
     }
 
     public void Suppress(TimeSpan duration)
@@ -103,39 +120,70 @@ public sealed class ClipboardHistoryService : IClipboardHistory
         Clipboard.SetText(item.Text ?? "");
     }
 
+    public void Remember(string text)
+    {
+        if (!Enabled || string.IsNullOrWhiteSpace(text))
+            return;
+
+        AddText(text.Length > 200_000 ? text[..200_000] : text);
+    }
+
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
         if (msg == WmClipboardUpdate)
-            Capture();
+            Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.Background, new Action(ReadSoon));
         return IntPtr.Zero;
     }
 
-    private void Capture()
+    private async void ReadSoon()
     {
-        if (!Enabled || Volatile.Read(ref _suppress) > 0)
-            return;
-
-        try
+        for (var attempt = 0; attempt < 6; attempt++)
         {
-            if (Clipboard.ContainsText())
+            if (!Enabled || Volatile.Read(ref _suppress) > 0)
+                return;
+
+            try
             {
-                var text = Clipboard.GetText();
-                if (!string.IsNullOrWhiteSpace(text))
-                    AddText(text.Length > 200_000 ? text[..200_000] : text);
+                if (TryReadText(out var text))
+                {
+                    AddText(text);
+                    return;
+                }
+
+                if (Clipboard.ContainsImage())
+                {
+                    var image = Clipboard.GetImage();
+                    if (image is not null)
+                        AddImage(image);
+                }
+
                 return;
             }
-
-            if (Clipboard.ContainsImage())
+            catch (Exception ex)
             {
-                var image = Clipboard.GetImage();
-                if (image is not null)
-                    AddImage(image);
+                if (attempt == 5)
+                {
+                    AppLog.Write("clipboard read: " + ex.Message);
+                    return;
+                }
+
+                await Task.Delay(40);
             }
         }
-        catch
-        {
-            // Another app owns the clipboard for a moment.
-        }
+    }
+
+    private static bool TryReadText(out string text)
+    {
+        text = "";
+        if (Clipboard.ContainsText(TextDataFormat.UnicodeText))
+            text = Clipboard.GetText(TextDataFormat.UnicodeText);
+        if (string.IsNullOrWhiteSpace(text) && Clipboard.ContainsText(TextDataFormat.Text))
+            text = Clipboard.GetText(TextDataFormat.Text);
+        if (string.IsNullOrWhiteSpace(text))
+            return false;
+
+        text = text.Length > 200_000 ? text[..200_000] : text;
+        return true;
     }
 
     private void AddText(string text)
@@ -198,7 +246,9 @@ public sealed class ClipboardHistoryService : IClipboardHistory
             if (items is null)
                 return;
 
-            foreach (var item in items.Where(x => x.Kind != "image" || (x.ImagePath is not null && File.Exists(x.ImagePath))))
+            foreach (var item in items
+                         .Where(x => x.Kind != "image" || (x.ImagePath is not null && File.Exists(x.ImagePath)))
+                         .OrderByDescending(x => x.CreatedAt))
                 _items.Add(item);
         }
         catch
@@ -233,6 +283,6 @@ public sealed class ClipboardHistoryService : IClipboardHistory
         }
     }
 
-    [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true)]
+    [DllImport("user32.dll", SetLastError = true)]
     private static extern bool AddClipboardFormatListener(IntPtr hwnd);
 }

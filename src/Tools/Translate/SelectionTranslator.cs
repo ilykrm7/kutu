@@ -16,11 +16,21 @@ public static class SelectionTranslator
     {
         if (ForegroundElevation.BlocksTyping())
         {
+            host.Log("translate skipped: foreground process is elevated");
             ForegroundElevation.NotifyOnce(host);
             return;
         }
 
-        var toast = TinyToast.Show(L.Get("Translate_Working"));
+        TinyToast? toast = null;
+        try
+        {
+            toast = TinyToast.Show(L.Get("Translate_Working"));
+        }
+        catch (Exception ex)
+        {
+            host.Log("translate toast: " + ex.Message);
+        }
+
         IDataObject? backup = null;
         try
         {
@@ -35,23 +45,28 @@ public static class SelectionTranslator
             backup = captured.previous;
             if (string.IsNullOrWhiteSpace(captured.text))
             {
+                host.Log("translate: selection copy was empty");
                 await KeyInjector.RunAsync(() => KeyInjector.Restore(backup));
                 backup = null;
-                toast.Set(L.Get("Translate_NoSelection"));
+                toast?.Set(L.Get("Translate_NoSelection"));
                 await Task.Delay(900);
                 return;
             }
 
             var result = await TranslateClient.TranslateAsync(captured.text, "auto", "EN", host.Settings.DeepLKey, host.Settings.DeepLEndpoint);
             var translated = string.IsNullOrWhiteSpace(result.Text) ? captured.text : result.Text;
+            host.SuppressClipboard(TimeSpan.FromMilliseconds(1500));
             await KeyInjector.RunAsync(() =>
             {
                 var typed = KeyInjector.Send(KeyStrokePlan.Unicode(translated));
                 Trace(host, $"translate unicode sent={typed.AcceptedEvents} result={typed.AcceptedEvents} err={typed.Win32Error}");
                 if (!typed.Ok)
                 {
+                    host.Log($"translate inject failed events={typed.AcceptedEvents} error={typed.Win32Error}");
                     var pasted = KeyInjector.PasteText(translated);
                     Trace(host, $"translate paste result={pasted.AcceptedEvents} err={pasted.Win32Error}");
+                    if (!pasted.Ok)
+                        host.Log($"translate paste failed events={pasted.AcceptedEvents} error={pasted.Win32Error}");
                 }
 
                 Thread.Sleep(80);
@@ -73,12 +88,13 @@ public static class SelectionTranslator
                 }
             }
 
-            toast.Set(ex.Message.Length > 80 ? ex.Message[..80] : ex.Message);
+            host.Log("translate: " + ex);
+            toast?.Set(ex.Message.Length > 80 ? ex.Message[..80] : ex.Message);
             await Task.Delay(1200);
         }
         finally
         {
-            toast.Close();
+            toast?.Close();
         }
     }
 

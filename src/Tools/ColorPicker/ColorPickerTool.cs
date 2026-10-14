@@ -66,8 +66,8 @@ public sealed class ColorPickerView : UserControl
 
             var chip = new Border
             {
-                Width = 92,
-                Height = 64,
+                Width = 124,
+                Height = 68,
                 CornerRadius = new CornerRadius(14),
                 Margin = new Thickness(0, 0, 8, 8),
                 Background = new SolidColorBrush(Color.FromRgb(rgb.R, rgb.G, rgb.B)),
@@ -76,6 +76,8 @@ public sealed class ColorPickerView : UserControl
                 Child = new TextBlock
                 {
                     Text = swatch.Hex,
+                    FontSize = 13,
+                    Margin = new Thickness(8, 0, 8, 0),
                     Foreground = rgb.R + rgb.G + rgb.B > 380 ? Brushes.Black : Brushes.White,
                     HorizontalAlignment = HorizontalAlignment.Center,
                     VerticalAlignment = VerticalAlignment.Center,
@@ -132,16 +134,28 @@ public sealed class ColorLensWindow : Window
         _onPicked = onPicked;
         _mouseProc = MouseHook;
         _keyProc = KeyHook;
-        Width = 280;
-        Height = 318;
+        Width = 336;
+        Height = 340;
         WindowStyle = WindowStyle.None;
         AllowsTransparency = true;
         Background = Brushes.Transparent;
         Topmost = true;
         ShowInTaskbar = false;
         ResizeMode = ResizeMode.NoResize;
-        _hex = new TextBlock { FontSize = 22, FontWeight = FontWeights.Bold, Foreground = Brushes.White };
-        _detail = new TextBlock { Foreground = new SolidColorBrush(Color.FromRgb(0xC5, 0xD0, 0xE0)), Margin = new Thickness(0, 4, 0, 0) };
+        _hex = new TextBlock
+        {
+            FontSize = 22,
+            FontWeight = FontWeights.Bold,
+            Foreground = Brushes.White,
+            Margin = new Thickness(0, 0, 8, 2)
+        };
+        _detail = new TextBlock
+        {
+            Foreground = new SolidColorBrush(Color.FromRgb(0xC5, 0xD0, 0xE0)),
+            Margin = new Thickness(0, 4, 8, 0),
+            TextWrapping = TextWrapping.Wrap,
+            MaxWidth = 250
+        };
         _swatch = new Border { Width = 42, Height = 42, CornerRadius = new CornerRadius(12), Margin = new Thickness(0, 0, 12, 0) };
         _grid = new Image { Width = 132, Height = 132, SnapsToDevicePixels = true };
         RenderOptions.SetBitmapScalingMode(_grid, BitmapScalingMode.NearestNeighbor);

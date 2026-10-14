@@ -105,6 +105,8 @@ public static class KeyInjector
 
     public static string CaptureSelection()
     {
+        Send(KeyStrokePlan.ReleaseModifiers());
+        Thread.Sleep(40);
         try
         {
             Clipboard.Clear();
@@ -114,18 +116,30 @@ public static class KeyInjector
             // The clipboard can be busy for a moment.
         }
 
+        var hwnd = GetForegroundWindow();
+        if (hwnd != IntPtr.Zero)
+            SendMessage(hwnd, 0x0301, IntPtr.Zero, IntPtr.Zero);
+
+        var copied = ReadClipboard();
+        if (!string.IsNullOrWhiteSpace(copied))
+            return copied;
+
         Send(KeyStrokePlan.Chord(0x11, 0x43));
-        for (var i = 0; i < 10; i++)
+        return ReadClipboard();
+    }
+
+    private static string ReadClipboard()
+    {
+        for (var i = 0; i < 12; i++)
         {
             Thread.Sleep(40);
             try
             {
-                if (Clipboard.ContainsText())
-                {
-                    var text = Clipboard.GetText();
-                    if (!string.IsNullOrWhiteSpace(text))
-                        return text;
-                }
+                if (!Clipboard.ContainsText())
+                    continue;
+                var text = Clipboard.GetText();
+                if (!string.IsNullOrWhiteSpace(text))
+                    return text;
             }
             catch
             {
@@ -246,6 +260,12 @@ public static class KeyInjector
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern uint SendInput(uint nInputs, NativeInput[] inputs, int cbSize);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr SendMessage(IntPtr hwnd, int message, IntPtr wParam, IntPtr lParam);
 
     [DllImport("user32.dll")]
     private static extern bool PeekMessage(out Msg message, IntPtr hwnd, uint min, uint max, uint remove);

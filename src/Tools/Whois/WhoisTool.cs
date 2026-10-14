@@ -63,12 +63,13 @@ public sealed class WhoisView : UserControl
 
         _status = Chrome.Hint("");
         _result = new StackPanel();
+        Chrome.BubbleWheel(_result);
         var stack = new StackPanel();
         stack.Children.Add(Chrome.Label(L.Get("Whois_Domain")));
         stack.Children.Add(row);
         stack.Children.Add(_status);
         stack.Children.Add(_result);
-        Content = new ScrollViewer { Content = stack, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
+        Content = stack;
     }
 
     private void ScheduleLookup()
@@ -94,23 +95,28 @@ public sealed class WhoisView : UserControl
 
     private async Task LookupAsync(bool explicitRequest, CancellationToken cancellationToken = default)
     {
-        var domain = DomainName.Normalize(_domain.Text);
+        var typed = _domain.Text;
+        var domain = DomainName.Normalize(typed);
         if (!DomainName.IsComplete(domain))
         {
+            if (!explicitRequest)
+                return;
+
             _result.Children.Clear();
-            _status.Text = explicitRequest ? L.Get("Whois_Empty") : "";
+            _status.Text = L.Get("Whois_Empty");
             return;
         }
 
-        _result.Children.Clear();
-        _status.Text = L.Get("Common_Working");
+        if (explicitRequest)
+            _status.Text = L.Get("Common_Working");
         try
         {
             var summary = await RdapClient.LookupAsync(domain, cancellationToken);
             var dns = await DnsLookup.QueryAsync(domain, cancellationToken);
-            if (cancellationToken.IsCancellationRequested)
+            if (cancellationToken.IsCancellationRequested || !string.Equals(_domain.Text, typed, StringComparison.Ordinal))
                 return;
             _status.Text = "";
+            _result.Children.Clear();
             AddCard(
             [
                 (L.Get("Whois_Domain"), string.IsNullOrWhiteSpace(summary.Domain) ? domain : summary.Domain),
@@ -151,11 +157,13 @@ public sealed class WhoisView : UserControl
         }
         catch (RdapNotFoundException)
         {
-            _status.Text = L.Get("Whois_Empty");
+            if (string.Equals(_domain.Text, typed, StringComparison.Ordinal))
+                _status.Text = L.Get("Whois_Empty");
         }
         catch (Exception ex)
         {
-            _status.Text = ex.Message;
+            if (string.Equals(_domain.Text, typed, StringComparison.Ordinal))
+                _status.Text = ex.Message;
         }
     }
 
@@ -186,6 +194,7 @@ public static class RdapClient
 {
     public static async Task<RdapSummary> LookupAsync(string domain, CancellationToken cancellationToken = default)
     {
+        TlsPolicy.Enable();
         using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
         http.DefaultRequestHeaders.UserAgent.ParseAdd("Kutu/1.0 (+https://github.com/ilykrm7/kutu)");
         using var request = new HttpRequestMessage(HttpMethod.Get, $"https://rdap.org/domain/{Uri.EscapeDataString(domain)}");

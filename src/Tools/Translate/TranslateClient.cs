@@ -8,7 +8,13 @@ public sealed record TranslationResult(string Text, bool UsedFallback);
 
 public static class TranslateClient
 {
-    private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(20) };
+    private static readonly HttpClient Http = Create();
+
+    private static HttpClient Create()
+    {
+        TlsPolicy.Enable();
+        return new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
+    }
 
     public static async Task<TranslationResult> TranslateAsync(
         string text,

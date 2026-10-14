@@ -3,6 +3,7 @@ using Kutu.Core;
 using Kutu.Core.Color;
 using Kutu.Core.Geometry;
 using Kutu.Core.Commands;
+using System.Net;
 using Kutu.Core.Hotkeys;
 using Kutu.Core.Models;
 using Kutu.Core.Network;
@@ -150,6 +151,15 @@ public class CoreLogicTests
         Assert.Equal(KeyStrokePlan.UnicodeFlag, typed.Flags);
         Assert.Equal(KeyStrokePlan.UnicodeFlag | KeyStrokePlan.KeyUp, strokes[9].Flags);
         Assert.Equal(IntPtr.Size == 8 ? 40 : 28, Marshal.SizeOf<NativeInput>());
+    }
+
+    [Fact]
+    public void Tls_enables_12_and_13()
+    {
+        TlsPolicy.Enable();
+        var protocol = ServicePointManager.SecurityProtocol;
+        Assert.True(protocol.HasFlag(SecurityProtocolType.Tls12));
+        Assert.True(protocol.HasFlag(SecurityProtocolType.Tls13));
     }
 
     [Fact]

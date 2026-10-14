@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
+using Kutu.Core.Network;
 
 namespace Kutu.Tools.Upload;
 
@@ -16,6 +17,7 @@ public static class UploadClient
         if (string.IsNullOrWhiteSpace(endpoint) || string.IsNullOrWhiteSpace(apiKey))
             throw new InvalidOperationException("missing-config");
 
+        TlsPolicy.Enable();
         using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(90) };
         using var form = new MultipartFormDataContent();
         var file = new ByteArrayContent(data);

@@ -17,4 +17,6 @@ public interface IClipboardHistory
     void ClearUnpinned();
 
     void Copy(ClipItem item);
+
+    void Remember(string text);
 }

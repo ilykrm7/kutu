@@ -38,7 +38,11 @@ public static class IpLookup
     private static HashSet<string>? _tor;
     private static DateTime _torAt;
 
-    static IpLookup() => Http.DefaultRequestHeaders.UserAgent.ParseAdd("Kutu/1.0");
+    static IpLookup()
+    {
+        TlsPolicy.Enable();
+        Http.DefaultRequestHeaders.UserAgent.ParseAdd("Kutu/1.0");
+    }
 
     public static async Task<string> PublicAddressAsync(CancellationToken cancellationToken = default)
     {

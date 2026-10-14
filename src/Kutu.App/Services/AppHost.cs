@@ -67,8 +67,16 @@ public sealed class AppHost : IKutuHost
 
     public void CopyText(string text)
     {
-        _clipboard.Suppress(TimeSpan.FromMilliseconds(500));
-        System.Windows.Clipboard.SetText(text);
+        _clipboard.Remember(text);
+        _clipboard.Suppress(TimeSpan.FromMilliseconds(700));
+        try
+        {
+            System.Windows.Clipboard.SetText(text);
+        }
+        catch (Exception ex)
+        {
+            AppLog.Write("clipboard set text: " + ex.Message);
+        }
     }
 
     public void CopyImage(BitmapSource image)

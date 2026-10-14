@@ -4,6 +4,8 @@ namespace Kutu.Core.Network;
 
 public static class HttpText
 {
+    static HttpText() => TlsPolicy.Enable();
+
     public static async Task<string> GetStringAsync(HttpClient client, string url, CancellationToken cancellationToken)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
