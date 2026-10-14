@@ -8,15 +8,24 @@ using Kutu.Core.Network;
 using Kutu.Core.Settings;
 using Kutu.Sdk.Hosting;
 using Kutu.Sdk.Localization;
+using Kutu.Tools.BulkIp;
 using Kutu.Tools.ClipboardHistory;
 using Kutu.Tools.ColorPicker;
 using Kutu.Tools.ImageConverter;
 using Kutu.Tools.ImageResize;
 using Kutu.Tools.IpReputation;
+using Kutu.Tools.NetProbe;
+using Kutu.Tools.Ocr;
+using Kutu.Tools.Password;
+using Kutu.Tools.Qr;
+using Kutu.Tools.ScreenRecord;
 using Kutu.Tools.Screenshot;
+using Kutu.Tools.ScreenTranslate;
+using Kutu.Tools.SslCheck;
 using Kutu.Tools.TextExpander;
 using Kutu.Tools.Translate;
 using Kutu.Tools.Upload;
+using Kutu.Tools.VideoDownload;
 using Kutu.Tools.Whois;
 using Wpf.Ui.Appearance;
 
@@ -35,6 +44,7 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        TryDeleteOldExe();
         TlsPolicy.Enable();
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
         DispatcherUnhandledException += OnDispatcherException;
@@ -81,8 +91,17 @@ public partial class App : Application
                 new TextExpanderTool(),
                 new WhoisTool(),
                 new IpReputationTool(),
+                new BulkIpTool(),
+                new NetProbeTool(),
+                new SslCheckTool(),
                 new UploadTool(),
-                new TranslateTool()
+                new TranslateTool(),
+                new QrTool(),
+                new OcrTool(),
+                new ScreenTranslateTool(),
+                new PasswordTool(),
+                new VideoDownloadTool(),
+                new ScreenRecordTool()
             ];
             _hotkeys = new GlobalHotkeyService();
             _host = new AppHost(settings, clipboard, tools, ExitApplication, BindHotkeys);
@@ -118,6 +137,7 @@ public partial class App : Application
             _expander.Start();
             if (e.Args.Any(arg => arg.Equals("--tray", StringComparison.OrdinalIgnoreCase)))
                 _window.Hide();
+            new UpdateController(_host, _window, ReleaseInstance).Start();
             _host.HandleArgs(e.Args);
         }
         catch (Exception ex)
@@ -156,6 +176,20 @@ public partial class App : Application
         Register(settings.ColorPickerHotkey, _host.StartColorPicker);
         Register(settings.ClipboardHotkey, _host.ShowClipboardPopup);
         Register(settings.TranslateHotkey, _host.ShowTranslatePopup);
+        Register(settings.ScreenTranslateHotkey, () => Observe(ScreenTranslateController.StartAsync(_host)));
+        Register(settings.RecordHotkey, () => Observe(ScreenRecordController.ToggleAsync(_host)));
+    }
+
+    private static async void Observe(Task task)
+    {
+        try
+        {
+            await task;
+        }
+        catch (Exception ex)
+        {
+            AppLog.Write(ex);
+        }
     }
 
     private void Register(string gesture, Action action)
@@ -191,6 +225,53 @@ public partial class App : Application
         catch
         {
             // Menu registration must not stop startup or look like a crash.
+        }
+    }
+
+    private void ReleaseInstance()
+    {
+        try
+        {
+            _ipc?.Cancel();
+        }
+        catch
+        {
+            // The pipe closes when the process exits.
+        }
+
+        try
+        {
+            _mutex?.ReleaseMutex();
+        }
+        catch
+        {
+            // The mutex is already released when startup did not own it.
+        }
+    }
+
+    private static void TryDeleteOldExe()
+    {
+        try
+        {
+            var exe = HostProcess.Executable;
+            var folder = string.IsNullOrWhiteSpace(exe) ? null : Path.GetDirectoryName(exe);
+            if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
+                return;
+            foreach (var path in Directory.GetFiles(folder, "Kutu.old*.exe"))
+            {
+                try
+                {
+                    File.Delete(path);
+                }
+                catch
+                {
+                    // The previous process may still be exiting. The next start tries again.
+                }
+            }
+        }
+        catch
+        {
+            // Cleanup must not look like a crash.
         }
     }
 

@@ -17,10 +17,10 @@
     <Product>Kutu</Product>
     <Description>Kutu — Windows için küçük araçlar.</Description>
     <Copyright>Copyright © 2026 Kerim Ekşi</Copyright>
-    <AssemblyVersion>1.0.0.0</AssemblyVersion>
-    <FileVersion>1.0.0.0</FileVersion>
-    <InformationalVersion>1.0.0</InformationalVersion>
-    <Version>1.0.0</Version>
+    <AssemblyVersion>1.1.0.0</AssemblyVersion>
+    <FileVersion>1.1.0.0</FileVersion>
+    <InformationalVersion>1.1.0</InformationalVersion>
+    <Version>1.1.0</Version>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Deterministic>true</Deterministic>
   </PropertyGroup>
@@ -65,6 +65,15 @@
     <ProjectReference Include="..\Tools\TextExpander\Kutu.Tools.TextExpander.csproj" />
     <ProjectReference Include="..\Tools\Translate\Kutu.Tools.Translate.csproj" />
     <ProjectReference Include="..\Tools\Upload\Kutu.Tools.Upload.csproj" />
+    <ProjectReference Include="..\Tools\BulkIp\Kutu.Tools.BulkIp.csproj" />
+    <ProjectReference Include="..\Tools\NetProbe\Kutu.Tools.NetProbe.csproj" />
+    <ProjectReference Include="..\Tools\Ocr\Kutu.Tools.Ocr.csproj" />
+    <ProjectReference Include="..\Tools\Password\Kutu.Tools.Password.csproj" />
+    <ProjectReference Include="..\Tools\Qr\Kutu.Tools.Qr.csproj" />
+    <ProjectReference Include="..\Tools\ScreenRecord\Kutu.Tools.ScreenRecord.csproj" />
+    <ProjectReference Include="..\Tools\ScreenTranslate\Kutu.Tools.ScreenTranslate.csproj" />
+    <ProjectReference Include="..\Tools\SslCheck\Kutu.Tools.SslCheck.csproj" />
+    <ProjectReference Include="..\Tools\VideoDownload\Kutu.Tools.VideoDownload.csproj" />
     <ProjectReference Include="..\Tools\Whois\Kutu.Tools.Whois.csproj" />
   </ItemGroup>
 </Project>

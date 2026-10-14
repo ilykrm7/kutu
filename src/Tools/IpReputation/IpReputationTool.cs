@@ -105,7 +105,7 @@ public sealed class IpReputationView : UserControl
         var list = results.ToList();
         var geo = list.FirstOrDefault(item => item.Id == "geo");
         var score = IpRisk.Combine(
-            list.Where(item => item.Id is not "dnsbl" and not "tor").Select(item => item.Score).ToList(),
+            list.Where(item => item.Id is not "dnsbl" and not "tor" and not "symantec").Select(item => item.Score).ToList(),
             list.FirstOrDefault(item => item.Id == "dnsbl")?.DnsblHits,
             list.FirstOrDefault(item => item.Id == "tor")?.Tor);
         var level = IpRisk.Level(score);
@@ -144,7 +144,13 @@ public sealed class IpReputationView : UserControl
     private FrameworkElement ProviderCard(ProviderOutcome result)
     {
         var panel = new StackPanel();
-        if (result.Status == "missing")
+        if (result.Status == "link")
+        {
+            var url = result.Lines.Count > 0 ? result.Lines[0].Value : "";
+            panel.Children.Add(Chrome.Hint(L.Get("Ip_SymantecNote")));
+            panel.Children.Add(Chrome.Secondary(L.Get("Action_OpenBrowser"), SymbolRegular.Open24, (_, _) => Open(url)));
+        }
+        else if (result.Status == "missing")
         {
             var hint = new TextBlock
             {
@@ -165,8 +171,16 @@ public sealed class IpReputationView : UserControl
                 panel.Children.Add(Chrome.Hint(result.Status == "empty" ? L.Get("Ip_NoRecord") : L.Get("Ip_Clean")));
         }
 
-        var card = Chrome.Section(result.Title + "  ·  " + StatusText(result.Status), SymbolRegular.Glance24, panel);
+        var status = StatusText(result.Status);
+        var card = Chrome.Section(status.Length == 0 ? result.Title : result.Title + "  ·  " + status, SymbolRegular.Glance24, panel);
         return card;
+    }
+
+    private static void Open(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            return;
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
     }
 
     private void Copy(string value)
@@ -180,7 +194,7 @@ public sealed class IpReputationView : UserControl
 
     private static string StatusText(string status) => status switch
     {
-        "missing" => "",
+        "missing" or "link" => "",
         "risk" => "Risk",
         "clean" => "Temiz",
         "empty" => "Kayıt yok",

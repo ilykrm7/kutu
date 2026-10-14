@@ -13,6 +13,10 @@ public sealed class CapturedScreen
     public double ScaleX { get; init; } = 1;
 
     public double ScaleY { get; init; } = 1;
+
+    public int OriginX { get; init; }
+
+    public int OriginY { get; init; }
 }
 
 public static class ScreenCapture
@@ -37,7 +41,7 @@ public static class ScreenCapture
         {
             var source = Imaging.CreateBitmapSourceFromHBitmap(handle, IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
             source.Freeze();
-            return new CapturedScreen { Bitmap = source, ScaleX = scaleX, ScaleY = scaleY };
+            return new CapturedScreen { Bitmap = source, ScaleX = scaleX, ScaleY = scaleY, OriginX = originX, OriginY = originY };
         }
         finally
         {

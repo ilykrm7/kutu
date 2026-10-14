@@ -41,7 +41,7 @@ public static class IpLookup
     static IpLookup()
     {
         TlsPolicy.Enable();
-        Http.DefaultRequestHeaders.UserAgent.ParseAdd("Kutu/1.0");
+        Http.DefaultRequestHeaders.UserAgent.ParseAdd("Kutu/1.1");
     }
 
     public static async Task<string> PublicAddressAsync(CancellationToken cancellationToken = default)
@@ -67,7 +67,8 @@ public static class IpLookup
             Guard("ipinfo", "IPinfo", () => string.IsNullOrWhiteSpace(settings.IpInfoKey) ? Task.FromResult(Missing("ipinfo", "IPinfo")) : IpInfoAsync(ip, settings.IpInfoKey)),
             Guard("geo", "Konum", () => GeoAsync(ip)),
             Guard("dnsbl", "Kara liste", () => DnsblAsync(ip)),
-            Guard("tor", "TOR", () => TorAsync(ip))
+            Guard("tor", "TOR", () => TorAsync(ip)),
+            Guard("symantec", "Symantec / Broadcom", () => Task.FromResult(Symantec(ip)))
         };
         return Task.WhenAll(work);
     }
@@ -356,6 +357,18 @@ public static class IpLookup
         {
             return DnsblMark.Blocked;
         }
+    }
+
+    private static ProviderOutcome Symantec(string ip)
+    {
+        var result = new ProviderOutcome
+        {
+            Id = "symantec",
+            Title = "Symantec / Broadcom",
+            Status = "link"
+        };
+        result.Lines.Add(("Site Review", SymantecReview.Url(ip)));
+        return result;
     }
 
     private static async Task<ProviderOutcome> TorAsync(string ip)

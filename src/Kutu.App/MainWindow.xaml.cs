@@ -6,6 +6,7 @@ using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
+using Kutu.App.Services;
 using Kutu.App.Views;
 using Kutu.Sdk.Hosting;
 using Kutu.Sdk.Localization;
@@ -34,6 +35,7 @@ public partial class MainWindow : FluentWindow
         DashboardButton.Content = NavLabel("Home24", L.Get("Nav_Dashboard"));
         FavoritesButton.Content = NavLabel("Star24", L.Get("Nav_Favorites"));
         SettingsButton.Content = NavLabel("Settings24", L.Get("Nav_Settings"));
+        UpdateApplyButton.Content = L.Get("Update_Action");
         SourceInitialized += (_, _) => ApplyDarkChrome();
         ShowDashboard();
     }
@@ -66,6 +68,45 @@ public partial class MainWindow : FluentWindow
         }
 
         _launcher.Present();
+    }
+
+    public void ShowUpdateBar(string version)
+    {
+        UpdateText.Text = string.Format(L.Get("Update_Available"), version);
+        UpdateApplyButton.Content = L.Get("Update_Action");
+        UpdateApplyButton.Visibility = Visibility.Visible;
+        UpdateProgress.Visibility = Visibility.Collapsed;
+        UpdateProgress.Value = 0;
+        UpdateBar.Visibility = Visibility.Visible;
+    }
+
+    public void ShowUpdateProgress(string version, double fraction)
+    {
+        if (fraction < 0)
+            fraction = 0;
+        if (fraction > 1)
+            fraction = 1;
+        var percent = (int)Math.Round(fraction * 100);
+        UpdateText.Text = string.Format(L.Get("Update_Progress"), percent);
+        UpdateApplyButton.Visibility = Visibility.Collapsed;
+        UpdateProgress.Visibility = Visibility.Visible;
+        UpdateProgress.Value = fraction;
+        UpdateBar.Visibility = Visibility.Visible;
+    }
+
+    public void SetUpdateMessage(string message)
+    {
+        UpdateText.Text = message;
+        UpdateApplyButton.Content = L.Get("Update_Action");
+        UpdateApplyButton.Visibility = Visibility.Visible;
+        UpdateBar.Visibility = Visibility.Visible;
+    }
+
+    public void HideUpdateBar()
+    {
+        UpdateBar.Visibility = Visibility.Collapsed;
+        UpdateProgress.Visibility = Visibility.Collapsed;
+        UpdateProgress.Value = 0;
     }
 
     public void ShowToast(string message)
@@ -145,6 +186,10 @@ public partial class MainWindow : FluentWindow
     private void Favorites_Click(object sender, RoutedEventArgs e) => ShowFavorites();
 
     private void Settings_Click(object sender, RoutedEventArgs e) => ShowSettings();
+
+    private void UpdateApply_Click(object sender, RoutedEventArgs e) => UpdateController.Current?.Apply();
+
+    private void UpdateClose_Click(object sender, RoutedEventArgs e) => UpdateController.Current?.DismissBar();
 
     private static void OpenSite()
     {

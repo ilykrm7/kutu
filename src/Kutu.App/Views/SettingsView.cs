@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using Kutu.App.Services;
 using Kutu.Core.Hotkeys;
+using Kutu.Core.Text;
 using Kutu.Sdk.Hosting;
 using Kutu.Sdk.Localization;
 using Kutu.Sdk.Ui;
@@ -23,6 +24,20 @@ public sealed class SettingsView : UserControl
     private readonly TextBox _color;
     private readonly TextBox _clipboard;
     private readonly TextBox _translate;
+    private readonly TextBox _screen;
+    private readonly TextBox _record;
+    private readonly ComboBox _screenLang;
+    private readonly ToggleSwitch _checkUpdates;
+    private readonly ToggleSwitch _autoUpdate;
+    private readonly TextBlock _version;
+    private readonly StackPanel _updateNotice;
+    private readonly TextBlock _updateNoticeText;
+    private readonly TextBox _passwordLength;
+    private readonly ToggleSwitch _passwordUpper;
+    private readonly ToggleSwitch _passwordLower;
+    private readonly ToggleSwitch _passwordDigits;
+    private readonly ToggleSwitch _passwordSymbols;
+    private readonly ToggleSwitch _passwordAmbiguous;
     private readonly PasswordBox _abuse;
     private readonly PasswordBox _virusTotal;
     private readonly PasswordBox _ipqs;
@@ -50,6 +65,26 @@ public sealed class SettingsView : UserControl
         _color = HotkeyBox();
         _clipboard = HotkeyBox();
         _translate = HotkeyBox();
+        _screen = HotkeyBox();
+        _record = HotkeyBox();
+        _screenLang = new ComboBox { Width = 180, Height = 36 };
+        foreach (var code in TranslateDirection.Targets)
+            _screenLang.Items.Add(code);
+        _checkUpdates = new ToggleSwitch { Content = L.Get("Update_Check") };
+        _autoUpdate = new ToggleSwitch { Content = L.Get("Update_Auto") };
+        _version = Chrome.Hint("");
+        _updateNoticeText = new TextBlock { Foreground = Chrome.Text, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 12, 0) };
+        var updateApply = Chrome.Primary(L.Get("Update_Action"), SymbolRegular.ArrowDownload24, (_, _) => UpdateController.Current?.Apply());
+        _updateNotice = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 12, 0, 0), Visibility = Visibility.Collapsed };
+        _updateNotice.Children.Add(_updateNoticeText);
+        _updateNotice.Children.Add(updateApply);
+        _passwordLength = Chrome.Input("20");
+        _passwordLength.Width = 88;
+        _passwordUpper = Flag(L.Get("Pass_Upper"));
+        _passwordLower = Flag(L.Get("Pass_Lower"));
+        _passwordDigits = Flag(L.Get("Pass_Digits"));
+        _passwordSymbols = Flag(L.Get("Pass_Symbols"));
+        _passwordAmbiguous = Flag(L.Get("Pass_Ambiguous"));
         _abuse = new PasswordBox { RevealButtonEnabled = true };
         _virusTotal = new PasswordBox { RevealButtonEnabled = true };
         _ipqs = new PasswordBox { RevealButtonEnabled = true };
@@ -66,11 +101,21 @@ public sealed class SettingsView : UserControl
         _startup.Unchecked += async (_, _) => await ToggleStartupAsync(false);
         _contextMenu.Checked += async (_, _) => await ToggleMenuAsync(true);
         _contextMenu.Unchecked += async (_, _) => await ToggleMenuAsync(false);
+        _checkUpdates.Checked += async (_, _) => await PersistUpdateFlagsAsync();
+        _checkUpdates.Unchecked += async (_, _) => await PersistUpdateFlagsAsync();
+        _autoUpdate.Checked += async (_, _) => await PersistUpdateFlagsAsync();
+        _autoUpdate.Unchecked += async (_, _) => await PersistUpdateFlagsAsync();
+        if (UpdateController.Current is not null)
+            UpdateController.Current.Changed += OnUpdatesChanged;
 
         var stack = new StackPanel();
         stack.Children.Add(Section(L.Get("Settings_General"), General()));
         stack.Children.Add(Gap());
+        stack.Children.Add(Section(L.Get("Settings_Updates"), Updates()));
+        stack.Children.Add(Gap());
         stack.Children.Add(Section(L.Get("Settings_Hotkeys"), Hotkeys()));
+        stack.Children.Add(Gap());
+        stack.Children.Add(Section(L.Get("Settings_PassDefaults"), PasswordDefaults()));
         stack.Children.Add(Gap());
         stack.Children.Add(Section(L.Get("Settings_Api"), Api()));
         stack.Children.Add(Gap());
@@ -93,6 +138,19 @@ public sealed class SettingsView : UserControl
         _color.Text = settings.ColorPickerHotkey;
         _clipboard.Text = settings.ClipboardHotkey;
         _translate.Text = settings.TranslateHotkey;
+        _screen.Text = settings.ScreenTranslateHotkey;
+        _record.Text = settings.RecordHotkey;
+        _screenLang.SelectedItem = TranslateDirection.Targets.Contains(settings.ScreenTranslateTarget) ? settings.ScreenTranslateTarget : "TR";
+        _checkUpdates.IsChecked = settings.CheckForUpdates;
+        _autoUpdate.IsChecked = settings.AutoUpdate;
+        _version.Text = L.Get("Update_Current") + "  v" + CurrentVersion();
+        _passwordLength.Text = settings.PasswordLength.ToString();
+        _passwordUpper.IsChecked = settings.PasswordUpper;
+        _passwordLower.IsChecked = settings.PasswordLower;
+        _passwordDigits.IsChecked = settings.PasswordDigits;
+        _passwordSymbols.IsChecked = settings.PasswordSymbols;
+        _passwordAmbiguous.IsChecked = settings.PasswordExcludeAmbiguous;
+        RefreshUpdateNotice();
         _abuse.Password = settings.AbuseIpDbKey;
         _virusTotal.Password = settings.VirusTotalKey;
         _ipqs.Password = settings.IpQualityScoreKey;
@@ -129,6 +187,38 @@ public sealed class SettingsView : UserControl
         panel.Children.Add(Row(L.Get("Settings_ColorHotkey"), _color));
         panel.Children.Add(Row(L.Get("Settings_ClipboardHotkey"), _clipboard));
         panel.Children.Add(Row(L.Get("Settings_TranslateHotkey"), _translate));
+        panel.Children.Add(Row(L.Get("Settings_ScreenHotkey"), _screen));
+        panel.Children.Add(Row(L.Get("Settings_RecordHotkey"), _record));
+        panel.Children.Add(new Border { Height = 8 });
+        panel.Children.Add(Chrome.Label(L.Get("Settings_ScreenLang")));
+        panel.Children.Add(_screenLang);
+        return panel;
+    }
+
+    private UIElement Updates()
+    {
+        var panel = new StackPanel();
+        panel.Children.Add(_version);
+        panel.Children.Add(new Border { Height = 8 });
+        panel.Children.Add(_checkUpdates);
+        panel.Children.Add(new Border { Height = 8 });
+        panel.Children.Add(_autoUpdate);
+        panel.Children.Add(new Border { Height = 12 });
+        panel.Children.Add(Chrome.Secondary(L.Get("Update_Check"), SymbolRegular.ArrowDownload24, (_, _) => UpdateController.Current?.CheckNow()));
+        panel.Children.Add(_updateNotice);
+        return panel;
+    }
+
+    private UIElement PasswordDefaults()
+    {
+        var panel = new StackPanel();
+        panel.Children.Add(Chrome.Label(L.Get("Pass_Length")));
+        panel.Children.Add(_passwordLength);
+        panel.Children.Add(_passwordUpper);
+        panel.Children.Add(_passwordLower);
+        panel.Children.Add(_passwordDigits);
+        panel.Children.Add(_passwordSymbols);
+        panel.Children.Add(_passwordAmbiguous);
         return panel;
     }
 
@@ -208,6 +298,19 @@ public sealed class SettingsView : UserControl
         settings.ColorPickerHotkey = _color.Text.Trim();
         settings.ClipboardHotkey = _clipboard.Text.Trim();
         settings.TranslateHotkey = _translate.Text.Trim();
+        settings.ScreenTranslateHotkey = _screen.Text.Trim();
+        settings.RecordHotkey = _record.Text.Trim();
+        settings.ScreenTranslateTarget = _screenLang.SelectedItem as string ?? "TR";
+        settings.CheckForUpdates = _checkUpdates.IsChecked == true;
+        settings.AutoUpdate = _autoUpdate.IsChecked == true;
+        if (!int.TryParse(_passwordLength.Text.Trim(), out var length) || length is < 4 or > 128)
+            length = 20;
+        settings.PasswordLength = length;
+        settings.PasswordUpper = _passwordUpper.IsChecked == true;
+        settings.PasswordLower = _passwordLower.IsChecked == true;
+        settings.PasswordDigits = _passwordDigits.IsChecked == true;
+        settings.PasswordSymbols = _passwordSymbols.IsChecked == true;
+        settings.PasswordExcludeAmbiguous = _passwordAmbiguous.IsChecked == true;
         settings.AbuseIpDbKey = _abuse.Password.Trim();
         settings.VirusTotalKey = _virusTotal.Password.Trim();
         settings.IpQualityScoreKey = _ipqs.Password.Trim();
@@ -221,10 +324,53 @@ public sealed class SettingsView : UserControl
         settings.UploadEndpoint = _uploadEndpoint.Text.Trim();
         await _host.SaveSettingsAsync();
         _host.RebindHotkeys();
+        UpdateController.Current?.EnsureWatching();
         L.SetCulture(settings.Language);
         _status.Text = languageChanged ? L.Get("Settings_RestartHint") : L.Get("Settings_Saved");
         _host.Toast(_status.Text);
     }
+
+    private async Task PersistUpdateFlagsAsync()
+    {
+        if (_loading)
+            return;
+        _host.Settings.CheckForUpdates = _checkUpdates.IsChecked == true;
+        _host.Settings.AutoUpdate = _autoUpdate.IsChecked == true;
+        await _host.SaveSettingsAsync();
+        UpdateController.Current?.EnsureWatching();
+    }
+
+    private void OnUpdatesChanged()
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(new Action(RefreshUpdateNotice));
+            return;
+        }
+
+        RefreshUpdateNotice();
+    }
+
+    private void RefreshUpdateNotice()
+    {
+        var version = UpdateController.Current?.Available;
+        if (string.IsNullOrWhiteSpace(version))
+        {
+            _updateNotice.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        _updateNoticeText.Text = string.Format(L.Get("Update_Available"), version);
+        _updateNotice.Visibility = Visibility.Visible;
+    }
+
+    private static string CurrentVersion()
+    {
+        var version = typeof(SettingsView).Assembly.GetName().Version;
+        return version is null ? "1.1.0" : $"{version.Major}.{version.Minor}.{version.Build}";
+    }
+
+    private static ToggleSwitch Flag(string label) => new() { Content = label, Margin = new Thickness(0, 6, 0, 0) };
 
     private static TextBox HotkeyBox()
     {
