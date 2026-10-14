@@ -27,6 +27,8 @@
     <Using Remove="System.Drawing" />
   </ItemGroup>
   <ItemGroup>
+    <None Remove="Assets\kutu.ico" />
+    <Resource Include="Assets\kutu.ico" />
     <Resource Include="Assets\kutu-mark.png" />
     <EmbeddedResource Include="Assets\kutu-mark.png" LogicalName="KutuMark.png" />
     <EmbeddedResource Include="shell\KutuShell.dll" LogicalName="KutuShell.dll" Condition="Exists('shell\KutuShell.dll')" />

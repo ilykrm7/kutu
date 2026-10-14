@@ -90,6 +90,43 @@ jobs:
           Move-Item -Force artifacts/lite/Kutu.exe artifacts/lite/Kutu-lite.exe
           Get-Item artifacts/full/Kutu.exe, artifacts/lite/Kutu-lite.exe | ForEach-Object { "{0}`t{1}" -f $_.Name, $_.Length }
 
+      - name: Smoke start
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $false
+          $log = Join-Path $env:APPDATA 'Kutu\kutu.log'
+          function Stop-Kutu {
+            Get-Process -Name Kutu,Kutu-lite -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+            Start-Sleep -Seconds 1
+          }
+          function Assert-Started($path, $seconds) {
+            Stop-Kutu
+            if (Test-Path $log) { Remove-Item $log -Force }
+            $proc = Start-Process -FilePath $path -PassThru
+            $deadline = (Get-Date).AddSeconds($seconds)
+            do {
+              Start-Sleep -Seconds 2
+              if ($proc.HasExited) {
+                $body = if (Test-Path $log) { Get-Content $log -Raw } else { '' }
+                throw "$path exited with $($proc.ExitCode).`n$body"
+              }
+            } while ((Get-Date) -lt $deadline)
+            if (Test-Path $log) {
+              $body = Get-Content $log -Raw
+              Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+              throw "$path wrote kutu.log:`n$body"
+            }
+            if (-not (Get-Process -Id $proc.Id -ErrorAction SilentlyContinue)) {
+              throw "$path is not running"
+            }
+            Stop-Process -Id $proc.Id -Force
+            Stop-Kutu
+            Write-Host "started $path"
+          }
+          Assert-Started (Resolve-Path 'artifacts\lite\Kutu-lite.exe') 8
+          Assert-Started (Resolve-Path 'artifacts\full\Kutu.exe') 25
+
       - name: Upload exe artifact
         uses: actions/upload-artifact@v4
         with:

@@ -7,7 +7,7 @@
             <ResourceDictionary.MergedDictionaries>
                 <ui:ThemesDictionary Theme="Dark" />
                 <ui:ControlsDictionary />
-                <ResourceDictionary Source="Themes/Kutu.xaml" />
+                <ResourceDictionary Source="pack://application:,,,/Themes/Kutu.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>
