@@ -59,8 +59,9 @@ public class TranslationPlanTests
                 cursor = at + token.Length;
             }
 
-            Assert.Contains("\n\n", result);
-            Assert.All(seen, chunk => Assert.DoesNotContain("\n\n", chunk));
+            var gap = sample.IndexOf("\r\n\r\n", StringComparison.Ordinal) >= 0 ? "\r\n\r\n" : "\n\n";
+            Assert.Contains(gap, result);
+            Assert.All(seen, chunk => Assert.DoesNotContain(gap, chunk));
         }
     }
 
