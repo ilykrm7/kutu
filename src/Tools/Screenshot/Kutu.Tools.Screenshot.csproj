@@ -5,6 +5,7 @@
     <RootNamespace>Kutu.Tools.Screenshot</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\Kutu.Core\Kutu.Core.csproj" />
     <ProjectReference Include="..\..\Kutu.Sdk\Kutu.Sdk.csproj" />
   </ItemGroup>
   <ItemGroup>

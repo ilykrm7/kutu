@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using Kutu.Core.Color;
+using Kutu.Core.Geometry;
 using Kutu.Core.Commands;
 using Kutu.Core.Hotkeys;
 using Kutu.Core.Models;
@@ -305,6 +306,21 @@ public class CoreLogicTests
         Assert.Equal(8, height);
         Assert.Equal(8 * 8 * 4, decoded.Length);
         Directory.Delete(dir, recursive: true);
+    }
+
+    [Fact]
+    public void Drag_box_keeps_every_direction_inside_the_selection()
+    {
+        var downRight = ShotDrag.FromPoints(10, 20, 80, 50);
+        Assert.Equal(new ShotDrag(10, 20, 70, 30), downRight);
+        var upLeft = ShotDrag.FromPoints(100, 80, 20, 10);
+        Assert.Equal(new ShotDrag(20, 10, 80, 70), upLeft);
+        var clamped = upLeft.Clamp(60, 40);
+        Assert.Equal(new ShotDrag(20, 10, 40, 30), clamped);
+        var point = ShotDrag.ClampPoint(-4, 90, 60, 40);
+        Assert.Equal((0d, 40d), point);
+        Assert.False(ShotDrag.FromPoints(5, 5, 6, 5).HasExtent());
+        Assert.True(downRight.HasExtent());
     }
 
     [Fact]
