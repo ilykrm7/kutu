@@ -231,9 +231,9 @@ public static class ContextMenuRegistration
             return false;
 
         var logoBytes = ReadAll(logo);
-        File.WriteAllBytes(Path.Combine(dir, "StoreLogo.png"), logoBytes);
-        File.WriteAllBytes(Path.Combine(dir, "Square44x44Logo.png"), logoBytes);
-        File.WriteAllBytes(Path.Combine(dir, "Square150x150Logo.png"), logoBytes);
+        WriteLogo(logoBytes, Path.Combine(dir, "StoreLogo.png"), 50);
+        WriteLogo(logoBytes, Path.Combine(dir, "Square44x44Logo.png"), 44);
+        WriteLogo(logoBytes, Path.Combine(dir, "Square150x150Logo.png"), 150);
         return true;
     }
 
@@ -308,15 +308,29 @@ public static class ContextMenuRegistration
         File.WriteAllText(script, $$"""
             $ErrorActionPreference = 'Stop'
             Get-AppxPackage -Name '{{PackageName}}' | Remove-AppxPackage -ErrorAction SilentlyContinue
-            try {
-              Add-AppxPackage -Path '{{manifestArg}}' -ExternalLocation '{{dirArg}}' -AllowUnsigned
-            } catch {
+            function Write-KutuAppxLog {
               try {
-                Add-AppxPackage -Path '{{manifestArg}}' -ExternalLocation '{{dirArg}}'
+                Get-WinEvent -LogName 'Microsoft-Windows-AppXDeploymentServer/Operational' -MaxEvents 8 -ErrorAction Stop |
+                  ForEach-Object { '{0} {1} {2}' -f $_.TimeCreated.ToString('o'), $_.Id, ($_.Message -replace '\s+', ' ') }
               } catch {
-                [Console]::Error.WriteLine(($_ | Out-String))
-                exit 1
+                Write-Output $_.Exception.Message
               }
+            }
+            $failures = @()
+            try {
+              Add-AppxPackage -Register '{{manifestArg}}' -ExternalLocation '{{dirArg}}' -AllowUnsigned
+              exit 0
+            } catch {
+              $failures += ($_ | Out-String)
+            }
+            try {
+              Add-AppxPackage -Register '{{manifestArg}}' -AllowUnsigned
+              exit 0
+            } catch {
+              $failures += ($_ | Out-String)
+              [Console]::Error.WriteLine(($failures -join "`n"))
+              Write-KutuAppxLog | ForEach-Object { [Console]::Error.WriteLine($_) }
+              exit 1
             }
             """);
         return RunPowerShell(script, Path.Combine(dir, "kutu-shell.log"));
@@ -398,7 +412,7 @@ public static class ContextMenuRegistration
               <Identity Name="{PackageName}" Publisher="CN=Kerim Eksi, O=Kutu, C=TR" Version="{PackageVersion()}" />
               <Properties>
                 <DisplayName>Kutu</DisplayName>
-                <PublisherDisplayName>Kerim Ekşi</PublisherDisplayName>
+                <PublisherDisplayName>Kerim Eksi</PublisherDisplayName>
                 <Logo>StoreLogo.png</Logo>
               </Properties>
               <Resources>
@@ -439,6 +453,23 @@ public static class ContextMenuRegistration
         using var file = File.Create(path);
         source.CopyTo(file);
         return true;
+    }
+
+    private static void WriteLogo(byte[] source, string path, int size)
+    {
+        using var input = new MemoryStream(source);
+        using var original = new System.Drawing.Bitmap(input);
+        using var bitmap = new System.Drawing.Bitmap(size, size, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+        bitmap.SetResolution(96, 96);
+        using (var graphics = System.Drawing.Graphics.FromImage(bitmap))
+        {
+            graphics.Clear(System.Drawing.Color.Transparent);
+            graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+            graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+            graphics.DrawImage(original, new System.Drawing.Rectangle(0, 0, size, size));
+        }
+
+        bitmap.Save(path, System.Drawing.Imaging.ImageFormat.Png);
     }
 
     private static byte[] ReadAll(Stream source)

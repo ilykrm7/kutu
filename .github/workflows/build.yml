@@ -297,8 +297,9 @@ jobs:
             $listing = if (Test-Path $shell) { ((Get-ChildItem $shell -Force).Name -join ', ') } else { '(no shell dir)' }
             throw "Win11 sparse package was not registered.`n$stampText`n$logText`n$listing"
           }
-          $location = $pkg.InstallLocation.TrimEnd('\')
-          if ($location -ne $shell) { throw "sparse package location is $location, expected $shell" }
+          $location = [IO.Path]::GetFullPath($pkg.InstallLocation).TrimEnd('\','/')
+          $expected = [IO.Path]::GetFullPath($shell).TrimEnd('\','/')
+          if ($location -ine $expected) { throw "sparse package location is $location, expected $expected" }
           foreach ($name in 'KutuShell.dll','KutuShell.exe','Square44x44Logo.png','Square150x150Logo.png','StoreLogo.png','kutu.path','kutu-shell.ps1','kutu.sparse','AppxManifest.xml') {
             if (-not (Test-Path (Join-Path $shell $name))) { throw "shell folder is missing $name" }
           }
