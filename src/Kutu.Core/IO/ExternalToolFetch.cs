@@ -5,7 +5,7 @@ using Kutu.Core.Updates;
 
 namespace Kutu.Core.IO;
 
-public readonly record struct FetchProgress(string Label, double Fraction);
+public readonly record struct FetchProgress(string Label, double Fraction, long Received = 0, long Total = 0, double BytesPerSecond = 0);
 
 public static class ExternalToolFetch
 {
@@ -23,8 +23,58 @@ public static class ExternalToolFetch
         Http.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
     }
 
-    public static Task DownloadFileAsync(string url, string path, IProgress<double>? progress, CancellationToken cancellationToken) =>
-        ToFileAsync(url, path, progress is null ? null : progress.Report, cancellationToken);
+    public static Task DownloadFileAsync(string url, string path, IProgress<FetchProgress>? progress, CancellationToken cancellationToken) =>
+        ToFileAsync(url, path, progress is null ? null : progress.Report, "Kutu", cancellationToken);
+
+    public static async Task<long?> ProbeLengthAsync(string url, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            return null;
+        try
+        {
+            using var head = new HttpRequestMessage(HttpMethod.Head, url);
+            using var response = await Http.SendAsync(head, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            if (response.IsSuccessStatusCode && response.Content.Headers.ContentLength is > 0)
+                return response.Content.Headers.ContentLength;
+        }
+        catch
+        {
+            // Some hosts reject HEAD. The range request below reads the length.
+        }
+
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(0, 0);
+            using var response = await Http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            if (response.Content.Headers.ContentRange?.Length is > 0)
+                return response.Content.Headers.ContentRange.Length;
+            if (response.Content.Headers.ContentLength is > 0)
+                return response.Content.Headers.ContentLength;
+        }
+        catch
+        {
+            // The button stays unlabeled when the size cannot be read.
+        }
+
+        return null;
+    }
+
+    public static async Task<long?> AssetLengthAsync(string releaseUrl, string fileName, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var release = await LatestAsync(releaseUrl, cancellationToken);
+            var file = ReleaseVersion.Find(release, fileName);
+            if (file is null || string.IsNullOrWhiteSpace(file.Url))
+                return null;
+            return await ProbeLengthAsync(file.Url, cancellationToken);
+        }
+        catch
+        {
+            return null;
+        }
+    }
 
     public static async Task<string> GetTextAsync(string url, CancellationToken cancellationToken)
     {
@@ -57,7 +107,7 @@ public static class ExternalToolFetch
         var temp = destination + ".download";
         try
         {
-            await ToFileAsync(file.Url, temp, fraction => progress?.Report(new FetchProgress(fileName, fraction)), cancellationToken);
+            await ToFileAsync(file.Url, temp, snapshot => progress?.Report(snapshot with { Label = fileName }), fileName, cancellationToken);
             if (!Sha256Check.Matches(temp, sumsText, fileName))
             {
                 TryDelete(temp);
@@ -83,7 +133,7 @@ public static class ExternalToolFetch
         var temp = Path.Combine(Path.GetTempPath(), "kutu-ffmpeg-" + Guid.NewGuid().ToString("N") + ".zip");
         try
         {
-            await ToFileAsync(zip.Url, temp, fraction => progress?.Report(new FetchProgress("ffmpeg", fraction)), cancellationToken);
+            await ToFileAsync(zip.Url, temp, snapshot => progress?.Report(snapshot with { Label = "ffmpeg" }), "ffmpeg", cancellationToken);
             if (!Sha256Check.Matches(temp, sumsText, ExternalTools.FfmpegZip))
             {
                 TryDelete(temp);
@@ -112,16 +162,18 @@ public static class ExternalToolFetch
         return ReleaseVersion.ParseLatest(json)?.Assets ?? throw new InvalidOperationException("release");
     }
 
-    private static async Task ToFileAsync(string url, string path, Action<double>? progress, CancellationToken cancellationToken)
+    private static async Task ToFileAsync(string url, string path, Action<FetchProgress>? progress, string label, CancellationToken cancellationToken)
     {
         using var response = await Http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         response.EnsureSuccessStatusCode();
-        var total = response.Content.Headers.ContentLength;
+        var total = response.Content.Headers.ContentLength ?? 0;
         using var input = await response.Content.ReadAsStreamAsync();
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         using var output = File.Create(path);
         var buffer = new byte[1024 * 128];
+        var meter = new TransferMeter();
         long done = 0;
+        progress?.Invoke(new FetchProgress(label, 0, 0, total, 0));
         while (true)
         {
             var read = await input.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
@@ -129,8 +181,8 @@ public static class ExternalToolFetch
                 break;
             await output.WriteAsync(buffer, 0, read, cancellationToken);
             done += read;
-            if (total is > 0)
-                progress?.Invoke(done / (double)total.Value);
+            var fraction = total > 0 ? done / (double)total : 0;
+            progress?.Invoke(new FetchProgress(label, fraction, done, total, meter.Observe(done, DateTime.UtcNow)));
         }
     }
 

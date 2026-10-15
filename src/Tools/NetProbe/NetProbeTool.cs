@@ -8,6 +8,7 @@ using Kutu.Sdk.Localization;
 using Kutu.Sdk.Ui;
 using Microsoft.Win32;
 using Wpf.Ui.Controls;
+using Button = Wpf.Ui.Controls.Button;
 using TextBox = Wpf.Ui.Controls.TextBox;
 
 namespace Kutu.Tools.NetProbe;
@@ -39,7 +40,10 @@ public sealed class NetProbeView : UserControl
     private readonly TextBox _concurrency;
     private readonly TextBlock _pingOut;
     private readonly TextBlock _progress;
+    private readonly TextBlock _empty;
+    private readonly Grid _header;
     private readonly StackPanel _rows;
+    private readonly Button[] _modes;
     private readonly List<PortScanResult> _results = [];
     private string _preset = "common";
     private CancellationTokenSource? _pingCancel;
@@ -58,14 +62,38 @@ public sealed class NetProbeView : UserControl
         _concurrency = Small("512");
         _pingOut = Chrome.Hint("");
         _progress = Chrome.Hint("");
+        _empty = new TextBlock
+        {
+            Text = L.Get("Port_None"),
+            Foreground = Chrome.Muted,
+            FontSize = 13,
+            Opacity = 0.8,
+            Margin = new Thickness(0, 8, 0, 8),
+            Visibility = Visibility.Collapsed
+        };
+        _header = Header();
+        _header.Visibility = Visibility.Collapsed;
         _rows = new StackPanel();
+        _modes =
+        [
+            Mode("single", L.Get("Port_Single")),
+            Mode("range", L.Get("Port_Range")),
+            Mode("common", L.Get("Port_Common")),
+            Mode("all", L.Get("Port_All"))
+        ];
+        ShowPreset("common");
 
         var pingRow = Row(_hostBox, Chrome.Primary(L.Get("Action_Ping"), SymbolRegular.Wifi124, async (_, _) => await PingAsync()), _count, Chrome.Secondary(L.Get("Action_Cancel"), SymbolRegular.Dismiss24, (_, _) => _pingCancel?.Cancel()));
-        var modes = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 8) };
-        modes.Children.Add(Mode("single", L.Get("Port_Single")));
-        modes.Children.Add(Mode("range", L.Get("Port_Range")));
-        modes.Children.Add(Mode("common", L.Get("Port_Common")));
-        modes.Children.Add(Mode("all", L.Get("Port_All")));
+        var modes = new Border
+        {
+            BorderBrush = Chrome.Line,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(10),
+            HorizontalAlignment = HorizontalAlignment.Left,
+            Padding = new Thickness(4),
+            Margin = new Thickness(0, 4, 0, 10),
+            Child = Row(_modes)
+        };
         var scanRow = Row(
             _ports,
             _timeout,
@@ -85,8 +113,9 @@ public sealed class NetProbeView : UserControl
         stack.Children.Add(modes);
         stack.Children.Add(scanRow);
         stack.Children.Add(_progress);
-        stack.Children.Add(Header());
+        stack.Children.Add(_header);
         stack.Children.Add(_rows);
+        stack.Children.Add(_empty);
         stack.Children.Add(export);
         Content = Chrome.ScrollPage(stack, 980);
     }
@@ -154,20 +183,33 @@ public sealed class NetProbeView : UserControl
             concurrency = 512;
         _results.Clear();
         _rows.Children.Clear();
-        var showClosed = ports.Length <= 64;
+        _empty.Visibility = Visibility.Collapsed;
+        _header.Visibility = Visibility.Collapsed;
         var progress = new Progress<PortScanTick>(tick =>
         {
             var eta = tick.Eta.TotalHours >= 1 ? tick.Eta.ToString(@"h\:mm\:ss") : tick.Eta.ToString(@"mm\:ss");
             _progress.Text = string.Format(L.Get("Port_Progress"), tick.Done, tick.Total, tick.Open, eta);
         });
-        await PortScanner.RunAsync(host, ports, timeout, concurrency, showClosed, result =>
+        await PortScanner.RunAsync(host, ports, timeout, concurrency, result =>
         {
-            Dispatcher.BeginInvoke(new Action(() => AddRow(result)));
+            if (result.Open)
+                Dispatcher.Invoke(() => AddRow(result));
         }, progress, cancel.Token);
+        if (!cancel.IsCancellationRequested && _results.All(result => !result.Open))
+        {
+            _rows.Children.Clear();
+            _header.Visibility = Visibility.Collapsed;
+            _empty.Visibility = Visibility.Visible;
+        }
     }
 
     private void AddRow(PortScanResult result)
     {
+        if (!result.Open)
+            return;
+
+        _empty.Visibility = Visibility.Collapsed;
+        _header.Visibility = Visibility.Visible;
         if (result.Port == 3389)
             _results.Insert(0, result);
         else if (result.Port == 22)
@@ -217,10 +259,10 @@ public sealed class NetProbeView : UserControl
             return;
         var builder = new StringBuilder();
         builder.AppendLine("port,state,service,banner");
-        foreach (var result in _results)
+        foreach (var result in OpenResults())
         {
             builder.Append(result.Port).Append(',')
-                .Append(BulkCsv.Cell(result.Open ? "open" : "closed")).Append(',')
+                .Append(BulkCsv.Cell("open")).Append(',')
                 .Append(BulkCsv.Cell(result.Service)).Append(',')
                 .Append(BulkCsv.Cell(result.Banner)).AppendLine();
         }
@@ -233,16 +275,27 @@ public sealed class NetProbeView : UserControl
     {
         var builder = new StringBuilder();
         builder.AppendLine("port\tstate\tservice\tbanner");
-        foreach (var result in _results)
-            builder.Append(result.Port).Append('\t').Append(result.Open ? "open" : "closed").Append('\t').Append(result.Service).Append('\t').Append(result.Banner).AppendLine();
+        foreach (var result in OpenResults())
+            builder.Append(result.Port).Append('\t').Append("open").Append('\t').Append(result.Service).Append('\t').Append(result.Banner).AppendLine();
         return builder.ToString();
     }
 
-    private UIElement Mode(string id, string label)
+    private IEnumerable<PortScanResult> OpenResults() => _results.Where(result => result.Open);
+
+    private Button Mode(string id, string label)
     {
-        var button = Chrome.Secondary(label, SymbolRegular.Checkmark24, (_, _) =>
+        var button = new Button
+        {
+            Content = label,
+            Tag = id,
+            Padding = new Thickness(12, 6, 12, 6),
+            Margin = new Thickness(2, 0, 2, 0),
+            FontSize = 13
+        };
+        button.Click += (_, _) =>
         {
             _preset = id;
+            ShowPreset(id);
             if (id == "all")
             {
                 _ports.Text = "1-65535";
@@ -253,8 +306,20 @@ public sealed class NetProbeView : UserControl
             {
                 _ports.Text = "";
             }
-        });
+        };
+        Motion.Pressable(button);
         return button;
+    }
+
+    private void ShowPreset(string id)
+    {
+        foreach (var button in _modes)
+        {
+            var on = Equals(button.Tag as string, id);
+            button.Appearance = on ? ControlAppearance.Primary : ControlAppearance.Secondary;
+            button.FontWeight = on ? FontWeights.SemiBold : FontWeights.Normal;
+            button.Icon = on ? new SymbolIcon { Symbol = SymbolRegular.Checkmark24, FontSize = 14 } : null;
+        }
     }
 
     private static TextBox Small(string text)

@@ -207,6 +207,8 @@ public sealed class AppHost : IKutuHost
 
     public void ShowLauncher() => _window?.ToggleLauncher(this);
 
+    public IReadOnlyCollection<string> HotkeysInUse { get; set; } = [];
+
     public void RebindHotkeys() => _rebindHotkeys();
 
     public void Exit() => _exit();

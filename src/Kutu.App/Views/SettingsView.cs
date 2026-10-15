@@ -1,10 +1,13 @@
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using Kutu.App.Services;
 using Kutu.Core.Hotkeys;
+using Kutu.Core.IO;
 using Kutu.Core.Text;
 using Kutu.Sdk.Hosting;
+using Kutu.Tools.ScreenRecord;
 using Kutu.Sdk.Localization;
 using Kutu.Sdk.Ui;
 using Wpf.Ui.Controls;
@@ -19,19 +22,15 @@ public sealed class SettingsView : UserControl
     private readonly ToggleSwitch _startup;
     private readonly ToggleSwitch _contextMenu;
     private readonly ComboBox _language;
-    private readonly TextBox _shot;
-    private readonly TextBox _launcher;
-    private readonly TextBox _color;
-    private readonly TextBox _clipboard;
-    private readonly TextBox _translate;
-    private readonly TextBox _screen;
-    private readonly TextBox _record;
+    private readonly List<HotkeyEditor> _hotkeys = [];
     private readonly ComboBox _screenLang;
     private readonly ToggleSwitch _checkUpdates;
     private readonly ToggleSwitch _autoUpdate;
     private readonly TextBlock _version;
     private readonly StackPanel _updateNotice;
     private readonly TextBlock _updateNoticeText;
+    private readonly TextBlock _toolStatus = Chrome.Hint("");
+    private CancellationTokenSource? _toolFetch;
     private readonly TextBox _passwordLength;
     private readonly ToggleSwitch _passwordUpper;
     private readonly ToggleSwitch _passwordLower;
@@ -60,13 +59,6 @@ public sealed class SettingsView : UserControl
         _language = new ComboBox { Width = 180, Height = 36 };
         _language.Items.Add(L.Get("Lang_Tr"));
         _language.Items.Add(L.Get("Lang_En"));
-        _shot = HotkeyBox();
-        _launcher = HotkeyBox();
-        _color = HotkeyBox();
-        _clipboard = HotkeyBox();
-        _translate = HotkeyBox();
-        _screen = HotkeyBox();
-        _record = HotkeyBox();
         _screenLang = new ComboBox { Width = 180, Height = 36 };
         foreach (var code in TranslateDirection.Targets)
             _screenLang.Items.Add(code);
@@ -113,6 +105,8 @@ public sealed class SettingsView : UserControl
         stack.Children.Add(Gap());
         stack.Children.Add(Section(L.Get("Settings_Updates"), Updates()));
         stack.Children.Add(Gap());
+        stack.Children.Add(Section(L.Get("Settings_Tools"), ExternalToolLinks()));
+        stack.Children.Add(Gap());
         stack.Children.Add(Section(L.Get("Settings_Hotkeys"), Hotkeys()));
         stack.Children.Add(Gap());
         stack.Children.Add(Section(L.Get("Settings_PassDefaults"), PasswordDefaults()));
@@ -122,6 +116,7 @@ public sealed class SettingsView : UserControl
         stack.Children.Add(Section(L.Get("Settings_Integration"), Integration()));
         stack.Children.Add(Chrome.Primary(L.Get("Action_Save"), SymbolRegular.Save24, async (_, _) => await SaveAsync()));
         stack.Children.Add(_status);
+        stack.Children.Add(Footer());
         Content = Chrome.ScrollPage(stack, 760);
         LoadFromSettings();
     }
@@ -133,13 +128,9 @@ public sealed class SettingsView : UserControl
         _startup.IsChecked = settings.StartWithWindows;
         _contextMenu.IsChecked = settings.ContextMenuRegistered;
         _language.SelectedIndex = settings.Language.StartsWith("en", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
-        _shot.Text = settings.ScreenshotHotkey;
-        _launcher.Text = settings.LauncherHotkey;
-        _color.Text = settings.ColorPickerHotkey;
-        _clipboard.Text = settings.ClipboardHotkey;
-        _translate.Text = settings.TranslateHotkey;
-        _screen.Text = settings.ScreenTranslateHotkey;
-        _record.Text = settings.RecordHotkey;
+        foreach (var editor in _hotkeys)
+            editor.Box.Text = ToolHotkeyMap.Get(settings, editor.Id);
+        PaintHotkeyConflicts();
         _screenLang.SelectedItem = TranslateDirection.Targets.Contains(settings.ScreenTranslateTarget) ? settings.ScreenTranslateTarget : "TR";
         _checkUpdates.IsChecked = settings.CheckForUpdates;
         _autoUpdate.IsChecked = settings.AutoUpdate;
@@ -182,17 +173,94 @@ public sealed class SettingsView : UserControl
     {
         var panel = new StackPanel();
         panel.Children.Add(Chrome.Hint(L.Get("Settings_HotkeyHint")));
-        panel.Children.Add(Row(L.Get("Settings_ScreenshotHotkey"), _shot));
-        panel.Children.Add(Row(L.Get("Settings_LauncherHotkey"), _launcher));
-        panel.Children.Add(Row(L.Get("Settings_ColorHotkey"), _color));
-        panel.Children.Add(Row(L.Get("Settings_ClipboardHotkey"), _clipboard));
-        panel.Children.Add(Row(L.Get("Settings_TranslateHotkey"), _translate));
-        panel.Children.Add(Row(L.Get("Settings_ScreenHotkey"), _screen));
-        panel.Children.Add(Row(L.Get("Settings_RecordHotkey"), _record));
+        panel.Children.Add(HotkeyRow(ToolHotkeyMap.LauncherId, L.Get("Settings_LauncherHotkey")));
+        foreach (var tool in _host.Tools.OrderBy(item => item.Order))
+            panel.Children.Add(HotkeyRow(tool.Id, L.Get(tool.TitleKey)));
         panel.Children.Add(new Border { Height = 8 });
+        panel.Children.Add(Chrome.Secondary(L.Get("Hotkey_Reset"), SymbolRegular.ArrowReset24, async (_, _) => await ResetHotkeysAsync()));
+        panel.Children.Add(new Border { Height = 12 });
         panel.Children.Add(Chrome.Label(L.Get("Settings_ScreenLang")));
         panel.Children.Add(_screenLang);
         return panel;
+    }
+
+    private UIElement HotkeyRow(string id, string label)
+    {
+        var box = HotkeyBox();
+        var conflict = new TextBlock
+        {
+            Text = L.Get("Hotkey_InUse"),
+            Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xE8, 0x8A, 0x8A)),
+            FontSize = 12,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(8, 0, 0, 0),
+            Visibility = Visibility.Collapsed
+        };
+        var clear = new TextBlock
+        {
+            Text = L.Get("Hotkey_Clear"),
+            Foreground = Chrome.Muted,
+            FontSize = 12,
+            Cursor = Cursors.Hand,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(8, 0, 0, 0)
+        };
+        clear.MouseLeftButtonUp += async (_, _) =>
+        {
+            if (_loading)
+                return;
+            box.Text = "";
+            await CommitHotkeysAsync();
+        };
+        _hotkeys.Add(new HotkeyEditor(id, box, conflict));
+        var grid = new Grid { Margin = new Thickness(0, 0, 0, 8) };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(168) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.ColumnDefinitions.Add(new ColumnDefinition());
+        var text = new TextBlock { Text = label, Foreground = Chrome.Text, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
+        Grid.SetColumn(box, 1);
+        Grid.SetColumn(clear, 2);
+        Grid.SetColumn(conflict, 3);
+        grid.Children.Add(text);
+        grid.Children.Add(box);
+        grid.Children.Add(clear);
+        grid.Children.Add(conflict);
+        return grid;
+    }
+
+    private async Task CommitHotkeysAsync()
+    {
+        if (_loading)
+            return;
+
+        var settings = _host.Settings;
+        foreach (var editor in _hotkeys)
+            ToolHotkeyMap.Set(settings, editor.Id, editor.Box.Text.Trim());
+        await _host.SaveSettingsAsync();
+        _host.RebindHotkeys();
+        PaintHotkeyConflicts();
+    }
+
+    private async Task ResetHotkeysAsync()
+    {
+        ToolHotkeyMap.Reset(_host.Settings, _host.Tools.Select(tool => tool.Id));
+        _loading = true;
+        foreach (var editor in _hotkeys)
+            editor.Box.Text = ToolHotkeyMap.Get(_host.Settings, editor.Id);
+        _loading = false;
+        await _host.SaveSettingsAsync();
+        _host.RebindHotkeys();
+        PaintHotkeyConflicts();
+    }
+
+    private void PaintHotkeyConflicts()
+    {
+        var blocked = new HashSet<string>(ToolHotkeyMap.LocalConflicts(_host.Settings, _host.Tools.Select(tool => tool.Id)), StringComparer.OrdinalIgnoreCase);
+        foreach (var id in _host.HotkeysInUse)
+            blocked.Add(id);
+        foreach (var editor in _hotkeys)
+            editor.Conflict.Visibility = blocked.Contains(editor.Id) ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private UIElement Updates()
@@ -207,6 +275,81 @@ public sealed class SettingsView : UserControl
         panel.Children.Add(Chrome.Secondary(L.Get("Update_Check"), SymbolRegular.ArrowDownload24, (_, _) => UpdateController.Current?.CheckNow()));
         panel.Children.Add(_updateNotice);
         return panel;
+    }
+
+    private UIElement ExternalToolLinks()
+    {
+        var panel = new StackPanel();
+        panel.Children.Add(ToolLink("ffmpeg", ExternalTools.FfmpegPath, ffmpeg: true));
+        panel.Children.Add(ToolLink("yt-dlp", ExternalTools.YtDlpPath, ffmpeg: false));
+        panel.Children.Add(_toolStatus);
+        return panel;
+    }
+
+    private UIElement ToolLink(string name, string path, bool ffmpeg)
+    {
+        var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 6) };
+        row.Children.Add(new TextBlock { Text = name, Foreground = Chrome.Muted, FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Width = 72 });
+        row.Children.Add(TinyLink(L.Get("Update_Action"), async () => await UpdateToolAsync(ffmpeg)));
+        row.Children.Add(TinyLink(L.Get("Tool_Remove"), () => RemoveTool(path, ffmpeg)));
+        return row;
+    }
+
+    private static TextBlock TinyLink(string text, Action click)
+    {
+        var block = new TextBlock
+        {
+            Text = text,
+            Foreground = Chrome.Muted,
+            FontSize = 12,
+            Cursor = Cursors.Hand,
+            TextDecorations = TextDecorations.Underline,
+            Margin = new Thickness(8, 0, 0, 0),
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        block.MouseLeftButtonUp += (_, _) => click();
+        return block;
+    }
+
+    private async Task UpdateToolAsync(bool ffmpeg)
+    {
+        _toolFetch?.Cancel();
+        var cancel = new CancellationTokenSource();
+        _toolFetch = cancel;
+        try
+        {
+            var progress = new Progress<FetchProgress>(item => _toolStatus.Text = TransferStatus.Format(item.Received, item.Total, item.BytesPerSecond));
+            await ExternalToolFetch.EnsureAsync(ytDlp: !ffmpeg, ffmpeg: ffmpeg, progress, cancel.Token);
+            _toolStatus.Text = "";
+        }
+        catch (OperationCanceledException)
+        {
+            _toolStatus.Text = L.Get("Video_Cancel");
+        }
+        catch (Exception ex)
+        {
+            _toolStatus.Text = ex.Message == "hash" ? L.Get("Tool_HashFail") : ex.Message;
+        }
+    }
+
+    private void RemoveTool(string path, bool ffmpeg)
+    {
+        if (ffmpeg && ScreenRecordController.IsRecording)
+        {
+            _toolStatus.Text = L.Get("Record_Live");
+            return;
+        }
+
+        try
+        {
+            if (File.Exists(path))
+                File.Delete(path);
+            _toolStatus.Text = "";
+        }
+        catch (Exception ex)
+        {
+            _toolStatus.Text = ex.Message;
+        }
     }
 
     private UIElement PasswordDefaults()
@@ -291,13 +434,8 @@ public sealed class SettingsView : UserControl
         var language = _language.SelectedIndex == 1 ? "en" : "tr";
         var languageChanged = !settings.Language.Equals(language, StringComparison.OrdinalIgnoreCase);
         settings.Language = language;
-        settings.ScreenshotHotkey = _shot.Text.Trim();
-        settings.LauncherHotkey = _launcher.Text.Trim();
-        settings.ColorPickerHotkey = _color.Text.Trim();
-        settings.ClipboardHotkey = _clipboard.Text.Trim();
-        settings.TranslateHotkey = _translate.Text.Trim();
-        settings.ScreenTranslateHotkey = _screen.Text.Trim();
-        settings.RecordHotkey = _record.Text.Trim();
+        foreach (var editor in _hotkeys)
+            ToolHotkeyMap.Set(settings, editor.Id, editor.Box.Text.Trim());
         settings.ScreenTranslateTarget = _screenLang.SelectedItem as string ?? "TR";
         settings.CheckForUpdates = _checkUpdates.IsChecked == true;
         settings.AutoUpdate = _autoUpdate.IsChecked == true;
@@ -322,6 +460,7 @@ public sealed class SettingsView : UserControl
         settings.UploadEndpoint = _uploadEndpoint.Text.Trim();
         await _host.SaveSettingsAsync();
         _host.RebindHotkeys();
+        PaintHotkeyConflicts();
         UpdateController.Current?.EnsureWatching();
         L.SetCulture(settings.Language);
         _status.Text = languageChanged ? L.Get("Settings_RestartHint") : L.Get("Settings_Saved");
@@ -365,21 +504,68 @@ public sealed class SettingsView : UserControl
     private static string CurrentVersion()
     {
         var version = typeof(SettingsView).Assembly.GetName().Version;
-        return version is null ? "1.1.0" : $"{version.Major}.{version.Minor}.{version.Build}";
+        return version is null ? "1.1.1" : $"{version.Major}.{version.Minor}.{version.Build}";
+    }
+
+    private static UIElement Footer()
+    {
+        var link = new TextBlock
+        {
+            Text = "Kerim Ekşi · kerimeksi.com",
+            Foreground = Chrome.Muted,
+            FontSize = 12,
+            Opacity = 0.8,
+            Cursor = Cursors.Hand,
+            TextDecorations = TextDecorations.Underline,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        link.MouseLeftButtonUp += (_, _) =>
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo("https://kerimeksi.com") { UseShellExecute = true });
+            }
+            catch
+            {
+                // Settings stays usable when the browser cannot open.
+            }
+        };
+
+        var version = new TextBlock
+        {
+            Text = "v" + CurrentVersion(),
+            Foreground = Chrome.Muted,
+            FontSize = 11,
+            Opacity = 0.7,
+            Margin = new Thickness(12, 1, 0, 0),
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        var row = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Margin = new Thickness(2, 28, 0, 4),
+            HorizontalAlignment = HorizontalAlignment.Left
+        };
+        row.Children.Add(link);
+        row.Children.Add(version);
+        return row;
     }
 
     private static ToggleSwitch Flag(string label) => new() { Content = label, Margin = new Thickness(0, 6, 0, 0) };
 
-    private static TextBox HotkeyBox()
+    private TextBox HotkeyBox()
     {
-        var box = Chrome.Input("Ctrl+Shift+S");
-        box.Width = 220;
-        box.PreviewKeyDown += (_, e) =>
+        var box = Chrome.Input("Ctrl+Alt+T");
+        box.Width = 168;
+        box.PreviewKeyDown += async (_, e) =>
         {
             e.Handled = true;
+            if (_loading)
+                return;
             if (e.Key is Key.Escape or Key.Delete or Key.Back)
             {
                 box.Text = "";
+                await CommitHotkeysAsync();
                 return;
             }
 
@@ -396,9 +582,12 @@ public sealed class SettingsView : UserControl
                 mods.HasFlag(ModifierKeys.Windows),
                 name);
             box.Text = gesture.ToString();
+            await CommitHotkeysAsync();
         };
         return box;
     }
+
+    private sealed record HotkeyEditor(string Id, TextBox Box, TextBlock Conflict);
 
     private static UIElement Section(string title, UIElement body)
     {

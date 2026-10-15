@@ -52,5 +52,7 @@ public interface IKutuHost
 
     void RebindHotkeys();
 
+    IReadOnlyCollection<string> HotkeysInUse { get; set; }
+
     void Exit();
 }

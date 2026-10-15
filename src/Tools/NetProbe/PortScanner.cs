@@ -23,7 +23,6 @@ public static class PortScanner
         int[] ports,
         int timeoutMs,
         int concurrency,
-        bool showClosed,
         Action<PortScanResult> onResult,
         IProgress<PortScanTick>? progress,
         CancellationToken cancellationToken)
@@ -63,9 +62,10 @@ public static class PortScanner
 
                     var count = Interlocked.Increment(ref done);
                     if (result.Open)
+                    {
                         Interlocked.Increment(ref open);
-                    if (result.Open || showClosed || port is 22 or 3389)
                         onResult(result);
+                    }
                     if (result.Open || port is 22 or 3389 || count % 48 == 0 || count == ports.Length)
                         Report(progress, count, ports.Length, Volatile.Read(ref open), started);
                 }

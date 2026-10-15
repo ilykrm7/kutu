@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -8,6 +7,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using Kutu.App.Services;
 using Kutu.App.Views;
+using Kutu.Core.IO;
 using Kutu.Sdk.Hosting;
 using Kutu.Sdk.Localization;
 using Kutu.Sdk.Ui;
@@ -28,10 +28,6 @@ public partial class MainWindow : FluentWindow
     {
         _host = host;
         InitializeComponent();
-        FooterLink.Text = "Kerim Ekşi · kerimeksi.com";
-        FooterLink.MouseLeftButtonUp += (_, _) => OpenSite();
-        var version = typeof(MainWindow).Assembly.GetName().Version;
-        VersionText.Text = version is null ? "v1.0.0" : $"v{version.Major}.{version.Minor}.{version.Build}";
         DashboardButton.Content = NavLabel("Home24", L.Get("Nav_Dashboard"));
         FavoritesButton.Content = NavLabel("Star24", L.Get("Nav_Favorites"));
         SettingsButton.Content = NavLabel("Settings24", L.Get("Nav_Settings"));
@@ -80,15 +76,16 @@ public partial class MainWindow : FluentWindow
         UpdateBar.Visibility = Visibility.Visible;
     }
 
-    public void ShowUpdateProgress(string version, double fraction)
+    public void ShowUpdateProgress(string version, FetchProgress progress)
     {
+        var fraction = progress.Fraction;
         if (fraction < 0)
             fraction = 0;
         if (fraction > 1)
             fraction = 1;
-        var percent = (int)Math.Round(fraction * 100);
-        UpdateText.Text = string.Format(L.Get("Update_Progress"), percent);
+        UpdateText.Text = TransferStatus.Format(progress.Received, progress.Total, progress.BytesPerSecond);
         UpdateApplyButton.Visibility = Visibility.Collapsed;
+        UpdateProgress.IsIndeterminate = progress.Total <= 0;
         UpdateProgress.Visibility = Visibility.Visible;
         UpdateProgress.Value = fraction;
         UpdateBar.Visibility = Visibility.Visible;
@@ -190,11 +187,6 @@ public partial class MainWindow : FluentWindow
     private void UpdateApply_Click(object sender, RoutedEventArgs e) => UpdateController.Current?.Apply();
 
     private void UpdateClose_Click(object sender, RoutedEventArgs e) => UpdateController.Current?.DismissBar();
-
-    private static void OpenSite()
-    {
-        Process.Start(new ProcessStartInfo("https://kerimeksi.com") { UseShellExecute = true });
-    }
 
     private void ApplyDarkChrome()
     {

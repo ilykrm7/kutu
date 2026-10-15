@@ -21,6 +21,13 @@ public static class ScreenLinePlan
         return marked;
     }
 
+    public static bool ShowTranslation(string? source, string? translation)
+    {
+        if (string.IsNullOrWhiteSpace(translation))
+            return false;
+        return !string.Equals((source ?? "").Trim(), translation.Trim(), StringComparison.OrdinalIgnoreCase);
+    }
+
     public static IReadOnlyList<string> Pending(IReadOnlyList<Line> lines)
     {
         var pending = new List<string>();

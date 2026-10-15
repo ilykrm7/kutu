@@ -156,7 +156,7 @@ jobs:
           if ($hits.Count -gt 0) {
             throw "Defender flagged Kutu:`n$($hits | ConvertTo-Json -Depth 5)"
           }
-          $shell = Join-Path $env:APPDATA 'Kutu\shell\1.1.0'
+          $shell = Join-Path $env:APPDATA 'Kutu\shell\1.1.1'
           foreach ($name in 'KutuShell.dll','KutuShell.exe') {
             $path = Join-Path $shell $name
             if (Test-Path $path) { Test-KutuScan $path }
@@ -289,7 +289,7 @@ jobs:
           $beside = @(Get-ChildItem (Split-Path $lite) -Force | Where-Object { $_.Name -notin @('Kutu.exe','Kutu.exe.sha256') })
           if ($beside.Count -gt 0) { throw "files beside Kutu.exe: $($beside.Name -join ', ')" }
           # Unsigned sparse packages need Developer Mode. Report the attempt; do not fail the job.
-          $shell = Join-Path $env:APPDATA 'Kutu\shell\1.1.0'
+          $shell = Join-Path $env:APPDATA 'Kutu\shell\1.1.1'
           $stampPath = Join-Path $shell 'kutu.sparse'
           $pkgDeadline = (Get-Date).AddSeconds(50)
           $pkg = $null

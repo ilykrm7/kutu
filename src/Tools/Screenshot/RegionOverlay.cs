@@ -1,4 +1,5 @@
 using Kutu.Core;
+using Kutu.Core.Geometry;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -8,7 +9,18 @@ using System.Windows.Shapes;
 
 namespace Kutu.Tools.Screenshot;
 
-public sealed record RegionPick(BitmapSource Bitmap, int ScreenX, int ScreenY, int Width, int Height);
+public sealed record RegionPick(
+    BitmapSource Bitmap,
+    int ScreenX,
+    int ScreenY,
+    int Width,
+    int Height,
+    double DipX,
+    double DipY,
+    double DipWidth,
+    double DipHeight,
+    bool PerMonitor,
+    IReadOnlyList<MonitorLayout.Band> Monitors);
 
 public sealed class RegionOverlay : Window
 {
@@ -25,7 +37,7 @@ public sealed class RegionOverlay : Window
         ResizeMode = ResizeMode.NoResize;
         Topmost = true;
         ShowInTaskbar = false;
-        Background = new SolidColorBrush(Color.FromArgb(70, 7, 11, 20));
+        Background = Brushes.Black;
         Cursor = Cursors.Cross;
         Left = SystemParameters.VirtualScreenLeft;
         Top = SystemParameters.VirtualScreenTop;
@@ -46,13 +58,19 @@ public sealed class RegionOverlay : Window
             Visibility = Visibility.Collapsed
         };
         var canvas = new Canvas();
+        canvas.Children.Add(new Rectangle
+        {
+            Width = Width,
+            Height = Height,
+            Fill = new SolidColorBrush(Color.FromArgb(48, 7, 11, 20)),
+            IsHitTestVisible = false
+        });
         canvas.Children.Add(_band);
         canvas.Children.Add(_size);
-        if (!offerFullScreen)
-        {
-            Content = canvas;
-        }
-        else
+        var root = new Grid();
+        root.Children.Add(CaptureImage(screen));
+        root.Children.Add(canvas);
+        if (offerFullScreen)
         {
             var full = new System.Windows.Controls.Button
             {
@@ -63,11 +81,10 @@ public sealed class RegionOverlay : Window
                 Margin = new Thickness(0, 18, 0, 0)
             };
             full.Click += (_, _) => AcceptFull();
-            var root = new Grid();
-            root.Children.Add(canvas);
             root.Children.Add(full);
-            Content = root;
         }
+
+        Content = root;
         MouseLeftButtonDown += OnDown;
         MouseMove += OnMove;
         MouseLeftButtonUp += OnUp;
@@ -89,6 +106,8 @@ public sealed class RegionOverlay : Window
     public BitmapSource? Crop { get; private set; }
 
     public Int32Rect PixelRect { get; private set; }
+
+    public Rect ScreenDip { get; private set; }
 
     private void OnDown(object sender, MouseButtonEventArgs e)
     {
@@ -123,7 +142,8 @@ public sealed class RegionOverlay : Window
 
         _dragging = false;
         ReleaseMouseCapture();
-        var rect = ToPixels(Rect(e.GetPosition(this)));
+        var local = Rect(e.GetPosition(this));
+        var rect = ToPixels(local);
         if (rect.Width < 4 || rect.Height < 4)
         {
             DialogResult = false;
@@ -131,18 +151,24 @@ public sealed class RegionOverlay : Window
             return;
         }
 
-        var cropped = new CroppedBitmap(_screen.Bitmap, rect);
-        cropped.Freeze();
-        Crop = cropped;
-        PixelRect = rect;
-        DialogResult = true;
-        Close();
+        Accept(local, rect);
     }
 
     private void AcceptFull()
     {
-        Crop = _screen.Bitmap;
-        PixelRect = new Int32Rect(0, 0, _screen.Bitmap.PixelWidth, _screen.Bitmap.PixelHeight);
+        Accept(new Rect(0, 0, Width, Height), new Int32Rect(0, 0, _screen.Bitmap.PixelWidth, _screen.Bitmap.PixelHeight));
+    }
+
+    private void Accept(Rect localDip, Int32Rect pixels)
+    {
+        var cropped = pixels.Width == _screen.Bitmap.PixelWidth && pixels.Height == _screen.Bitmap.PixelHeight && pixels.X == 0 && pixels.Y == 0
+            ? _screen.Bitmap
+            : (BitmapSource)new CroppedBitmap(_screen.Bitmap, pixels);
+        if (cropped.CanFreeze)
+            cropped.Freeze();
+        Crop = cropped;
+        PixelRect = pixels;
+        ScreenDip = new Rect(Left + localDip.X, Top + localDip.Y, Math.Max(1, localDip.Width), Math.Max(1, localDip.Height));
         DialogResult = true;
         Close();
     }
@@ -155,7 +181,53 @@ public sealed class RegionOverlay : Window
         if (!accepted)
             return null;
         var rect = overlay.PixelRect;
-        return new RegionPick(overlay.Crop!, screen.OriginX + rect.X, screen.OriginY + rect.Y, rect.Width, rect.Height);
+        var dip = overlay.ScreenDip;
+        return new RegionPick(
+            overlay.Crop!,
+            screen.OriginX + rect.X,
+            screen.OriginY + rect.Y,
+            rect.Width,
+            rect.Height,
+            dip.X,
+            dip.Y,
+            dip.Width,
+            dip.Height,
+            screen.PerMonitor,
+            screen.Monitors);
+    }
+
+    private static UIElement CaptureImage(CapturedScreen screen)
+    {
+        if (!screen.PerMonitor || screen.Monitors.Count == 0)
+            return new Image { Source = screen.Bitmap, Stretch = Stretch.Fill, IsHitTestVisible = false };
+
+        var canvas = new Canvas { IsHitTestVisible = false };
+        foreach (var band in screen.Monitors)
+        {
+            var localX = band.X - screen.OriginX;
+            var localY = band.Y - screen.OriginY;
+            var width = Math.Min(band.Width, screen.Bitmap.PixelWidth - localX);
+            var height = Math.Min(band.Height, screen.Bitmap.PixelHeight - localY);
+            if (localX < 0 || localY < 0 || width <= 0 || height <= 0)
+                continue;
+            var crop = new CroppedBitmap(screen.Bitmap, new Int32Rect(localX, localY, width, height));
+            crop.Freeze();
+            var image = new Image
+            {
+                Source = crop,
+                Stretch = Stretch.Fill,
+                Width = band.DipWidth,
+                Height = band.DipHeight,
+                IsHitTestVisible = false
+            };
+            Canvas.SetLeft(image, band.DipX - SystemParameters.VirtualScreenLeft);
+            Canvas.SetTop(image, band.DipY - SystemParameters.VirtualScreenTop);
+            canvas.Children.Add(image);
+        }
+
+        return canvas.Children.Count > 0
+            ? canvas
+            : new Image { Source = screen.Bitmap, Stretch = Stretch.Fill, IsHitTestVisible = false };
     }
 
     private Rect Rect(Point current)
@@ -167,12 +239,25 @@ public sealed class RegionOverlay : Window
 
     private Int32Rect ToPixels(Rect dip)
     {
-        var x = (int)Math.Round(dip.X * _screen.ScaleX);
-        var y = (int)Math.Round(dip.Y * _screen.ScaleY);
-        var w = (int)Math.Round(dip.Width * _screen.ScaleX);
-        var h = (int)Math.Round(dip.Height * _screen.ScaleY);
-        x = Num.Clamp(x, 0, _screen.Bitmap.PixelWidth - 1);
-        y = Num.Clamp(y, 0, _screen.Bitmap.PixelHeight - 1);
+        int x, y, w, h;
+        if (_screen.PerMonitor && _screen.Monitors.Count > 0)
+        {
+            var physical = MonitorLayout.PhysicalBounds(Left + dip.X, Top + dip.Y, dip.Width, dip.Height, _screen.Monitors);
+            x = physical.X - _screen.OriginX;
+            y = physical.Y - _screen.OriginY;
+            w = physical.Width;
+            h = physical.Height;
+        }
+        else
+        {
+            x = (int)Math.Round(dip.X * _screen.ScaleX);
+            y = (int)Math.Round(dip.Y * _screen.ScaleY);
+            w = (int)Math.Round(dip.Width * _screen.ScaleX);
+            h = (int)Math.Round(dip.Height * _screen.ScaleY);
+        }
+
+        x = Num.Clamp(x, 0, Math.Max(0, _screen.Bitmap.PixelWidth - 1));
+        y = Num.Clamp(y, 0, Math.Max(0, _screen.Bitmap.PixelHeight - 1));
         w = Num.Clamp(w, 1, _screen.Bitmap.PixelWidth - x);
         h = Num.Clamp(h, 1, _screen.Bitmap.PixelHeight - y);
         return new Int32Rect(x, y, w, h);

@@ -4,6 +4,8 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using Kutu.Core.Geometry;
+using Kutu.Core.Hotkeys;
 using Kutu.Core.Text;
 using Kutu.Sdk.Hosting;
 using Kutu.Sdk.Localization;
@@ -106,56 +108,46 @@ public static class ScreenTranslateController
 
     private static void ShowOverlay(RegionPick pick, IReadOnlyList<(OcrLineBox Line, string Translation)> pairs)
     {
-        var dpiX = pick.Bitmap.DpiX <= 1 ? 96 : pick.Bitmap.DpiX;
-        var dpiY = pick.Bitmap.DpiY <= 1 ? 96 : pick.Bitmap.DpiY;
-        var scaleX = dpiX / 96d;
-        var scaleY = dpiY / 96d;
+        var dipWidth = pick.DipWidth > 1 ? pick.DipWidth : Math.Max(120, pick.Width);
+        var dipHeight = pick.DipHeight > 1 ? pick.DipHeight : Math.Max(80, pick.Height);
         var canvas = new Canvas();
         var copy = new StringBuilder();
         foreach (var (line, translation) in pairs)
         {
-            if (string.IsNullOrWhiteSpace(line.Text))
+            if (!ScreenLinePlan.ShowTranslation(line.Text, translation))
                 continue;
-            copy.AppendLine(line.Text);
-            if (!string.IsNullOrWhiteSpace(translation))
-            {
-                copy.AppendLine(translation);
-                copy.AppendLine();
-            }
-
-            var stack = new StackPanel();
-            stack.Children.Add(new TextBlock
-            {
-                Text = line.Text,
-                Foreground = new SolidColorBrush(Color.FromRgb(0xC5, 0xD0, 0xE0)),
-                FontSize = 13,
-                TextWrapping = TextWrapping.Wrap
-            });
-            if (!string.IsNullOrWhiteSpace(translation))
-            {
-                stack.Children.Add(new TextBlock
-                {
-                    Text = translation,
-                    Foreground = Brushes.White,
-                    FontSize = 15,
-                    FontWeight = FontWeights.SemiBold,
-                    TextWrapping = TextWrapping.Wrap,
-                    Margin = new Thickness(0, 2, 0, 0)
-                });
-            }
-
+            copy.AppendLine(line.Text.Trim());
+            copy.AppendLine(translation.Trim());
+            copy.AppendLine();
+            var box = TranslationBox(pick, line, dipWidth, dipHeight);
+            var maxWidth = Math.Max(72, Math.Min(box.Width, Math.Max(72, dipWidth - box.X - 8)));
+            var top = box.Y;
+            if (top > dipHeight - 18)
+                top = Math.Max(0, dipHeight - 36);
             var card = new Border
             {
                 Background = new SolidColorBrush(Color.FromArgb(0xE8, 0x10, 0x18, 0x28)),
                 BorderBrush = new SolidColorBrush(Color.FromRgb(0x28, 0xA0, 0xF1)),
                 BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(8),
-                Padding = new Thickness(8, 4, 8, 6),
-                MaxWidth = 420,
-                Child = stack
+                Padding = new Thickness(8, 3, 8, 4),
+                MaxWidth = maxWidth,
+                MaxHeight = 42,
+                IsHitTestVisible = false,
+                Child = new TextBlock
+                {
+                    Text = translation.Trim(),
+                    Foreground = Brushes.White,
+                    FontSize = 14,
+                    FontWeight = FontWeights.SemiBold,
+                    TextWrapping = TextWrapping.Wrap,
+                    TextTrimming = TextTrimming.CharacterEllipsis,
+                    MaxWidth = Math.Max(56, maxWidth - 16),
+                    MaxHeight = 34
+                }
             };
-            Canvas.SetLeft(card, line.X / scaleX);
-            Canvas.SetTop(card, (line.Y + line.Height) / scaleY);
+            Canvas.SetLeft(card, Math.Max(0, box.X));
+            Canvas.SetTop(card, Math.Max(0, top));
             canvas.Children.Add(card);
         }
 
@@ -174,20 +166,20 @@ public static class ScreenTranslateController
         var bar = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(12) };
         bar.Children.Add(button);
         var root = new Grid();
-        root.Children.Add(new Image { Source = pick.Bitmap, Stretch = Stretch.Fill });
+        root.Children.Add(FrozenImage(pick));
         root.Children.Add(canvas);
         root.Children.Add(bar);
         var window = new Window
         {
             WindowStyle = WindowStyle.None,
-            AllowsTransparency = true,
-            Background = Brushes.Transparent,
+            ResizeMode = ResizeMode.NoResize,
+            Background = Brushes.Black,
             Topmost = true,
             ShowInTaskbar = false,
-            Left = pick.ScreenX / scaleX,
-            Top = pick.ScreenY / scaleY,
-            Width = Math.Max(120, pick.Width / scaleX),
-            Height = Math.Max(80, pick.Height / scaleY),
+            Left = pick.DipX,
+            Top = pick.DipY,
+            Width = dipWidth,
+            Height = dipHeight,
             Content = root
         };
         window.KeyDown += (_, e) =>
@@ -199,6 +191,56 @@ public static class ScreenTranslateController
         window.Activate();
         window.Focus();
     }
+
+    private static (double X, double Y, double Width) TranslationBox(RegionPick pick, OcrLineBox line, double dipWidth, double dipHeight)
+    {
+        if (pick.PerMonitor && pick.Monitors.Count > 0)
+        {
+            var mapped = MonitorLayout.UnderLine(pick.ScreenX + line.X, pick.ScreenY + line.Y, line.Width, line.Height, pick.DipX, pick.DipY, pick.Monitors);
+            if (mapped.Width > 0 || mapped.Height > 0)
+                return (mapped.X, mapped.Y, Math.Max(72, mapped.Width));
+        }
+
+        return MonitorLayout.LinearUnder(line.X, line.Y, line.Width, line.Height, pick.Bitmap.PixelWidth, pick.Bitmap.PixelHeight, dipWidth, dipHeight);
+    }
+
+    private static UIElement FrozenImage(RegionPick pick)
+    {
+        if (!pick.PerMonitor || pick.Monitors.Count == 0)
+            return new Image { Source = pick.Bitmap, Stretch = Stretch.Fill, IsHitTestVisible = false };
+
+        var canvas = new Canvas { IsHitTestVisible = false };
+        var cropRight = pick.ScreenX + pick.Bitmap.PixelWidth;
+        var cropBottom = pick.ScreenY + pick.Bitmap.PixelHeight;
+        foreach (var band in pick.Monitors)
+        {
+            var x1 = Math.Max(pick.ScreenX, band.X);
+            var y1 = Math.Max(pick.ScreenY, band.Y);
+            var x2 = Math.Min(cropRight, band.X + band.Width);
+            var y2 = Math.Min(cropBottom, band.Y + band.Height);
+            var width = x2 - x1;
+            var height = y2 - y1;
+            if (width <= 0 || height <= 0)
+                continue;
+            var crop = new CroppedBitmap(pick.Bitmap, new Int32Rect(x1 - pick.ScreenX, y1 - pick.ScreenY, width, height));
+            crop.Freeze();
+            var image = new Image
+            {
+                Source = crop,
+                Stretch = Stretch.Fill,
+                Width = width * 96d / band.DpiX,
+                Height = height * 96d / band.DpiY,
+                IsHitTestVisible = false
+            };
+            Canvas.SetLeft(image, band.DipX + (x1 - band.X) * 96d / band.DpiX - pick.DipX);
+            Canvas.SetTop(image, band.DipY + (y1 - band.Y) * 96d / band.DpiY - pick.DipY);
+            canvas.Children.Add(image);
+        }
+
+        return canvas.Children.Count > 0
+            ? canvas
+            : new Image { Source = pick.Bitmap, Stretch = Stretch.Fill, IsHitTestVisible = false };
+    }
 }
 
 public sealed class ScreenTranslateView : UserControl
@@ -207,7 +249,9 @@ public sealed class ScreenTranslateView : UserControl
     {
         var stack = new StackPanel();
         stack.Children.Add(Chrome.Hint(L.Get("Tool_Screen_Desc")));
-        stack.Children.Add(Chrome.Hint(string.Format(L.Get("Dash_Hint"), host.Settings.ScreenTranslateHotkey)));
+        var gesture = ToolHotkeyMap.Get(host.Settings, "screen-translate");
+        if (!string.IsNullOrWhiteSpace(gesture))
+            stack.Children.Add(Chrome.Hint(string.Format(L.Get("Dash_Hint"), gesture)));
         stack.Children.Add(Chrome.Hint(L.Get("Screen_Target") + ": " + host.Settings.ScreenTranslateTarget));
         stack.Children.Add(Chrome.Primary(L.Get("Action_ReadScreen"), SymbolRegular.Translate24, async (_, _) => await ScreenTranslateController.StartAsync(host)));
         Content = stack;

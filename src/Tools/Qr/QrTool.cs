@@ -13,6 +13,11 @@ using TextBox = Wpf.Ui.Controls.TextBox;
 
 namespace Kutu.Tools.Qr;
 
+public static class QrLaunch
+{
+    public static bool ReadScreen { get; set; }
+}
+
 public sealed class QrTool : IKutuTool
 {
     public string Id => "qr";
@@ -66,6 +71,11 @@ public sealed class QrView : UserControl
         stack.Children.Add(_read);
         stack.Children.Add(_status);
         Content = stack;
+        if (QrLaunch.ReadScreen)
+        {
+            QrLaunch.ReadScreen = false;
+            Dispatcher.BeginInvoke(new Action(() => _ = ReadScreenAsync()));
+        }
     }
 
     private void Generate()
