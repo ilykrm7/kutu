@@ -103,6 +103,9 @@ public sealed class SettingsService
         ColorPickerHotkey = settings.ColorPickerHotkey,
         ClipboardHotkey = settings.ClipboardHotkey,
         TranslateHotkey = settings.TranslateHotkey,
+        ScreenTranslateHotkey = settings.ScreenTranslateHotkey,
+        RecordHotkey = settings.RecordHotkey,
+        ScreenTranslateTarget = settings.ScreenTranslateTarget,
         ClipboardLimit = settings.ClipboardLimit,
         UploadEndpoint = settings.UploadEndpoint,
         DeepLEndpoint = settings.DeepLEndpoint,
@@ -123,7 +126,17 @@ public sealed class SettingsService
         TextExpanderEnabled = settings.TextExpanderEnabled,
         ExpanderDebug = settings.ExpanderDebug,
         ClipboardHistoryEnabled = settings.ClipboardHistoryEnabled,
-        FavoriteTools = settings.FavoriteTools
+        FavoriteTools = settings.FavoriteTools,
+        PasswordLength = settings.PasswordLength,
+        PasswordUpper = settings.PasswordUpper,
+        PasswordLower = settings.PasswordLower,
+        PasswordDigits = settings.PasswordDigits,
+        PasswordSymbols = settings.PasswordSymbols,
+        PasswordExcludeAmbiguous = settings.PasswordExcludeAmbiguous,
+        CheckForUpdates = settings.CheckForUpdates,
+        AutoUpdate = settings.AutoUpdate,
+        DismissedUpdateVersion = settings.DismissedUpdateVersion,
+        VideoOutputFolder = settings.VideoOutputFolder
     };
 
     public AppSettings FromDocument(SettingsDocument document) => new()
@@ -136,6 +149,9 @@ public sealed class SettingsService
         ColorPickerHotkey = document.ColorPickerHotkey,
         ClipboardHotkey = document.ClipboardHotkey,
         TranslateHotkey = document.TranslateHotkey,
+        ScreenTranslateHotkey = string.IsNullOrWhiteSpace(document.ScreenTranslateHotkey) ? "Ctrl+Alt+E" : document.ScreenTranslateHotkey,
+        RecordHotkey = string.IsNullOrWhiteSpace(document.RecordHotkey) ? "Ctrl+Alt+R" : document.RecordHotkey,
+        ScreenTranslateTarget = string.IsNullOrWhiteSpace(document.ScreenTranslateTarget) ? "TR" : document.ScreenTranslateTarget,
         ClipboardLimit = document.ClipboardLimit <= 0 ? 50 : document.ClipboardLimit,
         UploadEndpoint = document.UploadEndpoint,
         DeepLEndpoint = string.IsNullOrWhiteSpace(document.DeepLEndpoint)
@@ -158,7 +174,17 @@ public sealed class SettingsService
         TextExpanderEnabled = document.TextExpanderEnabled ?? true,
         ExpanderDebug = document.ExpanderDebug,
         ClipboardHistoryEnabled = document.ClipboardHistoryEnabled ?? true,
-        FavoriteTools = document.FavoriteTools ?? []
+        FavoriteTools = document.FavoriteTools ?? [],
+        PasswordLength = document.PasswordLength is < 4 or > 128 ? 20 : document.PasswordLength,
+        PasswordUpper = document.PasswordUpper,
+        PasswordLower = document.PasswordLower,
+        PasswordDigits = document.PasswordDigits,
+        PasswordSymbols = document.PasswordSymbols,
+        PasswordExcludeAmbiguous = document.PasswordExcludeAmbiguous,
+        CheckForUpdates = document.CheckForUpdates,
+        AutoUpdate = document.AutoUpdate,
+        DismissedUpdateVersion = document.DismissedUpdateVersion ?? "",
+        VideoOutputFolder = document.VideoOutputFolder ?? ""
     };
 
     private string Protect(string plain) =>

@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>Kutu.Tools.BulkIp</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Kutu.Sdk\Kutu.Sdk.csproj" />
+    <ProjectReference Include="..\IpReputation\Kutu.Tools.IpReputation.csproj" />
+  </ItemGroup>
+</Project>

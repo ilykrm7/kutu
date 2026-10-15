@@ -18,6 +18,12 @@ public sealed class AppSettings
 
     public string TranslateHotkey { get; set; } = "Ctrl+Alt+T";
 
+    public string ScreenTranslateHotkey { get; set; } = "Ctrl+Alt+E";
+
+    public string RecordHotkey { get; set; } = "Ctrl+Alt+R";
+
+    public string ScreenTranslateTarget { get; set; } = "TR";
+
     public int ClipboardLimit { get; set; } = 50;
 
     public string UploadEndpoint { get; set; } = "https://kerimeksi.com/kutu/upload.php";
@@ -59,4 +65,24 @@ public sealed class AppSettings
     public bool ClipboardHistoryEnabled { get; set; } = true;
 
     public List<string> FavoriteTools { get; set; } = [];
+
+    public int PasswordLength { get; set; } = 20;
+
+    public bool PasswordUpper { get; set; } = true;
+
+    public bool PasswordLower { get; set; } = true;
+
+    public bool PasswordDigits { get; set; } = true;
+
+    public bool PasswordSymbols { get; set; } = true;
+
+    public bool PasswordExcludeAmbiguous { get; set; } = true;
+
+    public bool CheckForUpdates { get; set; } = true;
+
+    public bool AutoUpdate { get; set; }
+
+    public string DismissedUpdateVersion { get; set; } = "";
+
+    public string VideoOutputFolder { get; set; } = "";
 }

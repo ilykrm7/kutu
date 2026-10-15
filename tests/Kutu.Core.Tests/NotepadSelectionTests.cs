@@ -42,6 +42,65 @@ public class NotepadSelectionTests
         }
     }
 
+    [Fact]
+    public void Notepad_selection_reports_both_translate_directions()
+    {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            return;
+
+        AssertDirection("merhaba", "EN");
+        AssertDirection("hello", "TR");
+    }
+
+    private static void AssertDirection(string word, string expected)
+    {
+        Process? notepad = null;
+        try
+        {
+            notepad = Process.Start(new ProcessStartInfo("notepad.exe") { UseShellExecute = false });
+            Assert.NotNull(notepad);
+            var (frame, edit) = WaitForEdit(notepad!, TimeSpan.FromSeconds(12));
+            Focus(frame, edit);
+            var typed = InputPump.Send(KeyStrokePlan.Unicode(word));
+            Assert.True(typed.Ok, "typing failed " + typed.Win32Error);
+            Thread.Sleep(250);
+            Focus(frame, edit);
+            var selected = InputPump.Send(KeyStrokePlan.Chord(0x11, 0x41));
+            Assert.True(selected.Ok, "select all failed " + selected.Win32Error);
+            Thread.Sleep(200);
+            Focus(frame, edit);
+            var replaced = SelectionGrab.Translate(text => TranslateDirection.InitialTarget(text));
+            if (!string.Equals(replaced.Trim(), expected, StringComparison.Ordinal))
+            {
+                Thread.Sleep(200);
+                Focus(frame, edit);
+                replaced = SelectionGrab.Translate(text => TranslateDirection.InitialTarget(text));
+            }
+
+            Assert.Equal(expected, replaced.Trim());
+            Thread.Sleep(250);
+            var body = ReadText(edit).Trim();
+            Assert.Equal(expected, body);
+        }
+        finally
+        {
+            try
+            {
+                if (notepad is { HasExited: false })
+                {
+                    notepad.Kill();
+                    notepad.WaitForExit(2000);
+                }
+            }
+            catch
+            {
+                // The window may already be gone.
+            }
+
+            notepad?.Dispose();
+        }
+    }
+
     private static void Drive(IntPtr frame, IntPtr edit, string word)
     {
         Focus(frame, edit);

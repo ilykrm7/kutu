@@ -30,7 +30,7 @@
   <data name="Tool_Upload_Title" xml:space="preserve"><value>Bağlantıya yükle</value></data>
   <data name="Tool_Upload_Desc" xml:space="preserve"><value>Metin veya görseli paylaşılabilir bağlantıya çevir.</value></data>
   <data name="Tool_Translate_Title" xml:space="preserve"><value>Çeviri</value></data>
-  <data name="Tool_Translate_Desc" xml:space="preserve"><value>Seçili metni İngilizceye çevirir. DeepL, sonra Google, sonra MyMemory.</value></data>
+  <data name="Tool_Translate_Desc" xml:space="preserve"><value>Türkçe metni İngilizceye, diğer dillerini Türkçeye çevirir. Önce Google, sonra DeepL, kısa metinde MyMemory.</value></data>
   <data name="Action_Back" xml:space="preserve"><value>Geri</value></data>
   <data name="Action_Copy" xml:space="preserve"><value>Kopyala</value></data>
   <data name="Action_Save" xml:space="preserve"><value>Kaydet</value></data>
@@ -161,6 +161,8 @@
   <data name="Translate_Output" xml:space="preserve"><value>Çeviri</value></data>
   <data name="Translate_Auto" xml:space="preserve"><value>Otomatik</value></data>
   <data name="Translate_Fallback" xml:space="preserve"><value>DeepL anahtarı yok, ücretsiz yedek kullanıldı.</value></data>
+  <data name="Translate_Provider" xml:space="preserve"><value>Sağlayıcı: {0}</value></data>
+  <data name="Translate_Failed" xml:space="preserve"><value>Çeviri tamamlanamadı.</value></data>
   <data name="Translate_Empty" xml:space="preserve"><value>Çevrilecek metin yok.</value></data>
   <data name="Translate_PopupHint" xml:space="preserve"><value>Panodaki metin</value></data>
   <data name="Common_Error" xml:space="preserve"><value>Bir sorun oluştu.</value></data>
@@ -205,4 +207,113 @@
   <data name="Image_FailedFile" xml:space="preserve"><value>{0} kaydedilemedi.</value></data>
   <data name="Shot_CopyFailed" xml:space="preserve"><value>Panoya kopyalanamadı.</value></data>
   <data name="Shot_Move" xml:space="preserve"><value>Taşı</value></data>
+  <data name="Tool_Qr_Title" xml:space="preserve"><value>QR</value></data>
+  <data name="Tool_Qr_Desc" xml:space="preserve"><value>QR oluştur, kopyala veya PNG kaydet. Ekran, dosya ve panodan oku.</value></data>
+  <data name="Tool_Ping_Title" xml:space="preserve"><value>Ping ve port</value></data>
+  <data name="Tool_Ping_Desc" xml:space="preserve"><value>Gecikme, tek port, aralık, sık kullanılanlar ve tüm portlar. Açık porta servis bakar.</value></data>
+  <data name="Tool_Bulk_Title" xml:space="preserve"><value>Toplu IP</value></data>
+  <data name="Tool_Bulk_Desc" xml:space="preserve"><value>Listeyi veya txt dosyasını sorgular, tabloyu CSV kaydeder.</value></data>
+  <data name="Tool_Ocr_Title" xml:space="preserve"><value>OCR</value></data>
+  <data name="Tool_Ocr_Desc" xml:space="preserve"><value>Ekran bölgesi veya görselden metin. Windows OCR, Türkçe ve İngilizce.</value></data>
+  <data name="Tool_Ssl_Title" xml:space="preserve"><value>SSL kontrol</value></data>
+  <data name="Tool_Ssl_Desc" xml:space="preserve"><value>Yayıncı, konu, SAN, geçerlilik, kalan gün, zincir ve TLS sürümü.</value></data>
+  <data name="Tool_Video_Title" xml:space="preserve"><value>Video indir</value></data>
+  <data name="Tool_Video_Desc" xml:space="preserve"><value>yt-dlp ile MP4 veya MP3. ffmpeg yalnız birleştirme gerektiğinde.</value></data>
+  <data name="Tool_Record_Title" xml:space="preserve"><value>Ekran kaydı</value></data>
+  <data name="Tool_Record_Desc" xml:space="preserve"><value>Bölge veya tam ekran, MP4 veya GIF. İmleç isteğe bağlı.</value></data>
+  <data name="Tool_Pass_Title" xml:space="preserve"><value>Parola</value></data>
+  <data name="Tool_Pass_Desc" xml:space="preserve"><value>Uzunluk, karakter kümeleri ve kriptografik rastgelelik.</value></data>
+  <data name="Tool_Screen_Title" xml:space="preserve"><value>Ekran çevirisi</value></data>
+  <data name="Tool_Screen_Desc" xml:space="preserve"><value>Bölge veya tam ekran. OCR, sonra her satırın altında çeviri.</value></data>
+  <data name="Action_Download" xml:space="preserve"><value>İndir</value></data>
+  <data name="Action_Scan" xml:space="preserve"><value>Tara</value></data>
+  <data name="Action_Ping" xml:space="preserve"><value>Ping</value></data>
+  <data name="Action_Export" xml:space="preserve"><value>CSV</value></data>
+  <data name="Action_Generate" xml:space="preserve"><value>Oluştur</value></data>
+  <data name="Action_ReadScreen" xml:space="preserve"><value>Ekrandan</value></data>
+  <data name="Action_ReadFile" xml:space="preserve"><value>Dosyadan</value></data>
+  <data name="Action_ReadClip" xml:space="preserve"><value>Panodan</value></data>
+  <data name="Action_OpenBrowser" xml:space="preserve"><value>Tarayıcıda aç</value></data>
+  <data name="Action_CopyAll" xml:space="preserve"><value>Tümünü kopyala</value></data>
+  <data name="Action_Stop" xml:space="preserve"><value>Durdur</value></data>
+  <data name="Action_FullScreen" xml:space="preserve"><value>Tam ekran</value></data>
+  <data name="Qr_Text" xml:space="preserve"><value>Metin</value></data>
+  <data name="Qr_Result" xml:space="preserve"><value>Okunan</value></data>
+  <data name="Qr_Empty" xml:space="preserve"><value>Metin yok.</value></data>
+  <data name="Qr_Saved" xml:space="preserve"><value>PNG kaydedildi.</value></data>
+  <data name="Qr_None" xml:space="preserve"><value>QR bulunamadı.</value></data>
+  <data name="Ping_Host" xml:space="preserve"><value>Adres</value></data>
+  <data name="Ping_Timeout" xml:space="preserve"><value>Zaman aşımı</value></data>
+  <data name="Ping_Summary" xml:space="preserve"><value>min {0} ms · ort {1} ms · max {2} ms · kayıp {3}</value></data>
+  <data name="Port_Mode" xml:space="preserve"><value>Tarama</value></data>
+  <data name="Port_Single" xml:space="preserve"><value>Tek port</value></data>
+  <data name="Port_Range" xml:space="preserve"><value>Aralık</value></data>
+  <data name="Port_Common" xml:space="preserve"><value>Sık kullanılan</value></data>
+  <data name="Port_All" xml:space="preserve"><value>Tüm portlar</value></data>
+  <data name="Port_Progress" xml:space="preserve"><value>{0} / {1} · açık {2} · kalan {3}</value></data>
+  <data name="Port_HeaderPort" xml:space="preserve"><value>Port</value></data>
+  <data name="Port_HeaderState" xml:space="preserve"><value>Durum</value></data>
+  <data name="Port_HeaderService" xml:space="preserve"><value>Servis</value></data>
+  <data name="Port_HeaderBanner" xml:space="preserve"><value>Afiş</value></data>
+  <data name="Port_Open" xml:space="preserve"><value>Açık</value></data>
+  <data name="Port_Closed" xml:space="preserve"><value>Kapalı</value></data>
+  <data name="Port_Invalid" xml:space="preserve"><value>Port veya aralık geçersiz.</value></data>
+  <data name="Bulk_Paste" xml:space="preserve"><value>Her satıra bir IP veya virgülle ayırın</value></data>
+  <data name="Bulk_Load" xml:space="preserve"><value>TXT yükle</value></data>
+  <data name="Bulk_Mine" xml:space="preserve"><value>Benim IP'm</value></data>
+  <data name="Bulk_Empty" xml:space="preserve"><value>IP yok.</value></data>
+  <data name="Bulk_Working" xml:space="preserve"><value>{0} adres bitti.</value></data>
+  <data name="Ip_SymantecNote" xml:space="preserve"><value>Symantec Site Review ve WebPulse için herkese açık bir API yok. Sonuç uydurulmaz; sayfa tarayıcıda açılır.</value></data>
+  <data name="Ocr_Missing" xml:space="preserve"><value>Windows OCR dil paketi yok. Ayarlar → Zaman ve dil → Dil ve bölge → bir dilin seçeneklerinden Türkçe veya İngilizce optik karakter tanımayı kurun.</value></data>
+  <data name="Ocr_Empty" xml:space="preserve"><value>Metin bulunamadı.</value></data>
+  <data name="Ocr_Hint" xml:space="preserve"><value>Bir bölge seçin veya görsel açın.</value></data>
+  <data name="Ssl_Host" xml:space="preserve"><value>Alan adı veya alan:port</value></data>
+  <data name="Ssl_Issuer" xml:space="preserve"><value>Yayıncı</value></data>
+  <data name="Ssl_Subject" xml:space="preserve"><value>Konu</value></data>
+  <data name="Ssl_San" xml:space="preserve"><value>SAN</value></data>
+  <data name="Ssl_From" xml:space="preserve"><value>Başlangıç</value></data>
+  <data name="Ssl_Until" xml:space="preserve"><value>Bitiş</value></data>
+  <data name="Ssl_Days" xml:space="preserve"><value>Kalan gün</value></data>
+  <data name="Ssl_Chain" xml:space="preserve"><value>Zincir</value></data>
+  <data name="Ssl_Protocol" xml:space="preserve"><value>TLS</value></data>
+  <data name="Ssl_Invalid" xml:space="preserve"><value>Adres geçersiz.</value></data>
+  <data name="Video_Url" xml:space="preserve"><value>Bağlantı</value></data>
+  <data name="Video_Folder" xml:space="preserve"><value>Klasör</value></data>
+  <data name="Video_Start" xml:space="preserve"><value>İndirmeyi başlat</value></data>
+  <data name="Video_NeedTool" xml:space="preserve"><value>yt-dlp yok. İndir, resmi GitHub sürümünü SHA256 ile doğrular.</value></data>
+  <data name="Video_NeedFfmpeg" xml:space="preserve"><value>MP3 ve birleştirme için ffmpeg gerekir. İndir'e basın.</value></data>
+  <data name="Video_Working" xml:space="preserve"><value>İndiriliyor…</value></data>
+  <data name="Video_Cancel" xml:space="preserve"><value>İptal edildi.</value></data>
+  <data name="Video_Done" xml:space="preserve"><value>Bitti.</value></data>
+  <data name="Video_Fail" xml:space="preserve"><value>İndirme tamamlanamadı.</value></data>
+  <data name="Record_Cursor" xml:space="preserve"><value>İmleci göster</value></data>
+  <data name="Record_Start" xml:space="preserve"><value>Kaydı başlat</value></data>
+  <data name="Record_Need" xml:space="preserve"><value>ffmpeg yok. İndir, resmi sürümü SHA256 ile doğrular.</value></data>
+  <data name="Record_Live" xml:space="preserve"><value>Kayıt sürüyor</value></data>
+  <data name="Tool_DownloadHint" xml:space="preserve"><value>yt-dlp ve ffmpeg kuruluma gömülmez. İndir, resmi GitHub sürümünü %AppData%\Kutu\tools altına alır ve SHA256 ile doğrular. ffmpeg arşivi büyüktür.</value></data>
+  <data name="Tool_Ready" xml:space="preserve"><value>Araç hazır.</value></data>
+  <data name="Tool_HashFail" xml:space="preserve"><value>Sağlama özeti uyuşmadı. Dosya kullanılmadı.</value></data>
+  <data name="Pass_Length" xml:space="preserve"><value>Uzunluk</value></data>
+  <data name="Pass_Upper" xml:space="preserve"><value>Büyük harf</value></data>
+  <data name="Pass_Lower" xml:space="preserve"><value>Küçük harf</value></data>
+  <data name="Pass_Digits" xml:space="preserve"><value>Rakam</value></data>
+  <data name="Pass_Symbols" xml:space="preserve"><value>Simge</value></data>
+  <data name="Pass_Ambiguous" xml:space="preserve"><value>Belirsiz karakterleri çıkar (0 O o 1 l I |)</value></data>
+  <data name="Pass_SaveDefault" xml:space="preserve"><value>Varsayılan olarak kaydet</value></data>
+  <data name="Screen_Target" xml:space="preserve"><value>Hedef dil</value></data>
+  <data name="Screen_Working" xml:space="preserve"><value>Okunuyor…</value></data>
+  <data name="Update_Available" xml:space="preserve"><value>Yeni sürüm mevcut: v{0}</value></data>
+  <data name="Update_Action" xml:space="preserve"><value>Güncelle</value></data>
+  <data name="Update_Check" xml:space="preserve"><value>Güncellemeleri denetle</value></data>
+  <data name="Update_Auto" xml:space="preserve"><value>Otomatik güncelle</value></data>
+  <data name="Update_Current" xml:space="preserve"><value>Yüklü sürüm</value></data>
+  <data name="Update_Progress" xml:space="preserve"><value>İndiriliyor… {0}%</value></data>
+  <data name="Update_Fail" xml:space="preserve"><value>Güncelleme tamamlanamadı.</value></data>
+  <data name="Update_None" xml:space="preserve"><value>Güncelsiniz.</value></data>
+  <data name="Update_Offline" xml:space="preserve"><value>Denetleme şu an yapılamadı.</value></data>
+  <data name="Settings_Updates" xml:space="preserve"><value>Güncellemeler</value></data>
+  <data name="Settings_ScreenHotkey" xml:space="preserve"><value>Ekran çevirisi</value></data>
+  <data name="Settings_RecordHotkey" xml:space="preserve"><value>Ekran kaydı</value></data>
+  <data name="Settings_PassDefaults" xml:space="preserve"><value>Parola varsayılanları</value></data>
+  <data name="Settings_ScreenLang" xml:space="preserve"><value>Ekran çevirisi dili</value></data>
 </root>

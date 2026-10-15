@@ -29,8 +29,6 @@ public sealed class TranslateTool : IKutuTool
 public sealed class TranslateView : UserControl
 {
     private readonly IKutuHost _host;
-    private readonly ComboBox _source;
-    private readonly ComboBox _target;
     private readonly TextBox _input;
     private readonly TextBox _output;
     private readonly TextBlock _status;
@@ -38,10 +36,6 @@ public sealed class TranslateView : UserControl
     public TranslateView(IKutuHost host)
     {
         _host = host;
-        _source = Languages(includeAuto: true);
-        _target = Languages(includeAuto: false);
-        Select(_source, host.Settings.TranslateSource);
-        Select(_target, host.Settings.TranslateTarget);
         _input = Chrome.Input(L.Get("Translate_Input"), multiline: true);
         _output = Chrome.Input(L.Get("Translate_Output"), multiline: true);
         _output.IsReadOnly = true;
@@ -60,7 +54,7 @@ public sealed class TranslateView : UserControl
         }));
 
         var stack = new StackPanel();
-        stack.Children.Add(Chrome.Hint(L.Get("Translate_ToEnglish")));
+        stack.Children.Add(Chrome.Hint(L.Get("Translate_Auto")));
         stack.Children.Add(Chrome.Label(L.Get("Translate_Input")));
         stack.Children.Add(_input);
         stack.Children.Add(buttons);
@@ -84,13 +78,13 @@ public sealed class TranslateView : UserControl
             }
 
             _status.Text = "";
-            var result = await TranslateClient.TranslateAsync(text, "auto", "EN", _host.Settings.DeepLKey, _host.Settings.DeepLEndpoint);
+            var result = await TranslateClient.TranslateAutoAsync(text, _host.Settings.DeepLKey, _host.Settings.DeepLEndpoint);
             _output.Text = result.Text;
-            _status.Text = "";
+            _status.Text = string.IsNullOrWhiteSpace(result.Provider) ? "" : string.Format(L.Get("Translate_Provider"), result.Provider);
         }
         catch (Exception ex)
         {
-            _status.Text = ex.Message;
+            _status.Text = ex.Message == "translate-failed" ? L.Get("Translate_Failed") : ex.Message;
         }
     }
 
@@ -106,43 +100,6 @@ public sealed class TranslateView : UserControl
         }
     }
 
-    private static ComboBox Languages(bool includeAuto)
-    {
-        var box = new ComboBox
-        {
-            Width = 160,
-            Height = 36,
-            Background = Chrome.Field,
-            Foreground = Chrome.Text,
-            BorderBrush = Chrome.Line
-        };
-        if (includeAuto)
-            box.Items.Add("auto");
-        foreach (var code in new[] { "TR", "EN", "DE", "FR", "ES", "IT", "NL", "RU", "AR", "ZH" })
-            box.Items.Add(code);
-        box.SelectedIndex = 0;
-        return box;
-    }
-
-    private static void Select(ComboBox box, string value)
-    {
-        for (var i = 0; i < box.Items.Count; i++)
-        {
-            if (string.Equals(box.Items[i]?.ToString(), value, StringComparison.OrdinalIgnoreCase))
-            {
-                box.SelectedIndex = i;
-                return;
-            }
-        }
-    }
-
-    private static StackPanel Field(string label, UIElement input)
-    {
-        var panel = new StackPanel { Margin = new Thickness(0, 0, 16, 0) };
-        panel.Children.Add(Chrome.Label(label));
-        panel.Children.Add(input);
-        return panel;
-    }
 }
 
 public static class TranslatePopup
@@ -182,6 +139,7 @@ public static class TranslatePopup
         var status = Chrome.Hint("");
         var card = new StackPanel();
         card.Children.Add(Chrome.Heading(L.Get("Tool_Translate_Title")));
+        card.Children.Add(Chrome.Hint(L.Get("Translate_Auto")));
         card.Children.Add(input);
         card.Children.Add(new Border { Height = 8 });
         card.Children.Add(output);
@@ -197,18 +155,16 @@ public static class TranslatePopup
                     return;
                 }
 
-                var result = await TranslateClient.TranslateAsync(
+                var result = await TranslateClient.TranslateAutoAsync(
                     input.Text,
-                    "auto",
-                    "EN",
                     host.Settings.DeepLKey,
                     host.Settings.DeepLEndpoint);
                 output.Text = result.Text;
-                status.Text = "";
+                status.Text = string.IsNullOrWhiteSpace(result.Provider) ? "" : string.Format(L.Get("Translate_Provider"), result.Provider);
             }
             catch (Exception ex)
             {
-                status.Text = ex.Message;
+                status.Text = ex.Message == "translate-failed" ? L.Get("Translate_Failed") : ex.Message;
             }
         }));
         buttons.Children.Add(Chrome.Secondary(L.Get("Action_Copy"), SymbolRegular.Copy24, (_, _) =>

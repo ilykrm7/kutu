@@ -344,6 +344,8 @@ public partial class DashboardView : UserControl
         "color-picker" => _host.Settings.ColorPickerHotkey,
         "clipboard" => _host.Settings.ClipboardHotkey,
         "translate" => _host.Settings.TranslateHotkey,
+        "screen-translate" => _host.Settings.ScreenTranslateHotkey,
+        "screen-record" => _host.Settings.RecordHotkey,
         _ => null
     };
 
@@ -370,8 +372,8 @@ public partial class DashboardView : UserControl
 
     private static string Category(string id) => id switch
     {
-        "image-converter" or "image-resize" or "screenshot" or "color-picker" => "image",
-        "clipboard" or "text-expander" or "translate" => "text",
+        "image-converter" or "image-resize" or "screenshot" or "color-picker" or "qr" or "screen-record" or "video" => "image",
+        "clipboard" or "text-expander" or "translate" or "ocr" or "screen-translate" or "password" => "text",
         _ => "net"
     };
 
@@ -384,8 +386,17 @@ public partial class DashboardView : UserControl
         "clipboard" => Color.FromRgb(0x2E, 0xC4, 0xB6),
         "text-expander" => Color.FromRgb(0x3A, 0x9B, 0xE0),
         "translate" => Color.FromRgb(0x3D, 0xD6, 0xC6),
+        "qr" => Color.FromRgb(0x7C, 0x6C, 0xF0),
+        "screen-record" => Color.FromRgb(0xFF, 0x6B, 0x8A),
+        "video" => Color.FromRgb(0xF0, 0xA0, 0x5A),
+        "ocr" => Color.FromRgb(0x5A, 0xD0, 0xA0),
+        "screen-translate" => Color.FromRgb(0x2B, 0xB8, 0xA0),
+        "password" => Color.FromRgb(0xC6, 0xA1, 0x5B),
         "whois" => Color.FromRgb(0x49, 0xC6, 0xA8),
         "ip-reputation" => Color.FromRgb(0x28, 0xB4, 0xE6),
+        "bulk-ip" => Color.FromRgb(0x49, 0xA0, 0xE6),
+        "net-probe" => Color.FromRgb(0x3B, 0xC6, 0xE0),
+        "ssl" => Color.FromRgb(0x6B, 0xCB, 0x77),
         _ => Color.FromRgb(0x6A, 0x7A, 0x94)
     };
 

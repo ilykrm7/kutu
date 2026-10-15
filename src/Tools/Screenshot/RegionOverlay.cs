@@ -8,6 +8,8 @@ using System.Windows.Shapes;
 
 namespace Kutu.Tools.Screenshot;
 
+public sealed record RegionPick(BitmapSource Bitmap, int ScreenX, int ScreenY, int Width, int Height);
+
 public sealed class RegionOverlay : Window
 {
     private readonly CapturedScreen _screen;
@@ -16,7 +18,7 @@ public sealed class RegionOverlay : Window
     private Point _start;
     private bool _dragging;
 
-    public RegionOverlay(CapturedScreen screen)
+    public RegionOverlay(CapturedScreen screen, bool offerFullScreen = false, string fullScreenLabel = "Tam ekran")
     {
         _screen = screen;
         WindowStyle = WindowStyle.None;
@@ -46,7 +48,26 @@ public sealed class RegionOverlay : Window
         var canvas = new Canvas();
         canvas.Children.Add(_band);
         canvas.Children.Add(_size);
-        Content = canvas;
+        if (!offerFullScreen)
+        {
+            Content = canvas;
+        }
+        else
+        {
+            var full = new System.Windows.Controls.Button
+            {
+                Content = fullScreenLabel,
+                Padding = new Thickness(14, 8, 14, 8),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Top,
+                Margin = new Thickness(0, 18, 0, 0)
+            };
+            full.Click += (_, _) => AcceptFull();
+            var root = new Grid();
+            root.Children.Add(canvas);
+            root.Children.Add(full);
+            Content = root;
+        }
         MouseLeftButtonDown += OnDown;
         MouseMove += OnMove;
         MouseLeftButtonUp += OnUp;
@@ -57,11 +78,17 @@ public sealed class RegionOverlay : Window
                 DialogResult = false;
                 Close();
             }
+            else if (offerFullScreen && e.Key == Key.Enter)
+            {
+                AcceptFull();
+            }
         };
         Loaded += (_, _) => Activate();
     }
 
     public BitmapSource? Crop { get; private set; }
+
+    public Int32Rect PixelRect { get; private set; }
 
     private void OnDown(object sender, MouseButtonEventArgs e)
     {
@@ -107,8 +134,28 @@ public sealed class RegionOverlay : Window
         var cropped = new CroppedBitmap(_screen.Bitmap, rect);
         cropped.Freeze();
         Crop = cropped;
+        PixelRect = rect;
         DialogResult = true;
         Close();
+    }
+
+    private void AcceptFull()
+    {
+        Crop = _screen.Bitmap;
+        PixelRect = new Int32Rect(0, 0, _screen.Bitmap.PixelWidth, _screen.Bitmap.PixelHeight);
+        DialogResult = true;
+        Close();
+    }
+
+    public static RegionPick? Choose(bool offerFullScreen, string fullScreenLabel)
+    {
+        var screen = ScreenCapture.Capture();
+        var overlay = new RegionOverlay(screen, offerFullScreen, fullScreenLabel);
+        var accepted = overlay.ShowDialog() == true && overlay.Crop is not null;
+        if (!accepted)
+            return null;
+        var rect = overlay.PixelRect;
+        return new RegionPick(overlay.Crop!, screen.OriginX + rect.X, screen.OriginY + rect.Y, rect.Width, rect.Height);
     }
 
     private Rect Rect(Point current)

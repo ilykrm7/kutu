@@ -53,7 +53,7 @@ public static class SelectionTranslator
                 return;
             }
 
-            var result = await TranslateClient.TranslateAsync(captured.text, "auto", "EN", host.Settings.DeepLKey, host.Settings.DeepLEndpoint);
+            var result = await TranslateClient.TranslateAutoAsync(captured.text, host.Settings.DeepLKey, host.Settings.DeepLEndpoint);
             var translated = string.IsNullOrWhiteSpace(result.Text) ? captured.text : result.Text;
             host.SuppressClipboard(TimeSpan.FromMilliseconds(1500));
             await KeyInjector.RunAsync(() =>
@@ -89,7 +89,8 @@ public static class SelectionTranslator
             }
 
             host.Log("translate: " + ex);
-            toast?.Set(ex.Message.Length > 80 ? ex.Message[..80] : ex.Message);
+            var note = ex.Message == "translate-failed" ? L.Get("Translate_Failed") : ex.Message;
+            toast?.Set(note.Length > 80 ? note[..80] : note);
             await Task.Delay(1200);
         }
         finally

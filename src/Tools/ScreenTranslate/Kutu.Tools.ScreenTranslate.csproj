@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>Kutu.Tools.ScreenTranslate</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Kutu.Sdk\Kutu.Sdk.csproj" />
+    <ProjectReference Include="..\Screenshot\Kutu.Tools.Screenshot.csproj" />
+    <ProjectReference Include="..\Ocr\Kutu.Tools.Ocr.csproj" />
+    <ProjectReference Include="..\Translate\Kutu.Tools.Translate.csproj" />
+  </ItemGroup>
+</Project>
