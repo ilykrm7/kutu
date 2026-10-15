@@ -180,7 +180,7 @@ public class V11LogicTests
         var dir = Path.Combine(Path.GetTempPath(), "kutu-tests", Guid.NewGuid().ToString("N"));
         var path = Path.Combine(dir, "settings.json");
         Directory.CreateDirectory(dir);
-        await File.WriteAllTextAsync(path, """
+        File.WriteAllText(path, """
         {
           "colorPickerHotkey": "Ctrl+Alt+P",
           "screenshotHotkey": "Ctrl+Shift+S",
