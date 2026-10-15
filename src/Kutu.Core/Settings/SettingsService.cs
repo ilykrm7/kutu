@@ -69,6 +69,12 @@ public sealed class SettingsService
         Current = FromDocument(document);
         ContextMenuExplicitOff = document.ContextMenuUserSet == true && !document.ContextMenuRegistered;
         ContextMenuDirty = !ContextMenuExplicitOff && !document.ContextMenuRegistered;
+        if (document.ToolHotkeys is null)
+        {
+            var menuDirty = ContextMenuDirty;
+            await SaveAsync(cancellationToken).ConfigureAwait(false);
+            ContextMenuDirty = menuDirty;
+        }
     }
 
     public void CorrectContextMenuOn()

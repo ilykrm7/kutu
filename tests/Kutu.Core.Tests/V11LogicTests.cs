@@ -1,11 +1,11 @@
 using System.Text;
 using Kutu.Core.Geometry;
+using Kutu.Core.Security;
 using Kutu.Core.Hotkeys;
 using Kutu.Core.IO;
 using Kutu.Core.Models;
 using Kutu.Core.Network;
 using Kutu.Core.Settings;
-using Kutu.Core.Security;
 using Kutu.Core.Text;
 using Kutu.Core.Updates;
 
@@ -175,6 +175,42 @@ public class V11LogicTests
     }
 
     [Fact]
+    public async Task Legacy_color_hotkey_moves_off_password_until_the_recorder_saves()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "kutu-tests", Guid.NewGuid().ToString("N"));
+        var path = Path.Combine(dir, "settings.json");
+        Directory.CreateDirectory(dir);
+        await File.WriteAllTextAsync(path, """
+        {
+          "colorPickerHotkey": "Ctrl+Alt+P",
+          "screenshotHotkey": "Ctrl+Shift+S",
+          "clipboardHotkey": "Ctrl+Alt+V",
+          "translateHotkey": "Ctrl+Alt+T",
+          "launcherHotkey": "Alt+Space"
+        }
+        """);
+
+        var service = new SettingsService(new PlainProtector(), path);
+        await service.LoadAsync();
+        Assert.Equal("Ctrl+Alt+C", ToolHotkeyMap.Get(service.Current, "color-picker"));
+        Assert.Equal("Ctrl+Alt+P", ToolHotkeyMap.Get(service.Current, "password"));
+
+        var persisted = new SettingsService(new PlainProtector(), path);
+        await persisted.LoadAsync();
+        Assert.Equal("Ctrl+Alt+C", ToolHotkeyMap.Get(persisted.Current, "color-picker"));
+        Assert.Equal("Ctrl+Alt+P", ToolHotkeyMap.Get(persisted.Current, "password"));
+
+        ToolHotkeyMap.Set(persisted.Current, "color-picker", "Ctrl+Alt+P");
+        service = persisted;
+        await service.SaveAsync();
+        var again = new SettingsService(new PlainProtector(), path);
+        await again.LoadAsync();
+        Assert.Equal("Ctrl+Alt+P", ToolHotkeyMap.Get(again.Current, "color-picker"));
+        Assert.Equal("Ctrl+Alt+P", ToolHotkeyMap.Get(again.Current, "password"));
+        Directory.Delete(dir, recursive: true);
+    }
+
+    [Fact]
     public void Password_uses_requested_classes_and_drops_ambiguous_characters()
     {
         var recipe = new PasswordRecipe(24, true, true, true, true, true);
@@ -297,6 +333,17 @@ public class V11LogicTests
         finally
         {
             File.Delete(path);
+        }
+    }
+
+    private sealed class PlainProtector : ISecretProtector
+    {
+        public string Protect(string plain) => "enc:" + Convert.ToBase64String(Encoding.UTF8.GetBytes(plain));
+
+        public string Unprotect(string protectedValue)
+        {
+            var payload = protectedValue["enc:".Length..];
+            return Encoding.UTF8.GetString(Convert.FromBase64String(payload));
         }
     }
 }
