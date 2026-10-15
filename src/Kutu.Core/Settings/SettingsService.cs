@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Kutu.Core.Hotkeys;
 using Kutu.Core.Models;
 using Kutu.Core.Security;
 
@@ -68,6 +69,12 @@ public sealed class SettingsService
         Current = FromDocument(document);
         ContextMenuExplicitOff = document.ContextMenuUserSet == true && !document.ContextMenuRegistered;
         ContextMenuDirty = !ContextMenuExplicitOff && !document.ContextMenuRegistered;
+        if (document.ToolHotkeys is null)
+        {
+            var menuDirty = ContextMenuDirty;
+            await SaveAsync(cancellationToken).ConfigureAwait(false);
+            ContextMenuDirty = menuDirty;
+        }
     }
 
     public void CorrectContextMenuOn()
@@ -98,13 +105,14 @@ public sealed class SettingsService
         StartWithWindows = settings.StartWithWindows,
         ContextMenuRegistered = settings.ContextMenuRegistered,
         ContextMenuUserSet = true,
-        ScreenshotHotkey = settings.ScreenshotHotkey,
+        ScreenshotHotkey = ToolHotkeyMap.Get(settings, "screenshot"),
         LauncherHotkey = settings.LauncherHotkey,
-        ColorPickerHotkey = settings.ColorPickerHotkey,
-        ClipboardHotkey = settings.ClipboardHotkey,
-        TranslateHotkey = settings.TranslateHotkey,
-        ScreenTranslateHotkey = settings.ScreenTranslateHotkey,
-        RecordHotkey = settings.RecordHotkey,
+        ColorPickerHotkey = ToolHotkeyMap.Get(settings, "color-picker"),
+        ClipboardHotkey = ToolHotkeyMap.Get(settings, "clipboard"),
+        TranslateHotkey = ToolHotkeyMap.Get(settings, "translate"),
+        ScreenTranslateHotkey = ToolHotkeyMap.Get(settings, "screen-translate"),
+        RecordHotkey = ToolHotkeyMap.Get(settings, "screen-record"),
+        ToolHotkeys = new Dictionary<string, string>(settings.ToolHotkeys, StringComparer.OrdinalIgnoreCase),
         ScreenTranslateTarget = settings.ScreenTranslateTarget,
         ClipboardLimit = settings.ClipboardLimit,
         UploadEndpoint = settings.UploadEndpoint,
@@ -139,8 +147,10 @@ public sealed class SettingsService
         VideoOutputFolder = settings.VideoOutputFolder
     };
 
-    public AppSettings FromDocument(SettingsDocument document) => new()
+    public AppSettings FromDocument(SettingsDocument document)
     {
+        var settings = new AppSettings
+        {
         Language = string.IsNullOrWhiteSpace(document.Language) ? "tr" : document.Language,
         StartWithWindows = document.StartWithWindows,
         ContextMenuRegistered = document.ContextMenuUserSet is null || document.ContextMenuRegistered,
@@ -185,7 +195,12 @@ public sealed class SettingsService
         AutoUpdate = document.AutoUpdate,
         DismissedUpdateVersion = document.DismissedUpdateVersion ?? "",
         VideoOutputFolder = document.VideoOutputFolder ?? ""
-    };
+        };
+        settings.LauncherHotkey = document.LauncherHotkey ?? "";
+        settings.ToolHotkeys = ToolHotkeyMap.Import(document);
+        ToolHotkeyMap.Mirror(settings);
+        return settings;
+    }
 
     private string Protect(string plain) =>
         string.IsNullOrEmpty(plain) ? "" : _protector.Protect(plain);

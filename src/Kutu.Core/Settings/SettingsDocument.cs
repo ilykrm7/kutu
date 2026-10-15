@@ -16,7 +16,9 @@ public sealed class SettingsDocument
 
     public string LauncherHotkey { get; set; } = "Alt+Space";
 
-    public string ColorPickerHotkey { get; set; } = "Ctrl+Alt+P";
+    public string ColorPickerHotkey { get; set; } = "Ctrl+Alt+C";
+
+    public Dictionary<string, string>? ToolHotkeys { get; set; }
 
     public string ClipboardHotkey { get; set; } = "Ctrl+Alt+V";
 

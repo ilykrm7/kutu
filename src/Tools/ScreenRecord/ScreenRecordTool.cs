@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
+using Kutu.Core.Hotkeys;
 using Kutu.Core.IO;
 using Kutu.Sdk.Hosting;
 using Kutu.Sdk.Localization;
@@ -10,6 +11,7 @@ using Kutu.Tools.Screenshot;
 using Wpf.Ui.Controls;
 using CheckBox = System.Windows.Controls.CheckBox;
 using ComboBox = System.Windows.Controls.ComboBox;
+using ProgressBar = System.Windows.Controls.ProgressBar;
 
 namespace Kutu.Tools.ScreenRecord;
 
@@ -36,6 +38,8 @@ public static class ScreenRecordController
     private static Window? _badge;
 
     public static bool IsRecording => _process is { HasExited: false };
+
+    public static event Action? Changed;
 
     public static async Task ToggleAsync(IKutuHost host)
     {
@@ -114,6 +118,7 @@ public static class ScreenRecordController
         process.Start();
         _process = process;
         ShowBadge();
+        Changed?.Invoke();
     }
 
     public static void Stop()
@@ -121,6 +126,7 @@ public static class ScreenRecordController
         var process = _process;
         _process = null;
         HideBadge();
+        Changed?.Invoke();
         if (process is null)
             return;
         try
@@ -191,7 +197,13 @@ public sealed class ScreenRecordView : UserControl
     private readonly ComboBox _format;
     private readonly CheckBox _cursor;
     private readonly TextBlock _status;
+    private readonly ProgressBar _bar;
+    private readonly Wpf.Ui.Controls.Button _download;
+    private readonly Wpf.Ui.Controls.Button _start;
+    private readonly Wpf.Ui.Controls.Button _stop;
+    private readonly Wpf.Ui.Controls.Button _cancel;
     private CancellationTokenSource? _fetch;
+    private bool _holdStatus;
 
     public ScreenRecordView(IKutuHost host)
     {
@@ -201,21 +213,88 @@ public sealed class ScreenRecordView : UserControl
         _format.Items.Add("GIF");
         _format.SelectedIndex = 0;
         _cursor = new CheckBox { Content = L.Get("Record_Cursor"), IsChecked = true, Foreground = Chrome.Text, VerticalAlignment = VerticalAlignment.Center };
-        _status = Chrome.Hint(ExternalTools.HasFfmpeg ? L.Get("Tool_Ready") : L.Get("Record_Need"));
+        _status = Chrome.Hint("");
+        _status.Visibility = Visibility.Collapsed;
+        _bar = new ProgressBar { Height = 8, Maximum = 1, Margin = new Thickness(0, 10, 0, 0), Visibility = Visibility.Collapsed };
+        _download = Chrome.Primary(L.Get("Action_Download"), SymbolRegular.ArrowDownload24, async (_, _) => await FetchAsync());
+        _start = Chrome.Primary(L.Get("Record_Start"), SymbolRegular.Record24, async (_, _) => await BeginAsync());
+        _stop = Chrome.Secondary(L.Get("Action_Stop"), SymbolRegular.RecordStop24, (_, _) => ScreenRecordController.Stop());
+        _cancel = Chrome.Secondary(L.Get("Action_Cancel"), SymbolRegular.Dismiss24, (_, _) => _fetch?.Cancel());
+        _cancel.Visibility = Visibility.Collapsed;
         var row = new StackPanel { Orientation = Orientation.Horizontal };
         row.Children.Add(_format);
         row.Children.Add(_cursor);
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 0) };
-        buttons.Children.Add(Chrome.Primary(L.Get("Action_Download"), SymbolRegular.ArrowDownload24, async (_, _) => await FetchAsync()));
-        buttons.Children.Add(Chrome.Primary(L.Get("Record_Start"), SymbolRegular.Record24, async (_, _) => await BeginAsync()));
-        buttons.Children.Add(Chrome.Secondary(L.Get("Action_Stop"), SymbolRegular.RecordStop24, (_, _) => ScreenRecordController.Stop()));
+        buttons.Children.Add(_download);
+        buttons.Children.Add(_start);
+        buttons.Children.Add(_stop);
+        buttons.Children.Add(_cancel);
         var stack = new StackPanel();
-        stack.Children.Add(Chrome.Hint(L.Get("Tool_DownloadHint")));
-        stack.Children.Add(Chrome.Hint(string.Format(L.Get("Dash_Hint"), host.Settings.RecordHotkey)));
+        var gesture = ToolHotkeyMap.Get(host.Settings, "screen-record");
+        if (!string.IsNullOrWhiteSpace(gesture))
+            stack.Children.Add(Chrome.Hint(string.Format(L.Get("Dash_Hint"), gesture)));
         stack.Children.Add(row);
         stack.Children.Add(buttons);
+        stack.Children.Add(_bar);
         stack.Children.Add(_status);
         Content = stack;
+        ScreenRecordController.Changed += OnRecordingChanged;
+        Unloaded += (_, _) => ScreenRecordController.Changed -= OnRecordingChanged;
+        RefreshTools();
+        _ = ProbeSizeAsync();
+    }
+
+    private void OnRecordingChanged()
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(new Action(RefreshTools));
+            return;
+        }
+
+        RefreshTools();
+    }
+
+    private void RefreshTools()
+    {
+        var has = ExternalTools.HasFfmpeg;
+        var recording = ScreenRecordController.IsRecording;
+        _download.Visibility = has ? Visibility.Collapsed : Visibility.Visible;
+        _start.IsEnabled = has;
+        _stop.IsEnabled = recording;
+        if (_fetch is not null)
+            return;
+        _bar.Visibility = Visibility.Collapsed;
+        _cancel.Visibility = Visibility.Collapsed;
+        if (recording)
+        {
+            _holdStatus = false;
+            _status.Visibility = Visibility.Visible;
+            _status.Text = L.Get("Record_Live");
+            return;
+        }
+
+        if (_holdStatus)
+            return;
+        _status.Visibility = Visibility.Collapsed;
+    }
+
+    private async Task ProbeSizeAsync()
+    {
+        if (ExternalTools.HasFfmpeg)
+            return;
+        var size = await ExternalToolFetch.AssetLengthAsync(ExternalTools.FfmpegRepo, ExternalTools.FfmpegZip, CancellationToken.None);
+        if (size is > 0 && _download.Visibility == Visibility.Visible)
+            _download.Content = L.Get("Action_Download") + " (" + TransferStatus.Size(size.Value) + ")";
+    }
+
+    private void ShowTransfer(FetchProgress item)
+    {
+        _bar.Visibility = Visibility.Visible;
+        _bar.IsIndeterminate = item.Total <= 0;
+        _bar.Value = item.Fraction;
+        _status.Visibility = Visibility.Visible;
+        _status.Text = TransferStatus.Format(item.Received, item.Total, item.BytesPerSecond);
     }
 
     private async Task FetchAsync()
@@ -223,15 +302,30 @@ public sealed class ScreenRecordView : UserControl
         _fetch?.Cancel();
         var cancel = new CancellationTokenSource();
         _fetch = cancel;
+        _cancel.Visibility = Visibility.Visible;
         try
         {
-            var progress = new Progress<FetchProgress>(item => _status.Text = item.Label + " " + (int)(item.Fraction * 100) + "%");
+            var progress = new Progress<FetchProgress>(ShowTransfer);
             await ExternalToolFetch.EnsureAsync(false, true, progress, cancel.Token);
-            _status.Text = L.Get("Tool_Ready");
+            _holdStatus = false;
+        }
+        catch (OperationCanceledException)
+        {
+            _holdStatus = true;
+            _status.Visibility = Visibility.Visible;
+            _status.Text = L.Get("Video_Cancel");
         }
         catch (Exception ex)
         {
+            _holdStatus = true;
+            _status.Visibility = Visibility.Visible;
             _status.Text = ex.Message == "hash" ? L.Get("Tool_HashFail") : ex.Message;
+        }
+        finally
+        {
+            if (ReferenceEquals(_fetch, cancel))
+                _fetch = null;
+            RefreshTools();
         }
     }
 

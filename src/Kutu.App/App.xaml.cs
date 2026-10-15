@@ -4,6 +4,7 @@ using System.Windows.Threading;
 using Kutu.App.Services;
 using Kutu.Core;
 using Kutu.Core.Diagnostics;
+using Kutu.Core.Hotkeys;
 using Kutu.Core.Network;
 using Kutu.Core.Settings;
 using Kutu.Sdk.Hosting;
@@ -171,14 +172,45 @@ public partial class App : Application
 
         _hotkeys.Clear();
         var settings = _host.Settings;
-        Register(settings.LauncherHotkey, _host.ShowLauncher);
-        Register(settings.ScreenshotHotkey, _host.StartScreenshot);
-        Register(settings.ColorPickerHotkey, _host.StartColorPicker);
-        Register(settings.ClipboardHotkey, _host.ShowClipboardPopup);
-        Register(settings.TranslateHotkey, _host.ShowTranslatePopup);
-        Register(settings.ScreenTranslateHotkey, () => Observe(ScreenTranslateController.StartAsync(_host)));
-        Register(settings.RecordHotkey, () => Observe(ScreenRecordController.ToggleAsync(_host)));
+        var ids = _host.Tools.Select(tool => tool.Id).ToList();
+        var blocked = new HashSet<string>(ToolHotkeyMap.LocalConflicts(settings, ids), StringComparer.OrdinalIgnoreCase);
+        var taken = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        void Take(string id, string gesture, Action action)
+        {
+            var key = ToolHotkeyMap.Normalize(gesture);
+            if (key.Length == 0 || blocked.Contains(id) || !taken.Add(key))
+                return;
+            if (_hotkeys.Register(gesture, action))
+                return;
+            blocked.Add(id);
+        }
+
+        Take(ToolHotkeyMap.LauncherId, settings.LauncherHotkey, _host.ShowLauncher);
+        foreach (var tool in _host.Tools)
+            Take(tool.Id, ToolHotkeyMap.Get(settings, tool.Id), ActionFor(tool.Id));
+        _host.HotkeysInUse = blocked;
     }
+
+    private Action ActionFor(string id) => id switch
+    {
+        "screenshot" => _host!.StartScreenshot,
+        "color-picker" => _host!.StartColorPicker,
+        "clipboard" => _host!.ShowClipboardPopup,
+        "translate" => _host!.ShowTranslatePopup,
+        "screen-translate" => () => Observe(ScreenTranslateController.StartAsync(_host!)),
+        "screen-record" => () => Observe(ScreenRecordController.ToggleAsync(_host!)),
+        "ocr" => () =>
+        {
+            OcrLaunch.ReadScreen = true;
+            _host!.OpenTool("ocr");
+        },
+        "qr" => () =>
+        {
+            QrLaunch.ReadScreen = true;
+            _host!.OpenTool("qr");
+        },
+        _ => () => _host!.OpenTool(id)
+    };
 
     private static async void Observe(Task task)
     {
@@ -190,15 +222,6 @@ public partial class App : Application
         {
             AppLog.Write(ex);
         }
-    }
-
-    private void Register(string gesture, Action action)
-    {
-        if (string.IsNullOrWhiteSpace(gesture))
-            return;
-
-        if (_hotkeys?.Register(gesture, action) == false)
-            _host?.Toast(gesture);
     }
 
     private static void SyncContextMenu(SettingsService settings)
