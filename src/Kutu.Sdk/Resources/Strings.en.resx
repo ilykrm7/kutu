@@ -30,7 +30,7 @@
   <data name="Tool_Upload_Title" xml:space="preserve"><value>Upload to link</value></data>
   <data name="Tool_Upload_Desc" xml:space="preserve"><value>Turn text or an image into a shareable link.</value></data>
   <data name="Tool_Translate_Title" xml:space="preserve"><value>Translate</value></data>
-  <data name="Tool_Translate_Desc" xml:space="preserve"><value>Translates Turkish to English and anything else to Turkish. Google first, then DeepL, and MyMemory only for short text.</value></data>
+  <data name="Tool_Translate_Desc" xml:space="preserve"><value>Translates Turkish into English and other languages into Turkish.</value></data>
   <data name="Action_Back" xml:space="preserve"><value>Back</value></data>
   <data name="Action_Copy" xml:space="preserve"><value>Copy</value></data>
   <data name="Action_Save" xml:space="preserve"><value>Save</value></data>
@@ -74,7 +74,10 @@
   <data name="Settings_Saved" xml:space="preserve"><value>Settings saved.</value></data>
   <data name="Settings_RestartHint" xml:space="preserve"><value>Language applies fully the next time the window opens.</value></data>
   <data name="Settings_KeysHint" xml:space="preserve"><value>Keys are encrypted on this PC with DPAPI. They are never stored in code.</value></data>
-  <data name="Settings_HotkeyHint" xml:space="preserve"><value>Click a box and press the shortcut. Esc clears it.</value></data>
+  <data name="Settings_HotkeyHint" xml:space="preserve"><value>Click a box and press the shortcut.</value></data>
+  <data name="Hotkey_Clear" xml:space="preserve"><value>Clear</value></data>
+  <data name="Hotkey_InUse" xml:space="preserve"><value>in use</value></data>
+  <data name="Hotkey_Reset" xml:space="preserve"><value>Defaults</value></data>
   <data name="Tray_Open" xml:space="preserve"><value>Open Kutu</value></data>
   <data name="Tray_Shot" xml:space="preserve"><value>Screenshot</value></data>
   <data name="Tray_Exit" xml:space="preserve"><value>Exit</value></data>
@@ -218,7 +221,7 @@
   <data name="Tool_Ssl_Title" xml:space="preserve"><value>SSL check</value></data>
   <data name="Tool_Ssl_Desc" xml:space="preserve"><value>Issuer, subject, SANs, validity, days left, chain, and TLS version.</value></data>
   <data name="Tool_Video_Title" xml:space="preserve"><value>Video download</value></data>
-  <data name="Tool_Video_Desc" xml:space="preserve"><value>MP4 or MP3 with yt-dlp. ffmpeg is fetched only when merging is needed.</value></data>
+  <data name="Tool_Video_Desc" xml:space="preserve"><value>Download MP4 or MP3 from a link.</value></data>
   <data name="Tool_Record_Title" xml:space="preserve"><value>Screen recording</value></data>
   <data name="Tool_Record_Desc" xml:space="preserve"><value>Region or full screen, MP4 or GIF. Cursor is optional.</value></data>
   <data name="Tool_Pass_Title" xml:space="preserve"><value>Password</value></data>
@@ -258,6 +261,7 @@
   <data name="Port_Open" xml:space="preserve"><value>Open</value></data>
   <data name="Port_Closed" xml:space="preserve"><value>Closed</value></data>
   <data name="Port_Invalid" xml:space="preserve"><value>The port or range is not valid.</value></data>
+  <data name="Port_None" xml:space="preserve"><value>No open ports found</value></data>
   <data name="Bulk_Paste" xml:space="preserve"><value>One IP per line, or separate them with commas</value></data>
   <data name="Bulk_Load" xml:space="preserve"><value>Load txt</value></data>
   <data name="Bulk_Mine" xml:space="preserve"><value>My IP</value></data>
@@ -292,6 +296,8 @@
   <data name="Record_Live" xml:space="preserve"><value>Recording</value></data>
   <data name="Tool_DownloadHint" xml:space="preserve"><value>yt-dlp and ffmpeg are not bundled. Download fetches the official GitHub release into %AppData%\Kutu\tools and verifies SHA256. The ffmpeg archive is large.</value></data>
   <data name="Tool_Ready" xml:space="preserve"><value>Tool is ready.</value></data>
+  <data name="Tool_Remove" xml:space="preserve"><value>Remove</value></data>
+  <data name="Settings_Tools" xml:space="preserve"><value>External tools</value></data>
   <data name="Tool_HashFail" xml:space="preserve"><value>The checksum did not match. The file was not kept.</value></data>
   <data name="Pass_Length" xml:space="preserve"><value>Length</value></data>
   <data name="Pass_Upper" xml:space="preserve"><value>Uppercase</value></data>

@@ -32,16 +32,10 @@ public sealed class GlobalHotkeyService : IDisposable
     public bool Register(string gestureText, Action action)
     {
         if (!HotkeyGesture.TryParse(gestureText, out var gesture) || !TryKey(gesture.Key, out var key))
-        {
-            AppLog.Write("hotkey not parsed: " + gestureText);
             return false;
-        }
 
         if (_hwnd == IntPtr.Zero)
-        {
-            AppLog.Write("hotkey not registered, window handle is zero: " + gestureText);
             return false;
-        }
 
         uint modifiers = 0x4000;
         if (gesture.Alt) modifiers |= 0x0001;
@@ -50,15 +44,8 @@ public sealed class GlobalHotkeyService : IDisposable
         if (gesture.Win) modifiers |= 0x0008;
         var id = _nextId++;
         var virtualKey = (uint)KeyInterop.VirtualKeyFromKey(key);
-        if (!TryRegister(id, modifiers, virtualKey))
-        {
-            var error = Marshal.GetLastWin32Error();
-            if (!TryRegister(id, modifiers & ~0x4000u, virtualKey))
-            {
-                AppLog.Write($"hotkey failed {gestureText} vk={virtualKey} error={error}");
-                return false;
-            }
-        }
+        if (!TryRegister(id, modifiers, virtualKey) && !TryRegister(id, modifiers & ~0x4000u, virtualKey))
+            return false;
 
         _actions[id] = action;
         return true;

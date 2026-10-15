@@ -197,12 +197,12 @@ static byte[] VersionInfo()
     {
         ("CompanyName", "Kerim Ekşi"),
         ("FileDescription", "Kutu — Windows için küçük araçlar."),
-        ("FileVersion", "1.0.0.0"),
+        ("FileVersion", "1.1.1.0"),
         ("InternalName", "Kutu.exe"),
         ("LegalCopyright", "Copyright © 2026 Kerim Ekşi"),
         ("OriginalFilename", "Kutu.exe"),
         ("ProductName", "Kutu"),
-        ("ProductVersion", "1.0.0")
+        ("ProductVersion", "1.1.1")
     };
 
     using var stream = new MemoryStream();
@@ -237,10 +237,10 @@ static byte[] FixedFileInfo()
     using var writer = new BinaryWriter(stream);
     writer.Write(0xFEEF04BD);
     writer.Write(0x00010000);
+    writer.Write((uint)0x00010001);
     writer.Write((uint)0x00010000);
-    writer.Write((uint)0);
+    writer.Write((uint)0x00010001);
     writer.Write((uint)0x00010000);
-    writer.Write((uint)0);
     writer.Write(0x3F);
     writer.Write(0);
     writer.Write(0x00040004);

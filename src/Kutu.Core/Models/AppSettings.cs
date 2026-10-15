@@ -1,3 +1,5 @@
+using Kutu.Core.Hotkeys;
+
 namespace Kutu.Core.Models;
 
 public sealed class AppSettings
@@ -12,7 +14,9 @@ public sealed class AppSettings
 
     public string LauncherHotkey { get; set; } = "Alt+Space";
 
-    public string ColorPickerHotkey { get; set; } = "Ctrl+Alt+P";
+    public string ColorPickerHotkey { get; set; } = "Ctrl+Alt+C";
+
+    public Dictionary<string, string> ToolHotkeys { get; set; } = ToolHotkeyMap.Fresh();
 
     public string ClipboardHotkey { get; set; } = "Ctrl+Alt+V";
 

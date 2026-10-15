@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using Kutu.Core.Hotkeys;
 using Kutu.Sdk.Hosting;
 using Kutu.Sdk.Localization;
 using Kutu.Sdk.Ui;
@@ -30,7 +31,9 @@ public sealed class ScreenshotView : UserControl
     {
         var stack = new StackPanel();
         stack.Children.Add(Chrome.Hint(L.Get("Shot_Hint")));
-        stack.Children.Add(Chrome.Hint(string.Format(L.Get("Dash_Hint"), host.Settings.ScreenshotHotkey)));
+        var gesture = ToolHotkeyMap.Get(host.Settings, "screenshot");
+        if (!string.IsNullOrWhiteSpace(gesture))
+            stack.Children.Add(Chrome.Hint(string.Format(L.Get("Dash_Hint"), gesture)));
         stack.Children.Add(Chrome.Primary(L.Get("Action_TakeShot"), SymbolRegular.Camera24, (_, _) => host.StartScreenshot()));
         Content = stack;
     }

@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using Kutu.Core.Hotkeys;
 using Kutu.Sdk.Hosting;
 using Kutu.Sdk.Localization;
 using Kutu.Sdk.Ui;
@@ -231,8 +232,9 @@ public partial class DashboardView : UserControl
         });
 
         var foot = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 10, 0, 0) };
-        var badge = Hotkey(tool) ?? L.Get("Dash_LauncherHint");
-        foot.Children.Add(Chip(soon ? L.Get("Dash_Soon") : badge));
+        var badge = soon ? L.Get("Dash_Soon") : ToolHotkeyMap.Get(_host.Settings, tool.Id);
+        if (!string.IsNullOrWhiteSpace(badge))
+            foot.Children.Add(Chip(badge));
         if (tool.Id is "text-expander" or "clipboard")
         {
             var toggle = new ToggleSwitch
@@ -337,17 +339,6 @@ public partial class DashboardView : UserControl
         list.RemoveAt(from);
         list.Insert(to, sourceId);
     }
-
-    private string? Hotkey(IKutuTool tool) => tool.Id switch
-    {
-        "screenshot" => _host.Settings.ScreenshotHotkey,
-        "color-picker" => _host.Settings.ColorPickerHotkey,
-        "clipboard" => _host.Settings.ClipboardHotkey,
-        "translate" => _host.Settings.TranslateHotkey,
-        "screen-translate" => _host.Settings.ScreenTranslateHotkey,
-        "screen-record" => _host.Settings.RecordHotkey,
-        _ => null
-    };
 
     private static bool Inside<T>(DependencyObject? node) where T : DependencyObject
     {

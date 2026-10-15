@@ -30,7 +30,7 @@
   <data name="Tool_Upload_Title" xml:space="preserve"><value>Bağlantıya yükle</value></data>
   <data name="Tool_Upload_Desc" xml:space="preserve"><value>Metin veya görseli paylaşılabilir bağlantıya çevir.</value></data>
   <data name="Tool_Translate_Title" xml:space="preserve"><value>Çeviri</value></data>
-  <data name="Tool_Translate_Desc" xml:space="preserve"><value>Türkçe metni İngilizceye, diğer dillerini Türkçeye çevirir. Önce Google, sonra DeepL, kısa metinde MyMemory.</value></data>
+  <data name="Tool_Translate_Desc" xml:space="preserve"><value>Türkçe metni İngilizceye, diğerlerini Türkçeye çevirir.</value></data>
   <data name="Action_Back" xml:space="preserve"><value>Geri</value></data>
   <data name="Action_Copy" xml:space="preserve"><value>Kopyala</value></data>
   <data name="Action_Save" xml:space="preserve"><value>Kaydet</value></data>
@@ -74,7 +74,10 @@
   <data name="Settings_Saved" xml:space="preserve"><value>Ayarlar kaydedildi.</value></data>
   <data name="Settings_RestartHint" xml:space="preserve"><value>Dil değişimi pencereyi yeniden açınca tam uygulanır.</value></data>
   <data name="Settings_KeysHint" xml:space="preserve"><value>Anahtarlar bu bilgisayarda DPAPI ile şifrelenir. Koda yazılmaz.</value></data>
-  <data name="Settings_HotkeyHint" xml:space="preserve"><value>Kutuya tıkla ve kısayolu bas. Esc temizler.</value></data>
+  <data name="Settings_HotkeyHint" xml:space="preserve"><value>Kutuya tıkla ve kısayolu bas.</value></data>
+  <data name="Hotkey_Clear" xml:space="preserve"><value>Temizle</value></data>
+  <data name="Hotkey_InUse" xml:space="preserve"><value>kullanımda</value></data>
+  <data name="Hotkey_Reset" xml:space="preserve"><value>Varsayılanlar</value></data>
   <data name="Tray_Open" xml:space="preserve"><value>Kutu'yu aç</value></data>
   <data name="Tray_Shot" xml:space="preserve"><value>Ekran görüntüsü</value></data>
   <data name="Tray_Exit" xml:space="preserve"><value>Çıkış</value></data>
@@ -218,7 +221,7 @@
   <data name="Tool_Ssl_Title" xml:space="preserve"><value>SSL kontrol</value></data>
   <data name="Tool_Ssl_Desc" xml:space="preserve"><value>Yayıncı, konu, SAN, geçerlilik, kalan gün, zincir ve TLS sürümü.</value></data>
   <data name="Tool_Video_Title" xml:space="preserve"><value>Video indir</value></data>
-  <data name="Tool_Video_Desc" xml:space="preserve"><value>yt-dlp ile MP4 veya MP3. ffmpeg yalnız birleştirme gerektiğinde.</value></data>
+  <data name="Tool_Video_Desc" xml:space="preserve"><value>Bağlantıdan MP4 veya MP3 indirir.</value></data>
   <data name="Tool_Record_Title" xml:space="preserve"><value>Ekran kaydı</value></data>
   <data name="Tool_Record_Desc" xml:space="preserve"><value>Bölge veya tam ekran, MP4 veya GIF. İmleç isteğe bağlı.</value></data>
   <data name="Tool_Pass_Title" xml:space="preserve"><value>Parola</value></data>
@@ -258,6 +261,7 @@
   <data name="Port_Open" xml:space="preserve"><value>Açık</value></data>
   <data name="Port_Closed" xml:space="preserve"><value>Kapalı</value></data>
   <data name="Port_Invalid" xml:space="preserve"><value>Port veya aralık geçersiz.</value></data>
+  <data name="Port_None" xml:space="preserve"><value>Açık port bulunamadı</value></data>
   <data name="Bulk_Paste" xml:space="preserve"><value>Her satıra bir IP veya virgülle ayırın</value></data>
   <data name="Bulk_Load" xml:space="preserve"><value>TXT yükle</value></data>
   <data name="Bulk_Mine" xml:space="preserve"><value>Benim IP'm</value></data>
@@ -292,6 +296,8 @@
   <data name="Record_Live" xml:space="preserve"><value>Kayıt sürüyor</value></data>
   <data name="Tool_DownloadHint" xml:space="preserve"><value>yt-dlp ve ffmpeg kuruluma gömülmez. İndir, resmi GitHub sürümünü %AppData%\Kutu\tools altına alır ve SHA256 ile doğrular. ffmpeg arşivi büyüktür.</value></data>
   <data name="Tool_Ready" xml:space="preserve"><value>Araç hazır.</value></data>
+  <data name="Tool_Remove" xml:space="preserve"><value>Kaldır</value></data>
+  <data name="Settings_Tools" xml:space="preserve"><value>Harici araçlar</value></data>
   <data name="Tool_HashFail" xml:space="preserve"><value>Sağlama özeti uyuşmadı. Dosya kullanılmadı.</value></data>
   <data name="Pass_Length" xml:space="preserve"><value>Uzunluk</value></data>
   <data name="Pass_Upper" xml:space="preserve"><value>Büyük harf</value></data>

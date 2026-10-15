@@ -9,6 +9,7 @@ using Kutu.Sdk.Ui;
 using Wpf.Ui.Controls;
 using TextBox = Wpf.Ui.Controls.TextBox;
 using ComboBox = System.Windows.Controls.ComboBox;
+using ProgressBar = System.Windows.Controls.ProgressBar;
 
 namespace Kutu.Tools.VideoDownload;
 
@@ -38,6 +39,9 @@ public sealed class VideoDownloadView : UserControl
     private readonly ComboBox _format;
     private readonly ComboBox _quality;
     private readonly TextBlock _status;
+    private readonly ProgressBar _bar;
+    private readonly Wpf.Ui.Controls.Button _download;
+    private readonly Wpf.Ui.Controls.Button _start;
     private CancellationTokenSource? _fetch;
     private Process? _running;
 
@@ -51,24 +55,78 @@ public sealed class VideoDownloadView : UserControl
             : host.Settings.VideoOutputFolder;
         _format = Choice("MP4", "MP3");
         _quality = Choice("best", "1080", "720", "480");
-        _status = Chrome.Hint(ReadyText());
+        _status = Chrome.Hint("");
+        _status.Visibility = Visibility.Collapsed;
+        _bar = new ProgressBar { Height = 8, Maximum = 1, Margin = new Thickness(0, 10, 0, 0), Visibility = Visibility.Collapsed };
+        _download = Chrome.Primary(L.Get("Action_Download"), SymbolRegular.ArrowDownload24, async (_, _) => await FetchToolsAsync());
+        _start = Chrome.Primary(L.Get("Video_Start"), SymbolRegular.Play24, async (_, _) => await StartAsync());
         var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 0) };
-        row.Children.Add(Chrome.Primary(L.Get("Action_Download"), SymbolRegular.ArrowDownload24, async (_, _) => await FetchToolsAsync()));
-        row.Children.Add(Chrome.Primary(L.Get("Video_Start"), SymbolRegular.Play24, async (_, _) => await StartAsync()));
+        row.Children.Add(_download);
+        row.Children.Add(_start);
         row.Children.Add(Chrome.Secondary(L.Get("Action_Cancel"), SymbolRegular.Dismiss24, (_, _) => Cancel()));
         var options = new StackPanel { Orientation = Orientation.Horizontal };
         options.Children.Add(_format);
         options.Children.Add(_quality);
         var stack = new StackPanel();
-        stack.Children.Add(Chrome.Hint(L.Get("Tool_DownloadHint")));
         stack.Children.Add(Chrome.Label(L.Get("Video_Url")));
         stack.Children.Add(_url);
         stack.Children.Add(Chrome.Label(L.Get("Video_Folder")));
         stack.Children.Add(_folder);
         stack.Children.Add(options);
         stack.Children.Add(row);
+        stack.Children.Add(_bar);
         stack.Children.Add(_status);
         Content = stack;
+        RefreshTools();
+        _ = ProbeSizeAsync();
+    }
+
+    private void RefreshTools()
+    {
+        var ready = ExternalTools.HasYtDlp && ExternalTools.HasFfmpeg;
+        _download.Visibility = ready ? Visibility.Collapsed : Visibility.Visible;
+        _start.IsEnabled = ExternalTools.HasYtDlp;
+        if (ready && _fetch is null)
+            _status.Visibility = Visibility.Collapsed;
+    }
+
+    private async Task ProbeSizeAsync()
+    {
+        if (ExternalTools.HasYtDlp && ExternalTools.HasFfmpeg)
+            return;
+        long total = 0;
+        var any = false;
+        if (!ExternalTools.HasYtDlp)
+        {
+            var size = await ExternalToolFetch.AssetLengthAsync(ExternalTools.YtDlpRepo, ExternalTools.YtDlpFile, CancellationToken.None);
+            if (size is > 0)
+            {
+                total += size.Value;
+                any = true;
+            }
+        }
+
+        if (!ExternalTools.HasFfmpeg)
+        {
+            var size = await ExternalToolFetch.AssetLengthAsync(ExternalTools.FfmpegRepo, ExternalTools.FfmpegZip, CancellationToken.None);
+            if (size is > 0)
+            {
+                total += size.Value;
+                any = true;
+            }
+        }
+
+        if (any && _download.Visibility == Visibility.Visible)
+            _download.Content = L.Get("Action_Download") + " (" + TransferStatus.Size(total) + ")";
+    }
+
+    private void ShowTransfer(FetchProgress item)
+    {
+        _bar.Visibility = Visibility.Visible;
+        _bar.IsIndeterminate = item.Total <= 0;
+        _bar.Value = item.Fraction;
+        _status.Visibility = Visibility.Visible;
+        _status.Text = TransferStatus.Format(item.Received, item.Total, item.BytesPerSecond);
     }
 
     private async Task FetchToolsAsync()
@@ -78,17 +136,29 @@ public sealed class VideoDownloadView : UserControl
         _fetch = cancel;
         try
         {
-            var progress = new Progress<FetchProgress>(item => _status.Text = item.Label + " " + (int)(item.Fraction * 100) + "%");
-            await ExternalToolFetch.EnsureAsync(ytDlp: true, ffmpeg: true, progress, cancel.Token);
-            _status.Text = L.Get("Tool_Ready");
+            var progress = new Progress<FetchProgress>(ShowTransfer);
+            await ExternalToolFetch.EnsureAsync(!ExternalTools.HasYtDlp, !ExternalTools.HasFfmpeg, progress, cancel.Token);
+            _bar.Visibility = Visibility.Collapsed;
+            _status.Visibility = Visibility.Collapsed;
+            RefreshTools();
         }
         catch (OperationCanceledException)
         {
+            _bar.Visibility = Visibility.Collapsed;
+            _status.Visibility = Visibility.Visible;
             _status.Text = L.Get("Video_Cancel");
         }
         catch (Exception ex)
         {
+            _bar.Visibility = Visibility.Collapsed;
+            _status.Visibility = Visibility.Visible;
             _status.Text = ex.Message == "hash" ? L.Get("Tool_HashFail") : ex.Message;
+        }
+        finally
+        {
+            if (ReferenceEquals(_fetch, cancel))
+                _fetch = null;
+            RefreshTools();
         }
     }
 
@@ -209,9 +279,6 @@ public sealed class VideoDownloadView : UserControl
         };
         return $"bv*{height}[ext=mp4]+ba[ext=m4a]/b{height}[ext=mp4]/b";
     }
-
-    private static string ReadyText() =>
-        ExternalTools.HasYtDlp ? (ExternalTools.HasFfmpeg ? "yt-dlp + ffmpeg" : "yt-dlp") : "";
 
     private static ComboBox Choice(params string[] items)
     {

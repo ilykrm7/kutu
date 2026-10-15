@@ -17,22 +17,22 @@ Arayüz Türkçe. Metinler `src/Kutu.Sdk/Resources/Strings.resx` içinde. İngil
 - **WHOIS + DNS** — RDAP (`rdap.org`), anahtarsız. A, AAAA, MX, NS, TXT, CNAME.
 - **IP itibarı** — AbuseIPDB, VirusTotal, IPQualityScore, OTX, GreyNoise, Shodan, IPinfo (anahtar Ayarlar'da, DPAPI). Anahtarsız: ipwho.is, Spamhaus ZEN, SpamCop, Barracuda ve TOR çıkış listesi. Symantec / Broadcom Site Review için herkese açık bir API yok; kart yalnızca tarayıcıda açılan arama bağlantısıdır, skor üretilmez.
 - **Toplu IP** — yapıştırılan liste veya txt. Aynı sağlayıcılar ve DNSBL. CSV. “Benim IP'm”.
-- **Ping ve port** — gecikme, tek port, aralık, sık kullanılanlar ve **Tüm portlar** (1–65535). 3389 ve 22, aralıkta varsa önce taranır ve sonuçları tablonun en üstüne hemen yazılır. Açık portta banner ve RDP / HTTP / TLS yoklaması. Kopyala veya CSV.
+- **Ping ve port** — gecikme, tek port, aralık, sık kullanılanlar ve **Tüm portlar** (1–65535). Dört kip tek seçimdir; yalnız seçili olan işaretlidir. 3389 ve 22, aralıkta varsa önce taranır. Tablo, kopya ve CSV yalnız açık portları içerir; kapalı ve filtrelenenler yazılmaz. Hiçbiri açık değilse “Açık port bulunamadı” görünür. Açık portta banner ve RDP / HTTP / TLS yoklaması yapılır. İlerleme satırı `x / y · açık n · kalan` olarak kalır.
 - **SSL kontrol** — yayıncı, konu, SAN, geçerlilik, kalan gün, zincir, TLS sürümü.
 - **Bağlantıya yükle** — kart soluk, düğme tıklanmaz, ipucu Yakında.
 - **Çeviri** — Türkçe metin İngilizceye, diğer diller Türkçeye. Yerel ipucu, sonra sağlayıcının algıladığı dil; Türkçeye gidip Türkçe dönerse İngilizceye yeniden sorulur. Önce Google, sonra DeepL, kısa metinde MyMemory. Uzun metin tek POST ile gider; bölünürse paragraf ve cümle sınırında, sırayı ve satır sonlarını koruyarak birleşir. Ctrl+Alt+T seçili metni yerinde çevirir.
 - **QR** — oluştur, PNG kopyala veya kaydet. Ekran bölgesi, dosya ve panodan oku.
 - **OCR** — ekran bölgesi veya görsel. Windows OCR (Türkçe / İngilizce dil paketi gerekir).
-- **Ekran çevirisi** — Ctrl+Alt+E. Bölge veya tam ekran, OCR, her satırın altında çeviri. Hedef dil Ayarlar'da, varsayılan Türkçe. Esc kapatır.
+- **Ekran çevirisi** — Ctrl+Alt+E. Önce donmuş ekran görüntüsü, sonra bölge veya tam ekran. Kutu yalnız çevrilen satırın altında durur; hedef dildeki satır gösterilmez. Hedef dil Ayarlar'da, varsayılan Türkçe. Esc kapatır.
 - **Parola** — uzunluk, büyük/küçük/rakam/simge, belirsiz karakterleri çıkar. Kriptografik rastgelelik. Varsayılanlar Ayarlar'da.
-- **Video indir** — MP4 veya MP3. yt-dlp ve ffmpeg kuruluma gömülmez; **İndir** resmi GitHub sürümünü `%AppData%\Kutu\tools` altına alır ve SHA256 doğrular. ffmpeg arşivi büyüktür.
-- **Ekran kaydı** — Ctrl+Alt+R. Bölge veya tam ekran, MP4 veya GIF, isteğe bağlı imleç. ffmpeg aynı klasöre, yalnız kullanıcı isterse.
+- **Video indir** — bağlantıdan MP4 veya MP3. yt-dlp ve ffmpeg kuruluma gömülmez. Eksik olanlar için **İndir (boyut)** resmi sürümü `%AppData%\Kutu\tools` altına alır, SHA256 doğrular ve `indirilen / toplam MB · hız · kalan` gösterir. İkisi de kuruluysa İndir gizlenir.
+- **Ekran kaydı** — Ctrl+Alt+R. Bölge veya tam ekran, MP4 veya GIF, isteğe bağlı imleç. **Kaydı başlat** ffmpeg kurulana kadar kapalıdır; **Durdur** yalnız kayıt sürerken açıktır. ffmpeg aynı klasöre, yalnız kullanıcı isterse.
 
 Sürüm 1.1 açılışta ve yaklaşık 12 saatte bir GitHub Releases'a bakar. Yeni sürüm varsa pencerenin üstünde ince bir şerit görünür: **Güncelle** ve kapat. Kapatmak o sürümün şeridini gizler; Ayarlar'daki “Yeni sürüm mevcut” satırı kalır. **Güncellemeleri denetle** varsayılan açıktır. **Otomatik güncelle** varsayılan kapalıdır. Ağ hatası sessizdir.
 
 **Alt+Space** Spotlight benzeri başlatıcı açar: `ss`, `renk`, `whois`, `çevir`.
 
-Kısayollar, Windows ile başlatma ve sağ tık menüsü Ayarlar'dan açılıp kapanır. API anahtarları koda yazılmaz; `%AppData%\Kutu\settings.json` içinde DPAPI (CurrentUser) ile şifrelenir.
+Kısayollar Ayarlar'daki **Kısayollar** bölümünde her araç için ayrı kaydedilir; çakışan veya sistemin reddettiği kombinasyon `kullanımda` görünür. Kart, aracın kendi kısayolunu gösterir, kısayolu yoksa rozet yoktur. Başlatıcı Alt+Space olarak kalır. Windows ile başlatma ve sağ tık menüsü de Ayarlar'dadır. API anahtarları koda yazılmaz; `%AppData%\Kutu\settings.json` içinde DPAPI (CurrentUser) ile şifrelenir.
 
 ## Exe nerede
 

@@ -10,6 +10,11 @@ using TextBox = Wpf.Ui.Controls.TextBox;
 
 namespace Kutu.Tools.Ocr;
 
+public static class OcrLaunch
+{
+    public static bool ReadScreen { get; set; }
+}
+
 public sealed class OcrTool : IKutuTool
 {
     public string Id => "ocr";
@@ -56,6 +61,11 @@ public sealed class OcrView : UserControl
         stack.Children.Add(_output);
         stack.Children.Add(_status);
         Content = stack;
+        if (OcrLaunch.ReadScreen)
+        {
+            OcrLaunch.ReadScreen = false;
+            Dispatcher.BeginInvoke(new Action(() => _ = FromScreenAsync()));
+        }
     }
 
     private async Task FromScreenAsync()

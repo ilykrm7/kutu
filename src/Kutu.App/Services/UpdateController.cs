@@ -21,6 +21,7 @@ public sealed class UpdateController
     private DateTime _idleSince = DateTime.UtcNow;
     private bool _startup = true;
     private bool _applying;
+    private CancellationTokenSource? _applyCancel;
 
     public UpdateController(IKutuHost host, MainWindow window, Action releaseInstance)
     {
@@ -60,6 +61,12 @@ public sealed class UpdateController
 
     public void DismissBar()
     {
+        if (_applying)
+        {
+            _applyCancel?.Cancel();
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(Available))
             return;
         _host.Settings.DismissedUpdateVersion = Available;
@@ -127,14 +134,17 @@ public sealed class UpdateController
         }
 
         _applying = true;
+        _applyCancel?.Cancel();
+        var cancel = new CancellationTokenSource();
+        _applyCancel = cancel;
         var dir = Path.Combine(SettingsService.AppDirectory, "updates");
         Directory.CreateDirectory(dir);
         var incoming = Path.Combine(dir, "Kutu.exe");
         var version = Available;
         try
         {
-            var progress = new Progress<double>(value => _window.ShowUpdateProgress(version, value));
-            await ExternalToolFetch.DownloadFileAsync(exe.Url, incoming, progress, CancellationToken.None);
+            var progress = new Progress<FetchProgress>(value => _window.ShowUpdateProgress(version, value));
+            await ExternalToolFetch.DownloadFileAsync(exe.Url, incoming, progress, cancel.Token);
             _window.SetUpdateMessage(L.Get("Update_Progress").Replace("{0}", "…"));
             var sums = await ExternalToolFetch.GetTextAsync(hash.Url, CancellationToken.None);
             if (!Sha256Check.Matches(incoming, sums, "Kutu.exe"))
@@ -169,6 +179,21 @@ public sealed class UpdateController
             _releaseInstance();
             Process.Start(new ProcessStartInfo(current) { UseShellExecute = true });
             _host.Exit();
+        }
+        catch (OperationCanceledException)
+        {
+            try
+            {
+                if (File.Exists(incoming))
+                    File.Delete(incoming);
+            }
+            catch
+            {
+                // The cancelled download is removed on the next attempt.
+            }
+
+            if (!string.IsNullOrWhiteSpace(version))
+                _window.ShowUpdateBar(version);
         }
         catch
         {
