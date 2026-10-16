@@ -1,7 +1,7 @@
 namespace Kutu.Core.Shell;
 
 /// <summary>
-/// Where the Windows 11 sparse package lives. It is never the folder that contains Kutu.exe.
+/// Files older builds left beside Kutu.exe. The classic menu does not need them.
 /// </summary>
 public static class ShellLayout
 {
@@ -13,11 +13,30 @@ public static class ShellLayout
         "Square150x150Logo.png",
         "StoreLogo.png",
         "kutu.path",
-        "kutu-shell.ps1",
         "kutu.sparse",
         "kutu.sparse.txt",
         "AppxManifest.xml"
     ];
+
+    public static bool IsGeneratedScript(string? path)
+    {
+        if (string.IsNullOrEmpty(path))
+            return false;
+        var name = Path.GetFileName(path.Replace('\\', '/'));
+        if (string.IsNullOrEmpty(name) || name.Length < 12 || !name.StartsWith("kutu-shell", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        var dot = name.LastIndexOf('.');
+        if (dot < 0 || name.Length - dot != 4)
+            return false;
+
+        var a = char.ToLowerInvariant(name[dot + 1]);
+        var b = char.ToLowerInvariant(name[dot + 2]);
+        var c = char.ToLowerInvariant(name[dot + 3]);
+        return (a == 'p' && b == 's' && c == '1')
+            || (a == 'b' && b == 'a' && c == 't')
+            || (a == 'c' && b == 'm' && c == 'd');
+    }
 
     public static string VersionFolder(string appDirectory, string version)
     {

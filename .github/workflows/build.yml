@@ -37,34 +37,6 @@ jobs:
       - name: Test
         run: dotnet test tests/Kutu.Core.Tests/Kutu.Core.Tests.csproj -c Release -f net48 --nologo
 
-      - name: Build shell extension
-        shell: pwsh
-        run: |
-          $PSNativeCommandUseErrorActionPreference = $false
-          New-Item -ItemType Directory -Force -Path src/Kutu.App/shell | Out-Null
-          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
-          if ($vs) {
-            $builtDll = "src\Kutu.App\shell\KutuShell.ci.dll"
-            $builtHost = "src\Kutu.App\shell\KutuShell.ci.exe"
-            cmd /c "`"$vs\VC\Auxiliary\Build\vcvars64.bat`" && cl /nologo /LD /O2 /EHsc /utf-8 /Fo:src\Kutu.App\shell\KutuShell.obj src\Kutu.Shell\KutuShell.cpp /link /OUT:$builtDll ole32.lib uuid.lib shell32.lib shlwapi.lib & cl /nologo /O2 /MT /EHsc /utf-8 /Fo:src\Kutu.App\shell\KutuShellHost.obj /Fe:$builtHost src\Kutu.Shell\KutuShellHost.cpp /link /SUBSYSTEM:WINDOWS user32.lib kernel32.lib & exit /b 0"
-            if ((Test-Path $builtDll) -and ((Get-Item $builtDll).Length -gt 0)) {
-              Move-Item -Force $builtDll src\Kutu.App\shell\KutuShell.dll
-              Write-Host "Using the MSVC shell DLL"
-            } else {
-              Write-Host "cl did not produce a DLL; the committed KutuShell.dll stays in the package"
-              if (Test-Path $builtDll) { Remove-Item $builtDll -Force }
-            }
-            if ((Test-Path $builtHost) -and ((Get-Item $builtHost).Length -gt 0)) {
-              Move-Item -Force $builtHost src\Kutu.App\shell\KutuShell.exe
-              Write-Host "Using the MSVC shell host"
-            } elseif (Test-Path $builtHost) {
-              Remove-Item $builtHost -Force
-            }
-          }
-          Remove-Item src\Kutu.App\shell\*.obj, src\Kutu.App\shell\*.exp, src\Kutu.App\shell\*.lib, src\Kutu.App\shell\*.pdb -ErrorAction SilentlyContinue
-          if (-not (Test-Path src/Kutu.App/shell/KutuShell.dll)) { throw "KutuShell.dll was not produced" }
-          if (-not (Test-Path src/Kutu.App/shell/KutuShell.exe)) { throw "KutuShell.exe was not produced" }
-
       - name: Publish Kutu.exe
         shell: pwsh
         run: >
@@ -82,19 +54,35 @@ jobs:
           [System.IO.File]::WriteAllText((Join-Path (Get-Location) 'artifacts/Kutu.exe.sha256'), "$hash  Kutu.exe`n")
           Get-Content artifacts/Kutu.exe.sha256
 
-      - name: Allow unsigned sparse packages
+      - name: Reject script strings
         shell: pwsh
         run: |
-          # Best effort. Unsigned registration is not a build gate.
-          try {
-            $key = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock'
-            New-Item -Path $key -Force | Out-Null
-            New-ItemProperty -Path $key -Name AllowAllTrustedApps -PropertyType DWord -Value 1 -Force | Out-Null
-            New-ItemProperty -Path $key -Name AllowDevelopmentWithoutDevLicense -PropertyType DWord -Value 1 -Force | Out-Null
-            Write-Host 'unsigned sparse packages unlocked'
-          } catch {
-            Write-Host "unsigned sparse package unlock skipped: $_"
+          $ErrorActionPreference = 'Stop'
+          $exe = (Resolve-Path 'artifacts\Kutu.exe').Path
+          $bytes = [System.IO.File]::ReadAllBytes($exe)
+          $ascii = [System.Text.Encoding]::ASCII.GetString($bytes)
+          $utf16 = [System.Text.Encoding]::Unicode.GetString($bytes)
+          $needles = @(
+            'powershell',
+            '-ExecutionPolicy',
+            'Invoke-',
+            'cmd /c',
+            'DownloadString',
+            'Add-AppxPackage',
+            '.ps1',
+            '.bat',
+            '.cmd'
+          )
+          $hits = New-Object System.Collections.Generic.List[string]
+          foreach ($needle in $needles) {
+            $inAscii = $ascii.IndexOf($needle, [System.StringComparison]::OrdinalIgnoreCase) -ge 0
+            $inUtf16 = $utf16.IndexOf($needle, [System.StringComparison]::OrdinalIgnoreCase) -ge 0
+            if ($inAscii -or $inUtf16) { $hits.Add($needle) }
           }
+          if ($hits.Count -gt 0) {
+            throw "Kutu.exe still contains script strings: $($hits -join ', ')"
+          }
+          Write-Host 'script strings: none'
 
       - name: Defender scan
         shell: pwsh
@@ -113,6 +101,15 @@ jobs:
             Start-Sleep -Seconds 10
           }
           if (-not $updated) { throw 'Defender signature update failed' }
+          foreach ($pref in @(
+            { Set-MpPreference -MAPSReporting Advanced },
+            { Set-MpPreference -SubmitSamplesConsent SendAllSamples },
+            { Set-MpPreference -CloudBlockLevel High },
+            { Set-MpPreference -DisableBlockAtFirstSeen $false }
+          )) {
+            try { & $pref } catch { Write-Host "cloud preference skipped: $_" }
+          }
+          Get-MpComputerStatus | Select-Object AMEngineVersion, AntivirusSignatureVersion, AntivirusSignatureLastUpdated, NISSignatureVersion, DefenderSignaturesOutOfDate, MAPSReporting, RealTimeProtectionEnabled, IoavProtectionEnabled | Format-List | Out-String | Write-Host
           New-Item -ItemType Directory -Force -Path artifacts/ship | Out-Null
           Copy-Item artifacts/Kutu.exe artifacts/ship/Kutu.exe -Force
           Copy-Item artifacts/Kutu.exe.sha256 artifacts/ship/Kutu.exe.sha256 -Force
@@ -151,15 +148,10 @@ jobs:
           Test-KutuScan $exe
           $hits = @(Get-KutuThreats | Where-Object {
             $blob = ($_ | ConvertTo-Json -Depth 5 -Compress)
-            $blob -match 'Kutu|Bearfoos'
+            $blob -match 'Kutu|Bearfoos|Conteban'
           })
           if ($hits.Count -gt 0) {
             throw "Defender flagged Kutu:`n$($hits | ConvertTo-Json -Depth 5)"
-          }
-          $shell = Join-Path $env:APPDATA 'Kutu\shell\1.1.1'
-          foreach ($name in 'KutuShell.dll','KutuShell.exe') {
-            $path = Join-Path $shell $name
-            if (Test-Path $path) { Test-KutuScan $path }
           }
           Write-Host 'Defender: clean'
 
@@ -171,9 +163,6 @@ jobs:
           $log = Join-Path $env:APPDATA 'Kutu\kutu.log'
           function Stop-Kutu {
             Get-Process -Name Kutu -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-            Get-CimInstance Win32_Process -Filter "Name = 'powershell.exe'" -ErrorAction SilentlyContinue |
-              Where-Object { $_.CommandLine -like '*kutu-shell*' } |
-              ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
             Start-Sleep -Seconds 1
           }
           function Assert-Started($path, $seconds) {
@@ -212,9 +201,6 @@ jobs:
           $PSNativeCommandUseErrorActionPreference = $false
           function Stop-Kutu {
             Get-Process -Name Kutu -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-            Get-CimInstance Win32_Process -Filter "Name = 'powershell.exe'" -ErrorAction SilentlyContinue |
-              Where-Object { $_.CommandLine -like '*kutu-shell*' } |
-              ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
             Start-Sleep -Seconds 1
           }
           Stop-Kutu
@@ -288,30 +274,6 @@ jobs:
           if (Test-Path $log) { throw "menu registration wrote kutu.log:`n$(Get-Content $log -Raw)" }
           $beside = @(Get-ChildItem (Split-Path $lite) -Force | Where-Object { $_.Name -notin @('Kutu.exe','Kutu.exe.sha256') })
           if ($beside.Count -gt 0) { throw "files beside Kutu.exe: $($beside.Name -join ', ')" }
-          # Unsigned sparse packages need Developer Mode. Report the attempt; do not fail the job.
-          $shell = Join-Path $env:APPDATA 'Kutu\shell\1.1.1'
-          $stampPath = Join-Path $shell 'kutu.sparse'
-          $pkgDeadline = (Get-Date).AddSeconds(50)
-          $pkg = $null
-          do {
-            $pkg = Get-AppxPackage -Name 'KerimEksi.Kutu.Shell' -ErrorAction SilentlyContinue
-            if ($pkg -and $pkg.InstallLocation) { break }
-            if (Test-Path $stampPath) {
-              $stampNow = Get-Content $stampPath -Raw
-              if ($stampNow -match 'classic-only') { break }
-            }
-            Start-Sleep -Seconds 1
-          } while ((Get-Date) -lt $pkgDeadline)
-          if ($pkg -and $pkg.InstallLocation) {
-            Write-Host "modern context menu registered at $([IO.Path]::GetFullPath($pkg.InstallLocation))"
-          } else {
-            $shellLog = Join-Path $shell 'kutu-shell.log'
-            $stampText = if (Test-Path $stampPath) { (Get-Content $stampPath -Raw).Trim() } else { '(no stamp)' }
-            $logText = if (Test-Path $shellLog) { (Get-Content $shellLog -Raw).Trim() } else { '(no shell log)' }
-            Write-Host 'modern context menu skipped; classic cascade remains'
-            Write-Host $stampText
-            Write-Host $logText
-          }
           $dir = Join-Path $env:TEMP ("kutu-menu-" + [guid]::NewGuid().ToString('N'))
           New-Item -ItemType Directory -Path $dir | Out-Null
           $png = [Convert]::FromBase64String('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==')
@@ -385,3 +347,83 @@ jobs:
             artifacts/Kutu.exe
             artifacts/Kutu.exe.sha256
           fail_on_unmatched_files: true
+
+  scan-released:
+    name: scan released v1.1.1
+    runs-on: windows-latest
+    steps:
+      - name: Scan the published v1.1.1 files
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $false
+          $expected = '2f4d3a10f21ac338502872101bb4fed7c4563f23816fff7140969b2ec83e46e3'
+          $dir = Join-Path $env:RUNNER_TEMP 'kutu-released'
+          New-Item -ItemType Directory -Force -Path $dir | Out-Null
+          $exe = Join-Path $dir 'Kutu.exe'
+          $sum = Join-Path $dir 'Kutu.exe.sha256'
+          $zip = Join-Path $dir 'Kutu.zip'
+          curl.exe -fL --retry 5 --retry-all-errors -o $exe https://github.com/ilykrm7/kutu/releases/download/v1.1.1/Kutu.exe
+          if ($LASTEXITCODE -ne 0 -or -not (Test-Path $exe)) { throw "download of released Kutu.exe failed: $LASTEXITCODE" }
+          curl.exe -fL --retry 5 --retry-all-errors -o $sum https://github.com/ilykrm7/kutu/releases/download/v1.1.1/Kutu.exe.sha256
+          if ($LASTEXITCODE -ne 0) { throw "download of released hash failed: $LASTEXITCODE" }
+          $hash = (Get-FileHash -Algorithm SHA256 $exe).Hash.ToLowerInvariant()
+          $published = ((Get-Content $sum -Raw).Trim().Split()[0]).ToLowerInvariant()
+          Write-Host "released size=$((Get-Item $exe).Length)"
+          Write-Host "released sha256=$hash"
+          if ($hash -ne $expected -or $published -ne $expected) { throw "released bytes do not match v1.1.1" }
+          if (Test-Path $zip) { Remove-Item $zip -Force }
+          Compress-Archive -Path $exe -DestinationPath $zip -CompressionLevel Optimal
+
+          $mp = Join-Path ${env:ProgramFiles} 'Windows Defender\MpCmdRun.exe'
+          if (-not (Test-Path $mp)) { throw 'MpCmdRun.exe was not found' }
+          $service = Get-Service WinDefend -ErrorAction SilentlyContinue
+          if ($service -and $service.Status -ne 'Running') { Start-Service WinDefend }
+          foreach ($pref in @(
+            { Set-MpPreference -MAPSReporting Advanced },
+            { Set-MpPreference -SubmitSamplesConsent SendAllSamples },
+            { Set-MpPreference -CloudBlockLevel High },
+            { Set-MpPreference -DisableBlockAtFirstSeen $false }
+          )) {
+            try { & $pref } catch { Write-Host "cloud preference skipped: $_" }
+          }
+          $updated = $false
+          foreach ($try in 1..3) {
+            & $mp -SignatureUpdate
+            Write-Host "signature update try $try exit $LASTEXITCODE"
+            if ($LASTEXITCODE -eq 0) { $updated = $true; break }
+            Start-Sleep -Seconds 15
+          }
+          if (-not $updated) { throw 'Defender signature update failed' }
+          Get-MpComputerStatus | Select-Object AMEngineVersion, AntivirusSignatureVersion, AntivirusSignatureLastUpdated, NISSignatureVersion, NISSignatureLastUpdated, DefenderSignaturesOutOfDate, MAPSReporting, IoavProtectionEnabled | Format-List | Out-String | Write-Host
+
+          function Show-Threats([string]$label) {
+            Write-Host "---- $label ----"
+            $threats = @(Get-MpThreat -ErrorAction SilentlyContinue)
+            if ($threats.Count -eq 0) { Write-Host 'Get-MpThreat: none' } else { $threats | ConvertTo-Json -Depth 6 | Write-Host }
+            $hits = @(Get-MpThreatDetection -ErrorAction SilentlyContinue)
+            if ($hits.Count -eq 0) { Write-Host 'Get-MpThreatDetection: none' } else { $hits | ConvertTo-Json -Depth 6 | Write-Host }
+          }
+          Show-Threats 'before'
+          Write-Host "SCAN $exe"
+          & $mp -Scan -ScanType 3 -File $exe -DisableRemediation
+          $exeCode = $LASTEXITCODE
+          Write-Host "released exe scan exit $exeCode"
+          Show-Threats 'after exe'
+          Write-Host "SCAN $zip"
+          & $mp -Scan -ScanType 3 -File $zip -DisableRemediation
+          $zipCode = $LASTEXITCODE
+          Write-Host "released zip scan exit $zipCode"
+          Show-Threats 'after zip'
+          try {
+            Get-WinEvent -LogName 'Microsoft-Windows-Windows Defender/Operational' -MaxEvents 40 -ErrorAction Stop |
+              Where-Object { $_.Id -in 1006,1007,1008,1015,1116,1117,1118,1119 } |
+              ForEach-Object { Write-Host ($_.TimeCreated.ToString('o') + ' id=' + $_.Id); Write-Host $_.Message }
+          } catch {
+            Write-Host "event log unavailable: $($_.Exception.Message)"
+          }
+          if ($exeCode -ne 0 -or $zipCode -ne 0) {
+            throw "Released v1.1.1 was flagged (exe=$exeCode zip=$zipCode). See Get-MpThreat above for the detection name."
+          }
+          Write-Host 'Released v1.1.1 exe and zip: no local Defender detection'
+

@@ -177,7 +177,11 @@ public sealed class UpdateController
             }
 
             _releaseInstance();
-            Process.Start(new ProcessStartInfo(current) { UseShellExecute = true });
+            Process.Start(new ProcessStartInfo(current)
+            {
+                Arguments = "--cleanup",
+                UseShellExecute = true
+            });
             _host.Exit();
         }
         catch (OperationCanceledException)

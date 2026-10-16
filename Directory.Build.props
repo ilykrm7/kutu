@@ -6,7 +6,7 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <Company>Kutu</Company>
     <Product>Kutu</Product>
-    <Version>1.1.1</Version>
+    <Version>1.1.2</Version>
     <Copyright>Copyright (c) 2026 Kutu contributors</Copyright>
     <Deterministic>true</Deterministic>
   </PropertyGroup>
