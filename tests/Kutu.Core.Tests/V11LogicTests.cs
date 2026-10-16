@@ -307,6 +307,17 @@ public class V11LogicTests
         Assert.False(ReleaseVersion.IsNewer("v1.1.1", new Version(1, 1, 1)));
         Assert.False(ReleaseVersion.IsNewer("v1.1.0", new Version(1, 1, 0)));
         Assert.False(ReleaseVersion.IsNewer("v1.0.9", new Version(1, 1, 0)));
+        Assert.True(ReleaseVersion.IsNewer("v1.1.2", new Version(1, 1, 0)));
+        Assert.True(ReleaseVersion.IsNewer("v1.1.2", new Version(1, 1, 1)));
+        Assert.False(ReleaseVersion.IsNewer("v1.1.2", new Version(1, 1, 2)));
+        var patched = ReleaseVersion.ParseLatest("""
+            {"tag_name":"v1.1.2","assets":[{"name":"Kutu.zip","browser_download_url":"https://example.test/Kutu.zip"},{"name":"Kutu.exe","browser_download_url":"https://example.test/Kutu.exe"},{"name":"Kutu.exe.sha256","browser_download_url":"https://example.test/Kutu.exe.sha256"}]}
+            """);
+        Assert.Equal("v1.1.2", patched!.Version);
+        Assert.Equal("https://example.test/Kutu.exe", ReleaseVersion.Find(patched.Assets, "Kutu.exe")!.Url);
+        Assert.Equal("https://example.test/Kutu.exe.sha256", ReleaseVersion.Find(patched.Assets, "Kutu.exe.sha256")!.Url);
+        var sums = Sha256Check.Compute(Encoding.ASCII.GetBytes("release")) + "  Kutu.exe\n";
+        Assert.Equal(Sha256Check.Compute(Encoding.ASCII.GetBytes("release")), Sha256Check.FindHash(sums, "Kutu.exe"));
         var release = ReleaseVersion.ParseLatest("""
             {"tag_name":"v1.2.0","assets":[{"name":"Kutu.exe","browser_download_url":"https://example.test/Kutu.exe"},{"name":"Kutu.exe.sha256","browser_download_url":"https://example.test/Kutu.exe.sha256"}]}
             """);

@@ -36,9 +36,9 @@ Kısayollar Ayarlar'daki **Kısayollar** bölümünde her araç için ayrı kayd
 
 ## Exe nerede
 
-Her push'ta Actions çıktısı `Kutu-win-x64` yalnız iki dosyadır: `Kutu.exe` ve `Kutu.exe.sha256`. .NET Framework 4.8 üzerine kuruludur. Windows 10, Windows 11 ve Windows Server 2019 bu çerçeveyi hazır getirir; ayrı bir çalışma zamanı kurulmaz. Bağımlılıklar ve `kutuwebp.dll` exe'nin içindedir.
+Her push'ta Actions çıktısı `Kutu-win-x64` üç dosyadır: `Kutu.exe`, `Kutu.exe.sha256` ve `Kutu.zip` (zip'in içinde yalnız `Kutu.exe`). .NET Framework 4.8 üzerine kuruludur. Windows 10, Windows 11 ve Windows Server 2019 bu çerçeveyi hazır getirir; ayrı bir çalışma zamanı kurulmaz. Bağımlılıklar ve `kutuwebp.dll` exe'nin içindedir.
 
-Sürüm etiketi (`v*`) itilince `Kutu.exe` ve `Kutu.exe.sha256` GitHub Release'a eklenir. Kurulum yok. İlk açılışta Windows SmartScreen uyarabilir; imzasız bir topluluk aracı olduğu için bu beklenen bir durum. Uygulama içi güncelleme bu iki dosyayı `HttpClient` ile indirir, özeti doğrular, çalışan exe'yi `Kutu.old.exe` olarak yeniden adlandırır, yeni dosyayı yerine yazar ve `--cleanup` ile yeniden başlatır.
+Sürüm etiketi (`v*`) itilince bu üç dosya GitHub Release'a eklenir. İndirme için zip yeterlidir. Kurulum yok. İlk açılışta Windows SmartScreen uyarabilir; imzasız bir topluluk aracı olduğu için bu beklenen bir durum. Uygulama içi güncelleme zip'i kullanmaz; `Kutu.exe` ve `Kutu.exe.sha256` dosyalarını `HttpClient` ile indirir, özeti doğrular, çalışan exe'yi `Kutu.old.exe` olarak yeniden adlandırır, yeni dosyayı yerine yazar ve `--cleanup` ile yeniden başlatır.
 
 Derleme sıkıştırmaz ve gizlemez. `kutuwebp.dll` yalnız WebP gerekirken `%LOCALAPPDATA%\Kutu\bin` altına sabit adla yazılır. Windows Defender yine de imzasız bir exe'yi sezgisel olarak işaretleyebilir. Yanlış alarmı [Microsoft'a bildirmek](https://www.microsoft.com/en-us/wdsi/filesubmission) için dosyayı “Software developer” olarak gönderin; algılama adı, dosya sürümü ve bu deponun adresini ekleyin. Açık kaynak imzası için [SignPath](https://signpath.io/) ücretsiz bir kuruluş hesabı verir. [Azure Trusted Signing](https://learn.microsoft.com/azure/trusted-signing/) (eski Artifact Signing) GitHub Actions ile kullanılabilir; kimlik doğrulaması ve ücret ister.
 

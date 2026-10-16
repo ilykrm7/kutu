@@ -318,13 +318,31 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
+          $zip = Join-Path (Get-Location) 'artifacts/Kutu.zip'
+          if (Test-Path $zip) { Remove-Item $zip -Force }
+          Add-Type -AssemblyName System.IO.Compression
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $archive = [System.IO.Compression.ZipFile]::Open($zip, [System.IO.Compression.ZipArchiveMode]::Create)
+          try {
+            [void][System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($archive, (Resolve-Path 'artifacts/Kutu.exe').Path, 'Kutu.exe')
+          } finally {
+            $archive.Dispose()
+          }
+          Copy-Item $zip artifacts/ship/Kutu.zip -Force
+          $packed = [System.IO.Compression.ZipFile]::OpenRead((Resolve-Path $zip))
+          try {
+            $entries = @($packed.Entries | ForEach-Object { $_.FullName })
+            if (($entries -join ',') -ne 'Kutu.exe') { throw "Kutu.zip must contain only Kutu.exe: $($entries -join ', ')" }
+          } finally {
+            $packed.Dispose()
+          }
           $names = @(Get-ChildItem artifacts/ship -Force | Sort-Object Name)
           Write-Host 'artifact files:'
           $names | ForEach-Object { "{0}`t{1}" -f $_.Name, $_.Length }
-          $expected = @('Kutu.exe', 'Kutu.exe.sha256')
+          $expected = @('Kutu.exe', 'Kutu.exe.sha256', 'Kutu.zip')
           $actual = @($names | ForEach-Object { $_.Name })
           if (($actual -join ',') -ne ($expected -join ',')) {
-            throw "ship folder must contain only Kutu.exe and Kutu.exe.sha256: $($actual -join ', ')"
+            throw "ship folder must contain Kutu.exe, Kutu.exe.sha256, and Kutu.zip: $($actual -join ', ')"
           }
           foreach ($name in 'KutuShell.dll','KutuShell.exe','Square44x44Logo.png','Square150x150Logo.png','kutu-shell.ps1','kutu.sparse','kutu.sparse.txt','kutu.path','AppxManifest.xml','StoreLogo.png') {
             if (Test-Path (Join-Path artifacts/ship $name)) { throw "$name was published beside Kutu.exe" }
@@ -337,6 +355,7 @@ jobs:
           path: |
             artifacts/ship/Kutu.exe
             artifacts/ship/Kutu.exe.sha256
+            artifacts/ship/Kutu.zip
           if-no-files-found: error
 
       - name: Attach exe to GitHub Release
@@ -346,6 +365,7 @@ jobs:
           files: |
             artifacts/Kutu.exe
             artifacts/Kutu.exe.sha256
+            artifacts/Kutu.zip
           fail_on_unmatched_files: true
 
   scan-released:
