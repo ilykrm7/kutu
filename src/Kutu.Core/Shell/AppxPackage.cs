@@ -4,7 +4,7 @@ using System.Text;
 namespace Kutu.Core.Shell;
 
 /// <summary>
-/// Unsigned MSIX layout that Add-AppxPackage -AllowUnsigned can open.
+/// Unsigned package layout kept for tests. The app does not install it.
 /// The block map covers the payload files. The map itself and the content-types part are not hashed.
 /// </summary>
 public static class AppxPackage

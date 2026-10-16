@@ -117,21 +117,6 @@ public partial class App : Application
             _expander = new TextExpanderService(_host);
             _tray = new TrayService(_host);
             _host.AttachTray(_tray.ShowNotice);
-            if (settings.Current.ContextMenuRegistered)
-            {
-                var exe = HostProcess.Executable ?? "";
-                _ = Task.Run(() =>
-                {
-                    try
-                    {
-                        ContextMenuRegistration.EnsureSparse(exe);
-                    }
-                    catch
-                    {
-                        // The classic menu is already registered.
-                    }
-                });
-            }
             _ipc = new CancellationTokenSource();
             SingleInstance.StartServer(args => Dispatcher.Invoke(() => _host.HandleArgs(args)), _ipc.Token);
             _window.Show();

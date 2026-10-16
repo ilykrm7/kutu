@@ -17,10 +17,10 @@
     <Product>Kutu</Product>
     <Description>Kutu — Windows için küçük araçlar.</Description>
     <Copyright>Copyright © 2026 Kerim Ekşi</Copyright>
-    <AssemblyVersion>1.1.1.0</AssemblyVersion>
-    <FileVersion>1.1.1.0</FileVersion>
-    <InformationalVersion>1.1.1</InformationalVersion>
-    <Version>1.1.1</Version>
+    <AssemblyVersion>1.1.2.0</AssemblyVersion>
+    <FileVersion>1.1.2.0</FileVersion>
+    <InformationalVersion>1.1.2</InformationalVersion>
+    <Version>1.1.2</Version>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Deterministic>true</Deterministic>
   </PropertyGroup>
@@ -37,8 +37,6 @@
     <Resource Include="Assets\kutu.ico" />
     <Resource Include="Assets\kutu-mark.png" />
     <EmbeddedResource Include="Assets\kutu-mark.png" LogicalName="KutuMark.png" />
-    <EmbeddedResource Include="shell\KutuShell.dll" LogicalName="KutuShell.dll" Condition="Exists('shell\KutuShell.dll')" />
-    <EmbeddedResource Include="shell\KutuShell.exe" LogicalName="KutuShell.exe" Condition="Exists('shell\KutuShell.exe')" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Costura.Fody" Version="5.7.0" PrivateAssets="all" />

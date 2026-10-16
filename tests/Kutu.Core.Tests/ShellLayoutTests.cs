@@ -38,9 +38,22 @@ public class ShellLayoutTests
         Assert.Contains("KutuShell.dll", ShellLayout.LegacyNeighborNames);
         Assert.Contains("Square44x44Logo.png", ShellLayout.LegacyNeighborNames);
         Assert.Contains("Square150x150Logo.png", ShellLayout.LegacyNeighborNames);
-        Assert.Contains("kutu-shell.ps1", ShellLayout.LegacyNeighborNames);
         Assert.Contains("kutu.sparse.txt", ShellLayout.LegacyNeighborNames);
         Assert.Contains("kutu.path", ShellLayout.LegacyNeighborNames);
         Assert.DoesNotContain("Kutu.exe", ShellLayout.LegacyNeighborNames);
+        foreach (var name in ShellLayout.LegacyNeighborNames)
+            Assert.False(ShellLayout.IsGeneratedScript(name));
+    }
+
+    [Fact]
+    public void Generated_script_names_are_recognized_without_being_stored()
+    {
+        Assert.True(ShellLayout.IsGeneratedScript("kutu-shell.ps1"));
+        Assert.True(ShellLayout.IsGeneratedScript("kutu-shell-remove.ps1"));
+        Assert.True(ShellLayout.IsGeneratedScript(@"C:\Temp\kutu-shell.bat"));
+        Assert.True(ShellLayout.IsGeneratedScript("kutu-shell.cmd"));
+        Assert.False(ShellLayout.IsGeneratedScript("kutu-shell.log"));
+        Assert.False(ShellLayout.IsGeneratedScript("notes.ps1"));
+        Assert.False(ShellLayout.IsGeneratedScript("Kutu.exe"));
     }
 }
