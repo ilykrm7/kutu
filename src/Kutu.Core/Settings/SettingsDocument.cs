@@ -42,6 +42,10 @@ public sealed class SettingsDocument
 
     public string IpQualityScoreKeyProtected { get; set; } = "";
 
+    public string ScamalyticsUserProtected { get; set; } = "";
+
+    public string ScamalyticsKeyProtected { get; set; } = "";
+
     public string OtxKeyProtected { get; set; } = "";
 
     public string GreyNoiseKeyProtected { get; set; } = "";

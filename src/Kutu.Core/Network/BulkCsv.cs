@@ -11,6 +11,8 @@ public sealed record BulkIpExport(
     string Asn,
     string Dnsbl,
     string Tor,
+    string ScamalyticsScore,
+    string ScamalyticsRisk,
     string SymantecUrl);
 
 public static class BulkCsv
@@ -18,7 +20,7 @@ public static class BulkCsv
     public static string Write(IEnumerable<BulkIpExport> rows)
     {
         var builder = new StringBuilder();
-        builder.AppendLine("ip,risk,country,city,isp,asn,dnsbl,tor,symantec_url");
+        builder.AppendLine("ip,risk,country,city,isp,asn,dnsbl,tor,scamalytics_score,scamalytics_risk,symantec_url");
         foreach (var row in rows)
         {
             builder.Append(Cell(row.Ip)).Append(',')
@@ -29,6 +31,8 @@ public static class BulkCsv
                 .Append(Cell(row.Asn)).Append(',')
                 .Append(Cell(row.Dnsbl)).Append(',')
                 .Append(Cell(row.Tor)).Append(',')
+                .Append(Cell(row.ScamalyticsScore)).Append(',')
+                .Append(Cell(row.ScamalyticsRisk)).Append(',')
                 .Append(Cell(row.SymantecUrl)).AppendLine();
         }
 

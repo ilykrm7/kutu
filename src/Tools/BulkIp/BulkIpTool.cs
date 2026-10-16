@@ -141,6 +141,7 @@ public sealed class BulkIpView : UserControl
             list.FirstOrDefault(item => item.Id == "tor")?.Tor);
         string? Pick(string id, Func<ProviderOutcome, string?> read) =>
             list.Where(item => item.Id == id).Select(read).FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
+        var scam = list.FirstOrDefault(item => item.Id == "scamalytics");
         var dnsbl = list.FirstOrDefault(item => item.Id == "dnsbl")?.DnsblHits?.ToString() ?? "";
         var tor = list.FirstOrDefault(item => item.Id == "tor")?.Tor switch
         {
@@ -157,6 +158,8 @@ public sealed class BulkIpView : UserControl
             Pick("geo", item => item.Asn) ?? "",
             dnsbl,
             tor,
+            scam?.Score?.ToString() ?? "",
+            scam?.RiskBand ?? "",
             SymantecReview.Url(ip));
     }
 
@@ -165,9 +168,10 @@ public sealed class BulkIpView : UserControl
         var grid = Table();
         Add(grid, row.Ip, 0);
         Add(grid, row.Risk, 1);
-        Add(grid, row.Country, 2);
-        Add(grid, row.Isp, 3);
-        Add(grid, row.Dnsbl, 4);
+        Add(grid, ScamalyticsApi.Cell(Score(row.ScamalyticsScore), row.ScamalyticsRisk), 2);
+        Add(grid, row.Country, 3);
+        Add(grid, row.Isp, 4);
+        Add(grid, row.Dnsbl, 5);
         var link = new TextBlock
         {
             Text = L.Get("Action_OpenBrowser"),
@@ -177,7 +181,7 @@ public sealed class BulkIpView : UserControl
             FontSize = 13
         };
         link.MouseLeftButtonUp += (_, _) => Process.Start(new ProcessStartInfo(row.SymantecUrl) { UseShellExecute = true });
-        Grid.SetColumn(link, 5);
+        Grid.SetColumn(link, 6);
         grid.Children.Add(link);
         return grid;
     }
@@ -187,10 +191,11 @@ public sealed class BulkIpView : UserControl
         var grid = Table();
         Add(grid, "IP", 0, true);
         Add(grid, "Risk", 1, true);
-        Add(grid, "Country", 2, true);
-        Add(grid, "ISP", 3, true);
-        Add(grid, "DNSBL", 4, true);
-        Add(grid, "Symantec", 5, true);
+        Add(grid, "Scamalytics", 2, true);
+        Add(grid, "Country", 3, true);
+        Add(grid, "ISP", 4, true);
+        Add(grid, "DNSBL", 5, true);
+        Add(grid, "Symantec", 6, true);
         return grid;
     }
 
@@ -206,7 +211,7 @@ public sealed class BulkIpView : UserControl
     private static Grid Table()
     {
         var grid = new Grid { Margin = new Thickness(0, 2, 0, 2) };
-        foreach (var width in new[] { 150, 70, 90, 180, 70, 140 })
+        foreach (var width in new[] { 150, 70, 130, 90, 160, 70, 130 })
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(width) });
         return grid;
     }
@@ -224,4 +229,6 @@ public sealed class BulkIpView : UserControl
         Grid.SetColumn(block, column);
         grid.Children.Add(block);
     }
+
+    private static int? Score(string text) => int.TryParse(text, out var value) ? value : null;
 }

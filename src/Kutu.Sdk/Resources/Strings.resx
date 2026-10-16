@@ -141,6 +141,12 @@
   <data name="Whois_Nameservers" xml:space="preserve"><value>Ad sunucuları</value></data>
   <data name="Whois_Dns" xml:space="preserve"><value>DNS kayıtları</value></data>
   <data name="Whois_Empty" xml:space="preserve"><value>Sonuç yok.</value></data>
+  <data name="Whois_Timeout" xml:space="preserve"><value>Sorgu zaman aşımına uğradı.</value></data>
+  <data name="Whois_DnsFailed" xml:space="preserve"><value>DNS sorgusu tamamlanamadı.</value></data>
+  <data name="Whois_RdapFailed" xml:space="preserve"><value>RDAP kaydı alınamadı.</value></data>
+  <data name="Whois_RdapMissing" xml:space="preserve"><value>RDAP kaydı yok.</value></data>
+  <data name="Whois_Failed" xml:space="preserve"><value>Sorgu tamamlanamadı.</value></data>
+  <data name="Whois_Partial" xml:space="preserve"><value>Gösterilen kayıtlar eksik olabilir.</value></data>
   <data name="Ip_Address" xml:space="preserve"><value>IP adresi</value></data>
   <data name="Ip_Score" xml:space="preserve"><value>İtibar skoru</value></data>
   <data name="Ip_Reports" xml:space="preserve"><value>Rapor</value></data>
@@ -188,6 +194,8 @@
   <data name="Menu_ModernFail" xml:space="preserve"><value>Modern menü kurulamadı. Klasik menü Daha fazla seçenek altında duruyor.</value></data>
   <data name="Settings_VirusTotalKey" xml:space="preserve"><value>VirusTotal anahtarı</value></data>
   <data name="Settings_IpqsKey" xml:space="preserve"><value>IPQualityScore anahtarı</value></data>
+  <data name="Settings_ScamalyticsUser" xml:space="preserve"><value>Scamalytics kullanıcı adı</value></data>
+  <data name="Settings_ScamalyticsKey" xml:space="preserve"><value>Scamalytics API anahtarı</value></data>
   <data name="Settings_OtxKey" xml:space="preserve"><value>AlienVault OTX anahtarı</value></data>
   <data name="Settings_GreyNoiseKey" xml:space="preserve"><value>GreyNoise anahtarı</value></data>
   <data name="Settings_ShodanKey" xml:space="preserve"><value>Shodan anahtarı</value></data>
@@ -238,6 +246,7 @@
   <data name="Action_ReadClip" xml:space="preserve"><value>Panodan</value></data>
   <data name="Action_OpenBrowser" xml:space="preserve"><value>Tarayıcıda aç</value></data>
   <data name="Action_CopyAll" xml:space="preserve"><value>Tümünü kopyala</value></data>
+  <data name="Screen_CloseHint" xml:space="preserve"><value>Kapatmak için Esc</value></data>
   <data name="Action_Stop" xml:space="preserve"><value>Durdur</value></data>
   <data name="Action_FullScreen" xml:space="preserve"><value>Tam ekran</value></data>
   <data name="Qr_Text" xml:space="preserve"><value>Metin</value></data>
@@ -262,6 +271,10 @@
   <data name="Port_Closed" xml:space="preserve"><value>Kapalı</value></data>
   <data name="Port_Invalid" xml:space="preserve"><value>Port veya aralık geçersiz.</value></data>
   <data name="Port_None" xml:space="preserve"><value>Açık port bulunamadı</value></data>
+  <data name="Port_PortLabel" xml:space="preserve"><value>Port</value></data>
+  <data name="Port_RangeLabel" xml:space="preserve"><value>Aralık</value></data>
+  <data name="Port_TimeoutLabel" xml:space="preserve"><value>Zaman aşımı (ms)</value></data>
+  <data name="Port_ConcurrencyLabel" xml:space="preserve"><value>Eşzamanlılık</value></data>
   <data name="Bulk_Paste" xml:space="preserve"><value>Her satıra bir IP veya virgülle ayırın</value></data>
   <data name="Bulk_Load" xml:space="preserve"><value>TXT yükle</value></data>
   <data name="Bulk_Mine" xml:space="preserve"><value>Benim IP'm</value></data>

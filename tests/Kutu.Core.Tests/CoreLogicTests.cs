@@ -88,6 +88,31 @@ public class CoreLogicTests
     }
 
     [Fact]
+    public void No_prefix_trigger_deletes_every_typed_character()
+    {
+        Assert.Equal(3, ExpanderReplacement.BackspaceCount("adm"));
+        Assert.Equal(4, ExpanderReplacement.BackspaceCount(":adm"));
+        Assert.Equal(3, ExpanderReplacement.BackspaceCount(" adm "));
+
+        var bare = new ExpanderCommit();
+        var snippet = new Snippet { Trigger = "adm", Body = "administrator" };
+        bare.KeyDown(0x41, null);
+        bare.KeyDown(0x44, null);
+        bare.KeyDown(0x4D, snippet);
+        Assert.False(bare.SwallowRepeat);
+        bare.KeyDown(0x4D, snippet);
+        Assert.True(bare.SwallowRepeat);
+        Assert.True(bare.KeyUp(0x4D, out var match, out var backspaces));
+        Assert.Equal("administrator", match?.Body);
+        Assert.Equal(3, backspaces);
+
+        var prefixed = new ExpanderCommit();
+        prefixed.KeyDown(0x4D, new Snippet { Trigger = ":adm", Body = "administrator" });
+        Assert.True(prefixed.KeyUp(0x4D, out _, out var colon));
+        Assert.Equal(4, colon);
+    }
+
+    [Fact]
     public void Expander_log_shows_only_the_trigger_suffix()
     {
         Assert.Null(ExpanderLogText.VisibleBuffer("notepad"));
@@ -229,6 +254,8 @@ public class CoreLogicTests
         var service = new SettingsService(new TestProtector(), path);
         service.Current.DeepLKey = "secret-key";
         service.Current.AbuseIpDbKey = "abuse";
+        service.Current.ScamalyticsUser = "scam-user";
+        service.Current.ScamalyticsKey = "scam-secret";
         service.Current.VirusTotalKey = "vt-secret";
         service.Current.UploadApiKey = "upload";
         service.Current.Snippets.Add(new Snippet { Trigger = ":imza", Body = "Kutu" });
@@ -236,12 +263,16 @@ public class CoreLogicTests
 
         var raw = File.ReadAllText(path);
         Assert.DoesNotContain("secret-key", raw);
+        Assert.DoesNotContain("scam-secret", raw);
+        Assert.DoesNotContain("scam-user", raw);
         Assert.Contains("enc:", raw);
 
         var loaded = new SettingsService(new TestProtector(), path);
         await loaded.LoadAsync();
         Assert.Equal("secret-key", loaded.Current.DeepLKey);
         Assert.Equal("abuse", loaded.Current.AbuseIpDbKey);
+        Assert.Equal("scam-user", loaded.Current.ScamalyticsUser);
+        Assert.Equal("scam-secret", loaded.Current.ScamalyticsKey);
         Assert.Equal("vt-secret", loaded.Current.VirusTotalKey);
         Assert.Equal("upload", loaded.Current.UploadApiKey);
         Assert.Equal(":imza", loaded.Current.Snippets[0].Trigger);

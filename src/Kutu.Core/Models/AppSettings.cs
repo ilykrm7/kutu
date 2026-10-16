@@ -40,6 +40,10 @@ public sealed class AppSettings
 
     public string IpQualityScoreKey { get; set; } = "";
 
+    public string ScamalyticsUser { get; set; } = "";
+
+    public string ScamalyticsKey { get; set; } = "";
+
     public string OtxKey { get; set; } = "";
 
     public string GreyNoiseKey { get; set; } = "";

@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Sockets;
 using Kutu.Core.Network;
 
@@ -27,118 +28,109 @@ public static class PortScanner
         IProgress<PortScanTick>? progress,
         CancellationToken cancellationToken)
     {
-        timeoutMs = Math.Max(50, Math.Min(timeoutMs, 10000));
-        concurrency = Math.Max(1, Math.Min(concurrency, Math.Max(1, ports.Length)));
-        concurrency = Math.Min(concurrency, 1024);
+        timeoutMs = PortScanBudget.Timeout(timeoutMs);
+        concurrency = PortScanBudget.Concurrency(concurrency);
+        var started = DateTime.UtcNow;
+        if (ports.Length == 0)
+        {
+            Report(progress, 0, 0, 0, started);
+            return;
+        }
+
+        var address = await ResolveAsync(host, cancellationToken);
+        if (address is null || cancellationToken.IsCancellationRequested)
+        {
+            Report(progress, ports.Length, ports.Length, 0, started);
+            return;
+        }
+
         var done = 0;
         var open = 0;
-        var next = 0;
-        var started = DateTime.UtcNow;
-        var workers = new Task[concurrency];
-        for (var worker = 0; worker < workers.Length; worker++)
+        var seen = new HashSet<int>();
+        var gate = new SemaphoreSlim(concurrency);
+        var tasks = new List<Task>(ports.Length);
+        foreach (var port in ports)
         {
-            workers[worker] = Task.Run(async () =>
+            if (cancellationToken.IsCancellationRequested)
+                break;
+
+            try
             {
-                while (!cancellationToken.IsCancellationRequested)
+                await gate.WaitAsync(cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+
+            var captured = port;
+            tasks.Add(Task.Run(() =>
+            {
+                var opened = false;
+                try
                 {
-                    var index = Interlocked.Increment(ref next) - 1;
-                    if (index >= ports.Length)
+                    if (cancellationToken.IsCancellationRequested)
                         return;
 
-                    var port = ports[index];
-                    PortScanResult result;
-                    try
-                    {
-                        result = await ProbeAsync(host, port, timeoutMs, cancellationToken);
-                    }
-                    catch (OperationCanceledException)
-                    {
+                    var result = Probe(address, captured, timeoutMs);
+                    if (!result.Open)
                         return;
-                    }
-                    catch
-                    {
-                        result = new PortScanResult { Port = port };
-                    }
 
-                    var count = Interlocked.Increment(ref done);
-                    if (result.Open)
+                    lock (seen)
                     {
+                        if (!seen.Add(result.Port))
+                            return;
                         Interlocked.Increment(ref open);
-                        onResult(result);
+                        opened = true;
                     }
-                    if (result.Open || port is 22 or 3389 || count % 48 == 0 || count == ports.Length)
-                        Report(progress, count, ports.Length, Volatile.Read(ref open), started);
+
+                    onResult(result);
                 }
-            }, cancellationToken);
+                catch (OperationCanceledException)
+                {
+                    // The scan is stopping.
+                }
+                catch
+                {
+                    // A failed probe is a closed port.
+                }
+                finally
+                {
+                    var count = Interlocked.Increment(ref done);
+                    if (opened || count == ports.Length || count % 64 == 0)
+                        Report(progress, count, ports.Length, Volatile.Read(ref open), started);
+                    gate.Release();
+                }
+            }));
         }
 
         try
         {
-            await Task.WhenAll(workers);
+            await Task.WhenAll(tasks);
         }
         catch (OperationCanceledException)
         {
             // Stopping the scan is a normal outcome.
         }
 
-        Report(progress, Volatile.Read(ref done), ports.Length, Volatile.Read(ref open), started);
+        var finished = cancellationToken.IsCancellationRequested ? Volatile.Read(ref done) : ports.Length;
+        Report(progress, finished, ports.Length, Volatile.Read(ref open), started);
     }
 
-    private static void Report(IProgress<PortScanTick>? progress, int done, int total, int open, DateTime started)
+    private static async Task<IPAddress?> ResolveAsync(string host, CancellationToken cancellationToken)
     {
-        var elapsed = Math.Max(0.001, (DateTime.UtcNow - started).TotalSeconds);
-        var eta = done <= 0 ? TimeSpan.Zero : TimeSpan.FromSeconds(elapsed / done * Math.Max(0, total - done));
-        progress?.Report(new PortScanTick(done, total, open, eta));
-    }
+        if (IPAddress.TryParse(host, out var literal))
+            return literal;
 
-    private static async Task<PortScanResult> ProbeAsync(string host, int port, int timeoutMs, CancellationToken cancellationToken)
-    {
-        var banner = await ReadBannerAsync(host, port, timeoutMs, cancellationToken);
-        if (banner is null)
-            return new PortScanResult { Port = port };
-
-        var service = ServiceProbe.Classify(banner);
-        var text = ServiceProbe.Decode(banner);
-        if (service is null && string.IsNullOrWhiteSpace(text))
-            service = await DetectAsync(host, port, timeoutMs, cancellationToken);
-
-        return new PortScanResult
-        {
-            Port = port,
-            Open = true,
-            Service = service ?? "",
-            Banner = OneLine(text)
-        };
-    }
-
-    private static async Task<string?> DetectAsync(string host, int port, int timeoutMs, CancellationToken cancellationToken)
-    {
-        var probeTimeout = Math.Min(timeoutMs, 450);
-        var rdp = ProbeAsync(host, port, probeTimeout, ServiceProbe.RdpConnectionRequest, data => ServiceProbe.IsRdpResponse(data), "RDP", cancellationToken);
-        var http = ProbeAsync(host, port, probeTimeout, ServiceProbe.HttpProbe, static data => ServiceProbe.ClassifyBanner(ServiceProbe.Decode(data)) == "HTTP", "HTTP", cancellationToken);
-        var tls = ProbeAsync(host, port, probeTimeout, ServiceProbe.TlsClientHello, data => ServiceProbe.IsTlsServerHello(data), "HTTPS (TLS)", cancellationToken);
-        var results = await Task.WhenAll(rdp, http, tls);
-        return results[0] ?? results[1] ?? results[2];
-    }
-
-    private static async Task<string?> ProbeAsync(
-        string host,
-        int port,
-        int timeoutMs,
-        byte[] request,
-        Func<byte[], bool> match,
-        string label,
-        CancellationToken cancellationToken)
-    {
         try
         {
-            using var client = new TcpClient();
-            if (!await ConnectAsync(client, host, port, timeoutMs, cancellationToken))
+            var lookup = Dns.GetHostAddressesAsync(host);
+            var finished = await Task.WhenAny(lookup, Task.Delay(3000, cancellationToken));
+            if (finished != lookup)
                 return null;
-            var stream = client.GetStream();
-            await stream.WriteAsync(request, 0, request.Length, cancellationToken);
-            var response = await ReadAsync(stream, 128, timeoutMs, cancellationToken);
-            return match(response) ? label : null;
+            var answers = await lookup;
+            return answers.FirstOrDefault(item => item.AddressFamily == AddressFamily.InterNetwork)
+                ?? answers.FirstOrDefault();
         }
         catch
         {
@@ -146,44 +138,152 @@ public static class PortScanner
         }
     }
 
-    private static async Task<byte[]?> ReadBannerAsync(string host, int port, int timeoutMs, CancellationToken cancellationToken)
+    private static PortScanResult Probe(IPAddress address, int port, int timeoutMs)
     {
-        using var client = new TcpClient();
-        if (!await ConnectAsync(client, host, port, timeoutMs, cancellationToken))
-            return null;
+        var answer = Connect(address, port, timeoutMs, out var socket);
+        if (PortScanBudget.ShouldRetry(answer, 0))
+        {
+            socket?.Dispose();
+            answer = Connect(address, port, PortScanBudget.RetryTimeout(timeoutMs), out socket);
+        }
+
+        if (answer != PortAnswer.Open || socket is null)
+        {
+            socket?.Dispose();
+            return new PortScanResult { Port = port };
+        }
+
         try
         {
-            return await ReadAsync(client.GetStream(), 256, Math.Min(timeoutMs, 280), cancellationToken);
+            var banner = Read(socket, Math.Min(timeoutMs, 350), 256);
+            var service = ServiceProbe.Classify(banner);
+            byte[]? rdp = null;
+            byte[]? ssh = null;
+            byte[]? tls = null;
+            if (service is null)
+            {
+                if (banner.Length == 0)
+                {
+                    socket.SendTimeout = timeoutMs;
+                    try
+                    {
+                        socket.Send(ServiceProbe.RdpConnectionRequest);
+                        rdp = Read(socket, Math.Min(timeoutMs, 500), 128);
+                    }
+                    catch
+                    {
+                        rdp = null;
+                    }
+                }
+                else
+                {
+                    rdp = Exchange(address, port, timeoutMs, ServiceProbe.RdpConnectionRequest);
+                }
+
+                if (!ServiceProbe.IsRdpResponse(rdp))
+                {
+                    ssh = Exchange(address, port, timeoutMs, ServiceProbe.SshClientBanner);
+                    if (ServiceProbe.Classify(ssh) is null)
+                        tls = Exchange(address, port, timeoutMs, ServiceProbe.TlsClientHello);
+                }
+            }
+
+            service = ServiceProbe.Identify(banner, rdp, ssh, tls);
+            return new PortScanResult
+            {
+                Port = port,
+                Open = true,
+                Service = service ?? "",
+                Banner = OneLine(ServiceProbe.Decode(banner))
+            };
+        }
+        finally
+        {
+            socket.Dispose();
+        }
+    }
+
+    private static PortAnswer Connect(IPAddress address, int port, int timeoutMs, out Socket? socket)
+    {
+        socket = new Socket(address.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+        try
+        {
+            var result = socket.BeginConnect(new IPEndPoint(address, port), null, null);
+            if (!result.AsyncWaitHandle.WaitOne(Math.Max(1, timeoutMs)))
+            {
+                Close(socket);
+                try
+                {
+                    socket.EndConnect(result);
+                }
+                catch
+                {
+                    // The timed-out connect is aborted.
+                }
+
+                socket = null;
+                return PortAnswer.Unanswered;
+            }
+
+            socket.EndConnect(result);
+            if (!socket.Connected)
+            {
+                Close(socket);
+                socket = null;
+                return PortAnswer.Refused;
+            }
+
+            return PortAnswer.Open;
+        }
+        catch (SocketException)
+        {
+            Close(socket);
+            socket = null;
+            return PortAnswer.Refused;
+        }
+        catch
+        {
+            Close(socket);
+            socket = null;
+            return PortAnswer.Unanswered;
+        }
+    }
+
+    private static byte[] Exchange(IPAddress address, int port, int timeoutMs, byte[] request)
+    {
+        var answer = Connect(address, port, timeoutMs, out var socket);
+        if (answer != PortAnswer.Open || socket is null)
+        {
+            socket?.Dispose();
+            return [];
+        }
+
+        try
+        {
+            socket.SendTimeout = timeoutMs;
+            socket.Send(request);
+            return Read(socket, Math.Min(timeoutMs, 500), 128);
         }
         catch
         {
             return [];
         }
-    }
-
-    private static async Task<bool> ConnectAsync(TcpClient client, string host, int port, int timeoutMs, CancellationToken cancellationToken)
-    {
-        var connect = client.ConnectAsync(host, port);
-        var finished = await Task.WhenAny(connect, Task.Delay(timeoutMs, cancellationToken));
-        if (finished != connect || cancellationToken.IsCancellationRequested)
+        finally
         {
-            client.Close();
-            _ = connect.ContinueWith(task => { _ = task.Exception; }, TaskContinuationOptions.OnlyOnFaulted);
-            return false;
+            socket.Dispose();
         }
-
-        await connect;
-        return client.Connected;
     }
 
-    private static async Task<byte[]> ReadAsync(NetworkStream stream, int max, int timeoutMs, CancellationToken cancellationToken)
+    private static byte[] Read(Socket socket, int timeoutMs, int max)
     {
-        var buffer = new byte[max];
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(timeoutMs);
         try
         {
-            var read = await stream.ReadAsync(buffer, 0, buffer.Length, timeout.Token);
+            if (!socket.Poll(Math.Max(1, timeoutMs) * 1000, SelectMode.SelectRead))
+                return [];
+            if (socket.Available <= 0)
+                return [];
+            var buffer = new byte[Math.Min(max, socket.Available)];
+            var read = socket.Receive(buffer);
             if (read <= 0)
                 return [];
             if (read == buffer.Length)
@@ -192,10 +292,29 @@ public static class PortScanner
             Buffer.BlockCopy(buffer, 0, slice, 0, read);
             return slice;
         }
-        catch (OperationCanceledException)
+        catch
         {
             return [];
         }
+    }
+
+    private static void Close(Socket? socket)
+    {
+        try
+        {
+            socket?.Close();
+        }
+        catch
+        {
+            // The socket is already gone.
+        }
+    }
+
+    private static void Report(IProgress<PortScanTick>? progress, int done, int total, int open, DateTime started)
+    {
+        var elapsed = Math.Max(0.001, (DateTime.UtcNow - started).TotalSeconds);
+        var eta = done <= 0 ? TimeSpan.Zero : TimeSpan.FromSeconds(elapsed / done * Math.Max(0, total - done));
+        progress?.Report(new PortScanTick(done, total, open, eta));
     }
 
     private static string OneLine(string text)

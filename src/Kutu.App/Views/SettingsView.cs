@@ -40,6 +40,8 @@ public sealed class SettingsView : UserControl
     private readonly PasswordBox _abuse;
     private readonly PasswordBox _virusTotal;
     private readonly PasswordBox _ipqs;
+    private readonly TextBox _scamalyticsUser;
+    private readonly PasswordBox _scamalyticsKey;
     private readonly PasswordBox _otx;
     private readonly PasswordBox _greyNoise;
     private readonly PasswordBox _shodan;
@@ -80,6 +82,8 @@ public sealed class SettingsView : UserControl
         _abuse = new PasswordBox { RevealButtonEnabled = true };
         _virusTotal = new PasswordBox { RevealButtonEnabled = true };
         _ipqs = new PasswordBox { RevealButtonEnabled = true };
+        _scamalyticsUser = Chrome.Input("");
+        _scamalyticsKey = new PasswordBox { RevealButtonEnabled = true };
         _otx = new PasswordBox { RevealButtonEnabled = true };
         _greyNoise = new PasswordBox { RevealButtonEnabled = true };
         _shodan = new PasswordBox { RevealButtonEnabled = true };
@@ -145,6 +149,8 @@ public sealed class SettingsView : UserControl
         _abuse.Password = settings.AbuseIpDbKey;
         _virusTotal.Password = settings.VirusTotalKey;
         _ipqs.Password = settings.IpQualityScoreKey;
+        _scamalyticsUser.Text = settings.ScamalyticsUser;
+        _scamalyticsKey.Password = settings.ScamalyticsKey;
         _otx.Password = settings.OtxKey;
         _greyNoise.Password = settings.GreyNoiseKey;
         _shodan.Password = settings.ShodanKey;
@@ -373,6 +379,8 @@ public sealed class SettingsView : UserControl
         panel.Children.Add(_abuse);
         panel.Children.Add(KeyRow(L.Get("Settings_VirusTotalKey"), _virusTotal));
         panel.Children.Add(KeyRow(L.Get("Settings_IpqsKey"), _ipqs));
+        panel.Children.Add(KeyRow(L.Get("Settings_ScamalyticsUser"), _scamalyticsUser));
+        panel.Children.Add(KeyRow(L.Get("Settings_ScamalyticsKey"), _scamalyticsKey));
         panel.Children.Add(KeyRow(L.Get("Settings_OtxKey"), _otx));
         panel.Children.Add(KeyRow(L.Get("Settings_GreyNoiseKey"), _greyNoise));
         panel.Children.Add(KeyRow(L.Get("Settings_ShodanKey"), _shodan));
@@ -450,6 +458,8 @@ public sealed class SettingsView : UserControl
         settings.AbuseIpDbKey = _abuse.Password.Trim();
         settings.VirusTotalKey = _virusTotal.Password.Trim();
         settings.IpQualityScoreKey = _ipqs.Password.Trim();
+        settings.ScamalyticsUser = _scamalyticsUser.Text.Trim();
+        settings.ScamalyticsKey = _scamalyticsKey.Password.Trim();
         settings.OtxKey = _otx.Password.Trim();
         settings.GreyNoiseKey = _greyNoise.Password.Trim();
         settings.ShodanKey = _shodan.Password.Trim();
@@ -504,7 +514,7 @@ public sealed class SettingsView : UserControl
     private static string CurrentVersion()
     {
         var version = typeof(SettingsView).Assembly.GetName().Version;
-        return version is null ? "1.1.2" : $"{version.Major}.{version.Minor}.{version.Build}";
+        return version is null ? "1.1.3" : $"{version.Major}.{version.Minor}.{version.Build}";
     }
 
     private static UIElement Footer()

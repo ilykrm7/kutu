@@ -29,6 +29,8 @@ public sealed class ProviderOutcome
 
     public string? Asn { get; init; }
 
+    public string? RiskBand { get; init; }
+
     public List<(string Label, string Value)> Lines { get; } = [];
 }
 
@@ -61,6 +63,7 @@ public static class IpLookup
             Guard("abuse", "AbuseIPDB", () => string.IsNullOrWhiteSpace(settings.AbuseIpDbKey) ? Task.FromResult(Missing("abuse", "AbuseIPDB")) : AbuseAsync(ip, settings.AbuseIpDbKey)),
             Guard("vt", "VirusTotal", () => string.IsNullOrWhiteSpace(settings.VirusTotalKey) ? Task.FromResult(Missing("vt", "VirusTotal")) : VirusTotalAsync(ip, settings.VirusTotalKey)),
             Guard("ipqs", "IPQualityScore", () => string.IsNullOrWhiteSpace(settings.IpQualityScoreKey) ? Task.FromResult(Missing("ipqs", "IPQualityScore")) : IpqsAsync(ip, settings.IpQualityScoreKey)),
+            Guard("scamalytics", "Scamalytics", () => ScamalyticsApi.HasCredentials(settings.ScamalyticsUser, settings.ScamalyticsKey) ? ScamalyticsAsync(ip, settings.ScamalyticsUser, settings.ScamalyticsKey) : Task.FromResult(Missing("scamalytics", "Scamalytics"))),
             Guard("otx", "AlienVault OTX", () => string.IsNullOrWhiteSpace(settings.OtxKey) ? Task.FromResult(Missing("otx", "AlienVault OTX")) : OtxAsync(ip, settings.OtxKey)),
             Guard("grey", "GreyNoise", () => string.IsNullOrWhiteSpace(settings.GreyNoiseKey) ? Task.FromResult(Missing("grey", "GreyNoise")) : GreyAsync(ip, settings.GreyNoiseKey)),
             Guard("shodan", "Shodan", () => string.IsNullOrWhiteSpace(settings.ShodanKey) ? Task.FromResult(Missing("shodan", "Shodan")) : ShodanAsync(ip, settings.ShodanKey)),
@@ -166,6 +169,63 @@ public static class IpLookup
         result.Lines.Add(("TOR", Yes(Bool(root, "tor"))));
         return result;
     }
+
+    private static async Task<ProviderOutcome> ScamalyticsAsync(string ip, string username, string key)
+    {
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, ScamalyticsApi.Url(username, key, ip));
+            using var response = await Http.SendAsync(request);
+            if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+                return Failed("Anahtar kabul edilmedi");
+            if (!response.IsSuccessStatusCode)
+                return Failed("Ulaşılamadı");
+            var body = await response.Content.ReadAsStringAsync();
+            JsonDocument json;
+            try
+            {
+                json = JsonDocument.Parse(body);
+            }
+            catch (JsonException)
+            {
+                return Failed("Ulaşılamadı");
+            }
+
+            using (json)
+            {
+                var reading = ScamalyticsApi.Read(json.RootElement);
+                if (!reading.Ok)
+                    return Failed(reading.Error);
+                var result = new ProviderOutcome
+                {
+                    Id = "scamalytics",
+                    Title = "Scamalytics",
+                    Status = ScamalyticsApi.IsRisk(reading.Score, reading.Risk) ? "risk" : "clean",
+                    Score = reading.Score,
+                    RiskBand = reading.Risk
+                };
+                result.Lines.Add(("Skor", reading.Score?.ToString() ?? "—"));
+                result.Lines.Add(("Risk", ScamalyticsApi.RiskLabel(reading.Risk)));
+                if (reading.Vpn is bool vpn)
+                    result.Lines.Add(("VPN", Yes(vpn)));
+                if (reading.Datacenter is bool datacenter)
+                    result.Lines.Add(("Veri merkezi", Yes(datacenter)));
+                return result;
+            }
+        }
+        catch
+        {
+            return Failed("Ulaşılamadı");
+        }
+    }
+
+    private static ProviderOutcome Failed(string message) => new()
+    {
+        Id = "scamalytics",
+        Title = "Scamalytics",
+        Status = "error",
+        Lines = { ("", message) }
+    };
 
     private static async Task<ProviderOutcome> OtxAsync(string ip, string key)
     {

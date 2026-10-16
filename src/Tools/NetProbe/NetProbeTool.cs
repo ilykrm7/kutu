@@ -38,6 +38,10 @@ public sealed class NetProbeView : UserControl
     private readonly TextBox _ports;
     private readonly TextBox _timeout;
     private readonly TextBox _concurrency;
+    private readonly TextBlock _portLabel;
+    private readonly StackPanel _portField;
+    private readonly StackPanel _timeoutField;
+    private readonly StackPanel _concurrencyField;
     private readonly TextBlock _pingOut;
     private readonly TextBlock _progress;
     private readonly TextBlock _empty;
@@ -56,10 +60,14 @@ public sealed class NetProbeView : UserControl
         _hostBox.Text = "1.1.1.1";
         _hostBox.Width = 220;
         _count = Small("4");
-        _ports = Small("80");
+        _ports = Small("");
         _ports.Width = 140;
-        _timeout = Small("200");
-        _concurrency = Small("512");
+        _timeout = Small("400");
+        _concurrency = Small("48");
+        _portLabel = Chrome.Label(L.Get("Port_PortLabel"));
+        _portField = Field(_portLabel, _ports);
+        _timeoutField = Field(Chrome.Label(L.Get("Port_TimeoutLabel")), _timeout);
+        _concurrencyField = Field(Chrome.Label(L.Get("Port_ConcurrencyLabel")), _concurrency);
         _pingOut = Chrome.Hint("");
         _progress = Chrome.Hint("");
         _empty = new TextBlock
@@ -81,7 +89,7 @@ public sealed class NetProbeView : UserControl
             Mode("common", L.Get("Port_Common")),
             Mode("all", L.Get("Port_All"))
         ];
-        ShowPreset("common");
+        ApplyMode("common");
 
         var pingRow = Row(_hostBox, Chrome.Primary(L.Get("Action_Ping"), SymbolRegular.Wifi124, async (_, _) => await PingAsync()), _count, Chrome.Secondary(L.Get("Action_Cancel"), SymbolRegular.Dismiss24, (_, _) => _pingCancel?.Cancel()));
         var modes = new Border
@@ -95,9 +103,9 @@ public sealed class NetProbeView : UserControl
             Child = Row(_modes)
         };
         var scanRow = Row(
-            _ports,
-            _timeout,
-            _concurrency,
+            _portField,
+            _timeoutField,
+            _concurrencyField,
             Chrome.Primary(L.Get("Action_Scan"), SymbolRegular.ScanDash24, async (_, _) => await ScanAsync()),
             Chrome.Secondary(L.Get("Action_Cancel"), SymbolRegular.Dismiss24, (_, _) => _scanCancel?.Cancel()));
         var export = Row(
@@ -178,9 +186,18 @@ public sealed class NetProbeView : UserControl
         }
 
         if (!int.TryParse(_timeout.Text.Trim(), out var timeout))
-            timeout = 200;
+            timeout = _preset == "all" ? 400 : 500;
         if (!int.TryParse(_concurrency.Text.Trim(), out var concurrency))
-            concurrency = 512;
+            concurrency = _preset == "all" ? 48 : 32;
+        if (_preset == "common")
+        {
+            timeout = 500;
+            concurrency = 16;
+        }
+        else if (_preset == "single")
+        {
+            concurrency = 1;
+        }
         _results.Clear();
         _rows.Children.Clear();
         _empty.Visibility = Visibility.Collapsed;
@@ -195,6 +212,12 @@ public sealed class NetProbeView : UserControl
             if (result.Open)
                 Dispatcher.Invoke(() => AddRow(result));
         }, progress, cancel.Token);
+        if (!cancel.IsCancellationRequested)
+        {
+            var open = _results.Select(result => result.Port).Distinct().Count();
+            _progress.Text = string.Format(L.Get("Port_Progress"), ports.Length, ports.Length, open, "00:00");
+        }
+
         if (!cancel.IsCancellationRequested && _results.All(result => !result.Open))
         {
             _rows.Children.Clear();
@@ -208,12 +231,15 @@ public sealed class NetProbeView : UserControl
         if (!result.Open)
             return;
 
+        if (_results.Any(item => item.Port == result.Port))
+            return;
+
         _empty.Visibility = Visibility.Collapsed;
         _header.Visibility = Visibility.Visible;
-        if (result.Port == 3389)
+        if (result.Service == "RDP")
             _results.Insert(0, result);
-        else if (result.Port == 22)
-            _results.Insert(_results.Count > 0 && _results[0].Port == 3389 ? 1 : 0, result);
+        else if (result.Service == "SSH")
+            _results.Insert(_results.Count > 0 && _results[0].Service == "RDP" ? 1 : 0, result);
         else
             _results.Add(result);
         Render();
@@ -292,23 +318,33 @@ public sealed class NetProbeView : UserControl
             Margin = new Thickness(2, 0, 2, 0),
             FontSize = 13
         };
-        button.Click += (_, _) =>
-        {
-            _preset = id;
-            ShowPreset(id);
-            if (id == "all")
-            {
-                _ports.Text = "1-65535";
-                _timeout.Text = "200";
-                _concurrency.Text = "512";
-            }
-            else if (id == "common")
-            {
-                _ports.Text = "";
-            }
-        };
+        button.Click += (_, _) => ApplyMode(id);
         Motion.Pressable(button);
         return button;
+    }
+
+    private void ApplyMode(string id)
+    {
+        _preset = id;
+        _portLabel.Text = id == "range" ? L.Get("Port_RangeLabel") : L.Get("Port_PortLabel");
+        var showPort = id is "single" or "range";
+        var showTimeout = id is "single" or "range" or "all";
+        var showConcurrency = id is "range" or "all";
+        _portField.Visibility = showPort ? Visibility.Visible : Visibility.Collapsed;
+        _timeoutField.Visibility = showTimeout ? Visibility.Visible : Visibility.Collapsed;
+        _concurrencyField.Visibility = showConcurrency ? Visibility.Visible : Visibility.Collapsed;
+        if (id == "all")
+        {
+            _ports.Text = "1-65535";
+            _timeout.Text = "400";
+            _concurrency.Text = "48";
+        }
+        else if (id == "common")
+        {
+            _ports.Text = "";
+        }
+
+        ShowPreset(id);
     }
 
     private void ShowPreset(string id)
@@ -329,6 +365,14 @@ public sealed class NetProbeView : UserControl
         box.Width = 88;
         box.Margin = new Thickness(0, 0, 8, 0);
         return box;
+    }
+
+    private static StackPanel Field(TextBlock label, TextBox box)
+    {
+        var panel = new StackPanel { Margin = new Thickness(0, 0, 8, 0) };
+        panel.Children.Add(label);
+        panel.Children.Add(box);
+        return panel;
     }
 
     private static StackPanel Row(params UIElement[] children)
