@@ -15,6 +15,8 @@ public static class ServiceProbe
 
     public static readonly byte[] HttpProbe = Encoding.ASCII.GetBytes("GET / HTTP/1.0\r\nHost: localhost\r\n\r\n");
 
+    public static readonly byte[] SshClientBanner = Encoding.ASCII.GetBytes("SSH-2.0-Kutu\r\n");
+
     public static byte[] TlsClientHello { get; } = BuildClientHello();
 
     public static bool IsRdpResponse(byte[]? data, int length = -1)
@@ -71,6 +73,24 @@ public static class ServiceProbe
         if (IsRdpResponse(data, length))
             return "RDP";
         return ClassifyBanner(Decode(data, length));
+    }
+
+    /// <summary>
+    /// Label a service from protocol bytes only. The port number is not an input.
+    /// </summary>
+    public static string? Identify(byte[]? banner, byte[]? rdp = null, byte[]? ssh = null, byte[]? tls = null)
+    {
+        var known = Classify(banner);
+        if (known is not null)
+            return known;
+        if (IsRdpResponse(rdp))
+            return "RDP";
+        var fromSsh = Classify(ssh);
+        if (fromSsh is not null)
+            return fromSsh;
+        if (IsTlsServerHello(tls))
+            return "HTTPS (TLS)";
+        return Classify(tls);
     }
 
     public static string Decode(byte[]? data, int length = -1)

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
+using Kutu.Core.Models;
 using Kutu.Core.Settings;
 using Kutu.Core.Text;
 using Kutu.Sdk.Hosting;
@@ -20,6 +21,7 @@ public sealed class TextExpanderService : IDisposable
     private const int WhMouseLl = 14;
     private readonly IKutuHost _host;
     private readonly ExpanderBuffer _buffer = new();
+    private readonly ExpanderCommit _commit = new();
     private readonly LowLevelKeyboardProc _proc;
     private readonly LowLevelKeyboardProc _mouseProc;
     private IntPtr _hook;
@@ -104,8 +106,13 @@ public sealed class TextExpanderService : IDisposable
                 var down = wParam == (IntPtr)WmKeyDown || wParam == (IntPtr)WmSysKeyDown;
                 TrackModifier(data.VkCode, down);
                 NoteFocus();
+                var swallow = false;
                 if (down && wParam == (IntPtr)WmKeyDown && _host.Settings.TextExpanderEnabled && !IsOwnProcess())
-                    HandleKey(data.VkCode, data.ScanCode);
+                    swallow = HandleKey(data.VkCode, data.ScanCode, down: true);
+                else if (!down && wParam == (IntPtr)WmKeyUp && _host.Settings.TextExpanderEnabled && !IsOwnProcess())
+                    swallow = HandleKey(data.VkCode, data.ScanCode, down: false);
+                if (swallow)
+                    return (IntPtr)1;
             }
 
             return CallNextHookEx(_hook, nCode, wParam, lParam);
@@ -120,6 +127,7 @@ public sealed class TextExpanderService : IDisposable
     {
         if (nCode >= 0 && (wParam == (IntPtr)0x0201 || wParam == (IntPtr)0x0204 || wParam == (IntPtr)0x0207 || wParam == (IntPtr)0x020B))
         {
+            _commit.Cancel();
             _buffer.MouseClick();
             NoteFocus();
         }
@@ -133,6 +141,7 @@ public sealed class TextExpanderService : IDisposable
         if (hwnd == _foreground)
             return;
         _foreground = hwnd;
+        _commit.Cancel();
         _buffer.FocusChanged();
         ReleaseModifiers();
     }
@@ -156,42 +165,63 @@ public sealed class TextExpanderService : IDisposable
             _win = down;
     }
 
-    private void HandleKey(uint vk, uint scan)
+    private bool HandleKey(uint vk, uint scan, bool down)
     {
+        if (!down)
+        {
+            if (_commit.KeyUp(vk, out var snippet, out var delete) && snippet is not null)
+                Schedule(snippet, delete);
+            return false;
+        }
+
+        if (_commit.HasPending)
+        {
+            _commit.KeyDown(vk, null);
+            if (_commit.SwallowRepeat)
+                return true;
+            if (_commit.Flush(out var early, out var earlyDelete) && early is not null)
+                Schedule(early, earlyDelete);
+        }
+
         if (vk == 0x08)
         {
+            _commit.Cancel();
             _buffer.Backspace();
-            return;
+            return false;
         }
 
         if (vk is 0x10 or 0xA0 or 0xA1 or 0x11 or 0xA2 or 0xA3 or 0x12 or 0xA4 or 0xA5 or 0x5B or 0x5C)
-            return;
+            return false;
 
         if (vk is 0x0D)
         {
+            _commit.Cancel();
             _buffer.Enter();
             ReleaseModifiers();
-            return;
+            return false;
         }
 
         if (vk is 0x09)
         {
+            _commit.Cancel();
             _buffer.Tab();
             ReleaseModifiers();
-            return;
+            return false;
         }
 
         if (vk is 0x1B)
         {
+            _commit.Cancel();
             _buffer.Escape();
             ReleaseModifiers();
-            return;
+            return false;
         }
 
         if (vk is 0x25 or 0x26 or 0x27 or 0x28 or 0x24 or 0x23)
         {
+            _commit.Cancel();
             _buffer.Clear();
-            return;
+            return false;
         }
 
         var text = ToChar(vk, scan);
@@ -199,11 +229,18 @@ public sealed class TextExpanderService : IDisposable
             text = FallbackChar(vk);
         var match = _buffer.Type(text, _host.Settings.Snippets, _win, _ctrl, _alt);
         LogTrigger(text, match?.Trigger);
-        if (match is null || string.IsNullOrEmpty(match.Body) || string.IsNullOrEmpty(match.Trigger))
+        _commit.KeyDown(vk, match);
+        if (match is not null)
+            _buffer.Clear();
+        return false;
+    }
+
+    private void Schedule(Snippet snippet, int delete)
+    {
+        if (string.IsNullOrEmpty(snippet.Body) || delete <= 0)
             return;
 
-        var body = match.Body;
-        var delete = match.Trigger.Trim().Length;
+        var body = snippet.Body;
         _buffer.Clear();
         DebugLog($"scheduled delete={delete}");
         KeyInjector.Run(() => ReplaceOnWorker(body, delete));

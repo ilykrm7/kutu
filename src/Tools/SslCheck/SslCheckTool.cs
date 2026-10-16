@@ -1,4 +1,5 @@
 using System.Net.Security;
+using Kutu.Core.Network;
 using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -106,12 +107,12 @@ public sealed class SslCheckView : UserControl
         var days = (int)Math.Floor((cert.NotAfter.ToUniversalTime() - DateTime.UtcNow).TotalDays);
         var chainText = string.Join("  ←  ", chain.ChainElements.Cast<X509ChainElement>().Select(item => item.Certificate.Subject));
         return new SslReport(
-            ssl.SslProtocol.ToString(),
+            CertificateText.Protocol(ssl.SslProtocol.ToString()),
             cert.Subject,
             cert.Issuer,
             names.Replace("\r", " ").Replace("\n", " "),
-            cert.NotBefore.ToString("u"),
-            cert.NotAfter.ToString("u"),
+            CertificateText.Stamp(cert.NotBefore),
+            CertificateText.Stamp(cert.NotAfter),
             days < 0 ? days + " · " + "expired" : days.ToString(),
             chainText);
     }

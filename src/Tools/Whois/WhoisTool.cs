@@ -109,14 +109,36 @@ public sealed class WhoisView : UserControl
 
         if (explicitRequest)
             _status.Text = L.Get("Common_Working");
-        try
+        using var limit = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        limit.CancelAfter(TimeSpan.FromSeconds(14));
+        var report = new DomainFetch();
+        var collect = report.RunAsync(domain, limit.Token);
+        var finished = await Task.WhenAny(collect, Task.Delay(TimeSpan.FromSeconds(14), cancellationToken));
+        if (cancellationToken.IsCancellationRequested || !string.Equals(_domain.Text, typed, StringComparison.Ordinal))
+            return;
+        if (finished != collect)
+            report.MarkTimeout();
+        else
         {
-            var summary = await RdapClient.LookupAsync(domain, cancellationToken);
-            var dns = await DnsLookup.QueryAsync(domain, cancellationToken);
-            if (cancellationToken.IsCancellationRequested || !string.Equals(_domain.Text, typed, StringComparison.Ordinal))
-                return;
-            _status.Text = "";
-            _result.Children.Clear();
+            try
+            {
+                await collect;
+            }
+            catch (OperationCanceledException)
+            {
+                if (cancellationToken.IsCancellationRequested)
+                    return;
+                report.MarkTimeout();
+            }
+        }
+
+        if (!string.Equals(_domain.Text, typed, StringComparison.Ordinal))
+            return;
+
+        _result.Children.Clear();
+        if (report.Rdap is not null)
+        {
+            var summary = report.Rdap;
             AddCard(
             [
                 (L.Get("Whois_Domain"), string.IsNullOrWhiteSpace(summary.Domain) ? domain : summary.Domain),
@@ -127,45 +149,62 @@ public sealed class WhoisView : UserControl
                 (L.Get("Whois_Status"), summary.Status.Count == 0 ? L.Get("Common_None") : string.Join(", ", summary.Status)),
                 (L.Get("Whois_Nameservers"), summary.NameServers.Count == 0 ? L.Get("Common_None") : string.Join("\n", summary.NameServers))
             ]);
+        }
 
-            var dnsBody = new StackPanel();
-            dnsBody.Children.Add(Chrome.Heading(L.Get("Whois_Dns")));
-            if (dns.Count == 0)
+        var dnsBody = new StackPanel();
+        dnsBody.Children.Add(Chrome.Heading(L.Get("Whois_Dns")));
+        if (report.Dns.Count == 0)
+        {
+            var dnsFailed = report.DnsKind is "dns" or "timeout" or "failed" or "rdap";
+            dnsBody.Children.Add(Chrome.Hint(dnsFailed ? L.Get("Whois_DnsFailed") : L.Get("Whois_Empty")));
+        }
+        else
+        {
+            foreach (var record in report.Dns)
             {
-                dnsBody.Children.Add(Chrome.Hint(L.Get("Whois_Empty")));
-            }
-            else
-            {
-                foreach (var record in dns)
+                dnsBody.Children.Add(new TextBlock
                 {
-                    dnsBody.Children.Add(new TextBlock
-                    {
-                        Text = $"{record.Type}   {record.Value}",
-                        Foreground = Chrome.Text,
-                        FontFamily = new System.Windows.Media.FontFamily("Cascadia Mono, Consolas"),
-                        Margin = new Thickness(0, 2, 0, 2),
-                        TextWrapping = TextWrapping.Wrap
-                    });
-                }
+                    Text = $"{record.Type}   {record.Value}",
+                    Foreground = Chrome.Text,
+                    FontFamily = new System.Windows.Media.FontFamily("Cascadia Mono, Consolas"),
+                    Margin = new Thickness(0, 2, 0, 2),
+                    TextWrapping = TextWrapping.Wrap
+                });
             }
+        }
 
-            _result.Children.Add(Chrome.Card(dnsBody));
-        }
-        catch (OperationCanceledException)
-        {
-            // A newer keystroke replaced this query.
-        }
-        catch (RdapNotFoundException)
-        {
-            if (string.Equals(_domain.Text, typed, StringComparison.Ordinal))
-                _status.Text = L.Get("Whois_Empty");
-        }
-        catch (Exception ex)
-        {
-            if (string.Equals(_domain.Text, typed, StringComparison.Ordinal))
-                _status.Text = ex.Message;
-        }
+        _result.Children.Add(Chrome.Card(dnsBody));
+        _status.Text = StatusText(report);
     }
+
+    private static string StatusText(DomainFetch report)
+    {
+        var parts = new List<string>();
+        if (report.Rdap is null && report.RdapKind == "empty")
+            parts.Add(report.Dns.Count == 0 ? L.Get("Whois_Empty") : L.Get("Whois_RdapMissing"));
+        else if (report.Rdap is null && report.RdapKind is not ("none" or "cancelled"))
+            parts.Add(Friendly(report.RdapKind, rdap: true));
+        if (report.DnsKind is "dns" or "timeout" or "failed")
+            parts.Add(Friendly(report.DnsKind, rdap: false));
+        if (report.TimedOut && parts.Count == 0)
+            parts.Add(L.Get("Whois_Timeout"));
+        var incomplete = report.TimedOut
+            || report.RdapKind is "timeout" or "failed" or "rdap" or "dns"
+            || report.DnsKind is "timeout" or "failed" or "dns" or "rdap";
+        if (incomplete && (report.Rdap is not null || report.Dns.Count > 0))
+            parts.Add(L.Get("Whois_Partial"));
+        return string.Join(" ", parts);
+    }
+
+    private static string Friendly(string kind, bool rdap) => kind switch
+    {
+        "timeout" => L.Get("Whois_Timeout"),
+        "dns" => L.Get("Whois_DnsFailed"),
+        "rdap" => L.Get("Whois_RdapFailed"),
+        "empty" => L.Get("Whois_Empty"),
+        "cancelled" => "",
+        _ => rdap ? L.Get("Whois_RdapFailed") : L.Get("Whois_Failed")
+    };
 
     private void AddCard(IEnumerable<(string Label, string Value)> rows)
     {
@@ -190,44 +229,185 @@ public sealed class WhoisView : UserControl
     private static string Blank(string? value) => string.IsNullOrWhiteSpace(value) ? L.Get("Common_None") : value;
 }
 
+public sealed class DomainFetch
+{
+    public RdapSummary? Rdap { get; private set; }
+
+    public string RdapKind { get; private set; } = "none";
+
+    public List<DnsRecord> Dns { get; } = [];
+
+    public string DnsKind { get; private set; } = "none";
+
+    public bool TimedOut { get; private set; }
+
+    public void MarkTimeout()
+    {
+        TimedOut = true;
+        if (Rdap is null && RdapKind is "none")
+            RdapKind = "timeout";
+        if (Dns.Count == 0 && DnsKind is "none")
+            DnsKind = "timeout";
+    }
+
+    public async Task RunAsync(string domain, CancellationToken cancellationToken)
+    {
+        try
+        {
+            Rdap = await RdapClient.LookupAsync(domain, cancellationToken);
+            RdapKind = "none";
+        }
+        catch (OperationCanceledException)
+        {
+            if (!cancellationToken.IsCancellationRequested)
+                RdapKind = "timeout";
+            else
+                RdapKind = "cancelled";
+        }
+        catch (RdapNotFoundException)
+        {
+            RdapKind = "empty";
+        }
+        catch (Exception ex)
+        {
+            RdapKind = LookupFailure.Kind(ex);
+        }
+
+        if (cancellationToken.IsCancellationRequested)
+            return;
+
+        try
+        {
+            var dns = await DnsLookup.QueryAsync(domain, cancellationToken);
+            Dns.AddRange(dns.Records);
+            DnsKind = dns.Partial ? "dns" : "none";
+        }
+        catch (OperationCanceledException)
+        {
+            DnsKind = cancellationToken.IsCancellationRequested ? "cancelled" : "timeout";
+        }
+        catch (Exception ex)
+        {
+            DnsKind = LookupFailure.Kind(ex);
+            if (DnsKind == "cancelled")
+                DnsKind = "dns";
+        }
+    }
+}
+
 public static class RdapClient
 {
     public static async Task<RdapSummary> LookupAsync(string domain, CancellationToken cancellationToken = default)
     {
         TlsPolicy.Enable();
-        using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
-        http.DefaultRequestHeaders.UserAgent.ParseAdd("Kutu/1.0 (+https://github.com/ilykrm7/kutu)");
-        using var request = new HttpRequestMessage(HttpMethod.Get, $"https://rdap.org/domain/{Uri.EscapeDataString(domain)}");
-        using var response = await http.SendAsync(request, cancellationToken);
-        if (response.StatusCode == HttpStatusCode.NotFound)
+        using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(8) };
+        http.DefaultRequestHeaders.UserAgent.ParseAdd("Kutu/1.1.3 (+https://github.com/ilykrm7/kutu)");
+        http.DefaultRequestHeaders.Accept.ParseAdd("application/rdap+json");
+        Exception? last = null;
+        var notFound = 0;
+        foreach (var url in RdapUrls.For(domain))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                using var request = new HttpRequestMessage(HttpMethod.Get, url);
+                using var limit = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                limit.CancelAfter(TimeSpan.FromSeconds(7));
+                var send = http.SendAsync(request, limit.Token);
+                var finished = await Task.WhenAny(send, Task.Delay(TimeSpan.FromSeconds(7), cancellationToken));
+                if (finished != send)
+                    throw new TimeoutException();
+                using var response = await send;
+                if (response.StatusCode == HttpStatusCode.NotFound)
+                {
+                    notFound++;
+                    continue;
+                }
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    last = new HttpRequestException(((int)response.StatusCode).ToString());
+                    continue;
+                }
+
+                var json = await response.Content.ReadAsStringAsync();
+                return RdapParser.Parse(json);
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                last = new TimeoutException();
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                last = ex;
+            }
+        }
+
+        if (notFound > 0 && last is null)
             throw new RdapNotFoundException();
-        response.EnsureSuccessStatusCode();
-        var json = await response.Content.ReadAsStringAsync();
-        return RdapParser.Parse(json);
+        throw last ?? new TimeoutException();
     }
 }
 
 public static class DnsLookup
 {
-    public static async Task<IReadOnlyList<DnsRecord>> QueryAsync(string domain, CancellationToken cancellationToken = default)
+    public static async Task<DnsQueryResult> QueryAsync(string domain, CancellationToken cancellationToken = default)
     {
-        var client = new LookupClient(new LookupClientOptions
+        var servers = PublicDns.IPv4.Select(IPAddress.Parse).ToArray();
+        var client = new LookupClient(new LookupClientOptions(servers)
         {
-            Timeout = TimeSpan.FromSeconds(4),
-            Retries = 1
+            Timeout = TimeSpan.FromSeconds(2),
+            Retries = 0,
+            UseCache = false,
+            ThrowDnsErrors = false,
+            UseRandomNameServer = false,
+            ContinueOnDnsError = true
         });
         var records = new List<DnsRecord>();
+        var failed = 0;
         foreach (var type in new[] { QueryType.A, QueryType.AAAA, QueryType.CNAME, QueryType.MX, QueryType.NS, QueryType.TXT })
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var response = await client.QueryAsync(domain, type, cancellationToken: cancellationToken);
-            foreach (var answer in response.Answers)
+            var got = await QueryTypeAsync(client, domain, type, cancellationToken);
+            if (got is null)
             {
-                records.Add(new DnsRecord(type.ToString(), Format(answer)));
+                failed++;
+                continue;
             }
+
+            foreach (var answer in got.Answers)
+                records.Add(new DnsRecord(type.ToString(), Format(answer)));
         }
 
-        return records;
+        if (records.Count == 0 && failed > 0)
+            throw new TimeoutException();
+        return new DnsQueryResult(records, failed > 0);
+    }
+
+    private static async Task<IDnsQueryResponse?> QueryTypeAsync(LookupClient client, string domain, QueryType type, CancellationToken cancellationToken)
+    {
+        using var limit = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        limit.CancelAfter(TimeSpan.FromSeconds(3));
+        try
+        {
+            var work = client.QueryAsync(domain, type, cancellationToken: limit.Token);
+            var finished = await Task.WhenAny(work, Task.Delay(TimeSpan.FromSeconds(3), cancellationToken));
+            if (finished != work)
+                return null;
+            return await work;
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return null;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private static string Format(DnsResourceRecord record) => record switch
@@ -241,6 +421,8 @@ public static class DnsLookup
         _ => record.ToString()
     };
 }
+
+public readonly record struct DnsQueryResult(IReadOnlyList<DnsRecord> Records, bool Partial);
 
 public sealed class RdapNotFoundException : Exception
 {

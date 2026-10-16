@@ -280,6 +280,67 @@ public class V11LogicTests
         Assert.False(ServiceProbe.IsRdpResponse(Encoding.ASCII.GetBytes("HTTP/1.1 200 OK")));
         Assert.Equal(0x16, ServiceProbe.TlsClientHello[0]);
         Assert.Equal(ServiceProbe.TlsClientHello.Length - 5, (ServiceProbe.TlsClientHello[3] << 8) | ServiceProbe.TlsClientHello[4]);
+
+        byte[] confirmOnly =
+        [
+            0x03, 0x00, 0x00, 0x13, 0x0e, 0xd0, 0x00, 0x00, 0x12, 0x34, 0x00,
+            0x02, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00
+        ];
+        Assert.Equal("RDP", ServiceProbe.Identify([], confirmOnly));
+        Assert.Equal("SSH", ServiceProbe.Identify(Encoding.ASCII.GetBytes("SSH-2.0-OpenSSH_9.0")));
+        Assert.Equal("SSH", ServiceProbe.Identify([], null, Encoding.ASCII.GetBytes("SSH-2.0-OpenSSH_9.0")));
+    }
+
+    [Fact]
+    public void Port_scan_dedupes_and_retries_only_unanswered_ports()
+    {
+        var table = new OpenPortTable();
+        Assert.True(table.Add(139));
+        Assert.False(table.Add(139));
+        Assert.True(table.Add(1453));
+        Assert.Equal(2, table.Count);
+        Assert.Equal([139, 1453], table.Ports);
+        Assert.True(PortPlan.TryBuild("common", "", out var common, out _));
+        Assert.Equal(common.Length, common.Distinct().Count());
+        Assert.Equal(1, common.Count(port => port == 139));
+
+        Assert.Equal(64, PortScanBudget.Concurrency(512));
+        Assert.Equal(48, PortScanBudget.Concurrency(48));
+        Assert.Equal(250, PortScanBudget.Timeout(200));
+        Assert.Equal(400, PortScanBudget.Timeout(400));
+        Assert.True(PortScanBudget.ShouldRetry(PortAnswer.Unanswered, 0));
+        Assert.False(PortScanBudget.ShouldRetry(PortAnswer.Unanswered, 1));
+        Assert.False(PortScanBudget.ShouldRetry(PortAnswer.Refused, 0));
+        Assert.False(PortScanBudget.ShouldRetry(PortAnswer.Open, 0));
+        Assert.True(PortScanBudget.RetryTimeout(400) >= 800);
+    }
+
+    [Fact]
+    public void Certificate_text_uses_tls_names_and_local_dates()
+    {
+        Assert.Equal("TLS 1.3", CertificateText.Protocol("Tls13"));
+        Assert.Equal("TLS 1.2", CertificateText.Protocol("Tls12"));
+        Assert.Equal("TLS 1.0", CertificateText.Protocol("Tls"));
+        Assert.Equal("05.03.2026 15:04", CertificateText.Stamp(new DateTime(2026, 3, 5, 15, 4, 0, DateTimeKind.Unspecified)));
+        Assert.Matches(@"^\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}$", CertificateText.Stamp(DateTime.UtcNow));
+        Assert.DoesNotContain("Z", CertificateText.Stamp(DateTime.UtcNow));
+    }
+
+    [Fact]
+    public void Domain_lookup_uses_ipv4_resolvers_and_hides_raw_dns_errors()
+    {
+        Assert.Equal(["1.1.1.1", "1.0.0.1", "8.8.8.8", "8.8.4.4"], PublicDns.IPv4);
+        Assert.All(PublicDns.IPv4, ip => Assert.DoesNotContain(":", ip));
+        var urls = RdapUrls.For("kerimeksi.com");
+        Assert.Contains("https://rdap.org/domain/kerimeksi.com", urls);
+        Assert.Contains("https://rdap.verisign.com/com/v1/domain/kerimeksi.com", urls);
+        Assert.Contains("https://www.rdap.net/domain/kerimeksi.com", urls);
+        Assert.True(urls.Count >= 2);
+
+        var raw = "Query 4324 => kerimeksi.com IN AAAA on [2a02:8108:0:1::1]:53 timed out or is a transient error";
+        Assert.Equal("dns", LookupFailure.Kind(new InvalidOperationException(raw)));
+        Assert.Equal("timeout", LookupFailure.Kind(new TimeoutException("The operation has timed out.")));
+        Assert.DoesNotContain("2a02", LookupFailure.Kind(new InvalidOperationException(raw)));
     }
 
     [Fact]

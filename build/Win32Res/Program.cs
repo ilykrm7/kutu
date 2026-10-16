@@ -197,12 +197,12 @@ static byte[] VersionInfo()
     {
         ("CompanyName", "Kerim Ekşi"),
         ("FileDescription", "Kutu — Windows için küçük araçlar."),
-        ("FileVersion", "1.1.2.0"),
+        ("FileVersion", "1.1.3.0"),
         ("InternalName", "Kutu.exe"),
         ("LegalCopyright", "Copyright © 2026 Kerim Ekşi"),
         ("OriginalFilename", "Kutu.exe"),
         ("ProductName", "Kutu"),
-        ("ProductVersion", "1.1.2")
+        ("ProductVersion", "1.1.3")
     };
 
     using var stream = new MemoryStream();

@@ -32,8 +32,8 @@ public static class KeyStrokePlan
         var strokes = new KeyStroke[count * 2];
         for (var i = 0; i < count; i++)
         {
-            strokes[i * 2] = new KeyStroke { Vk = 0x08, Extra = ExpanderHook.InjectionMarker };
-            strokes[(i * 2) + 1] = new KeyStroke { Vk = 0x08, Flags = KeyUp, Extra = ExpanderHook.InjectionMarker };
+            strokes[i * 2] = new KeyStroke { Vk = 0x08, Scan = 0x0E, Extra = ExpanderHook.InjectionMarker };
+            strokes[(i * 2) + 1] = new KeyStroke { Vk = 0x08, Scan = 0x0E, Flags = KeyUp, Extra = ExpanderHook.InjectionMarker };
         }
 
         return strokes;

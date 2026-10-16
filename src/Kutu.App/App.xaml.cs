@@ -182,7 +182,7 @@ public partial class App : Application
         "color-picker" => _host!.StartColorPicker,
         "clipboard" => _host!.ShowClipboardPopup,
         "translate" => _host!.ShowTranslatePopup,
-        "screen-translate" => () => Observe(ScreenTranslateController.StartAsync(_host!)),
+        "screen-translate" => () => Observe(ScreenTranslateController.ToggleAsync(_host!)),
         "screen-record" => () => Observe(ScreenRecordController.ToggleAsync(_host!)),
         "ocr" => () =>
         {

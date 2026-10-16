@@ -141,6 +141,12 @@
   <data name="Whois_Nameservers" xml:space="preserve"><value>Name servers</value></data>
   <data name="Whois_Dns" xml:space="preserve"><value>DNS records</value></data>
   <data name="Whois_Empty" xml:space="preserve"><value>No result.</value></data>
+  <data name="Whois_Timeout" xml:space="preserve"><value>The lookup timed out.</value></data>
+  <data name="Whois_DnsFailed" xml:space="preserve"><value>The DNS lookup did not finish.</value></data>
+  <data name="Whois_RdapFailed" xml:space="preserve"><value>The RDAP record could not be loaded.</value></data>
+  <data name="Whois_RdapMissing" xml:space="preserve"><value>No RDAP record.</value></data>
+  <data name="Whois_Failed" xml:space="preserve"><value>The lookup did not finish.</value></data>
+  <data name="Whois_Partial" xml:space="preserve"><value>The records shown may be incomplete.</value></data>
   <data name="Ip_Address" xml:space="preserve"><value>IP address</value></data>
   <data name="Ip_Score" xml:space="preserve"><value>Reputation score</value></data>
   <data name="Ip_Reports" xml:space="preserve"><value>Reports</value></data>
@@ -238,6 +244,7 @@
   <data name="Action_ReadClip" xml:space="preserve"><value>From clipboard</value></data>
   <data name="Action_OpenBrowser" xml:space="preserve"><value>Open in browser</value></data>
   <data name="Action_CopyAll" xml:space="preserve"><value>Copy all</value></data>
+  <data name="Screen_CloseHint" xml:space="preserve"><value>Press Esc to close</value></data>
   <data name="Action_Stop" xml:space="preserve"><value>Stop</value></data>
   <data name="Action_FullScreen" xml:space="preserve"><value>Full screen</value></data>
   <data name="Qr_Text" xml:space="preserve"><value>Text</value></data>
@@ -262,6 +269,10 @@
   <data name="Port_Closed" xml:space="preserve"><value>Closed</value></data>
   <data name="Port_Invalid" xml:space="preserve"><value>The port or range is not valid.</value></data>
   <data name="Port_None" xml:space="preserve"><value>No open ports found</value></data>
+  <data name="Port_PortLabel" xml:space="preserve"><value>Port</value></data>
+  <data name="Port_RangeLabel" xml:space="preserve"><value>Range</value></data>
+  <data name="Port_TimeoutLabel" xml:space="preserve"><value>Timeout (ms)</value></data>
+  <data name="Port_ConcurrencyLabel" xml:space="preserve"><value>Concurrency</value></data>
   <data name="Bulk_Paste" xml:space="preserve"><value>One IP per line, or separate them with commas</value></data>
   <data name="Bulk_Load" xml:space="preserve"><value>Load txt</value></data>
   <data name="Bulk_Mine" xml:space="preserve"><value>My IP</value></data>

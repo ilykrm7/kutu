@@ -1,7 +1,9 @@
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Kutu.Core.Geometry;
@@ -36,6 +38,38 @@ public sealed class ScreenTranslateTool : IKutuTool
 
 public static class ScreenTranslateController
 {
+    private const int EscHotkeyId = 0x4B11;
+    private const int WmHotkey = 0x0312;
+    private const int WmKeyDown = 0x0100;
+    private const int WmSysKeyDown = 0x0104;
+    private static Window? _overlay;
+
+    public static bool OverlayOpen => _overlay is { IsVisible: true };
+
+    public static Task ToggleAsync(IKutuHost host)
+    {
+        if (OverlayOpen)
+        {
+            CloseOverlay();
+            return Task.CompletedTask;
+        }
+
+        return StartAsync(host);
+    }
+
+    public static void CloseOverlay()
+    {
+        var window = _overlay;
+        if (window is null)
+            return;
+
+        _overlay = null;
+        if (window.Dispatcher.CheckAccess())
+            window.Close();
+        else
+            window.Dispatcher.Invoke(window.Close);
+    }
+
     public static async Task StartAsync(IKutuHost host)
     {
         host.HideForCapture();
@@ -163,8 +197,27 @@ public static class ScreenTranslateController
                 // The clipboard can be busy.
             }
         });
+        var close = Chrome.Secondary("", SymbolRegular.Dismiss24, (_, _) => CloseOverlay());
+        close.Padding = new Thickness(8, 8, 8, 8);
+        close.ToolTip = L.Get("Action_Close");
+        var hint = new Border
+        {
+            Background = new SolidColorBrush(Color.FromArgb(0xE8, 0x10, 0x18, 0x28)),
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(10, 6, 10, 6),
+            Margin = new Thickness(0, 0, 8, 0),
+            VerticalAlignment = VerticalAlignment.Center,
+            Child = new TextBlock
+            {
+                Text = L.Get("Screen_CloseHint"),
+                Foreground = Brushes.White,
+                FontSize = 13
+            }
+        };
         var bar = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(12) };
         bar.Children.Add(button);
+        bar.Children.Add(close);
+        bar.Children.Add(hint);
         var root = new Grid();
         root.Children.Add(FrozenImage(pick));
         root.Children.Add(canvas);
@@ -180,17 +233,82 @@ public static class ScreenTranslateController
             Top = pick.DipY,
             Width = dipWidth,
             Height = dipHeight,
-            Content = root
+            Content = root,
+            Focusable = true,
+            ShowActivated = true
         };
-        window.KeyDown += (_, e) =>
+        window.PreviewKeyDown += (_, e) =>
         {
-            if (e.Key == Key.Escape)
-                window.Close();
+            if (e.Key != Key.Escape)
+                return;
+            e.Handled = true;
+            window.Close();
         };
+        window.SourceInitialized += (_, _) => ArmEscape(window);
+        window.ContentRendered += (_, _) => FocusOverlay(window);
+        window.Closed += (_, _) =>
+        {
+            ReleaseEscape(window);
+            if (ReferenceEquals(_overlay, window))
+                _overlay = null;
+        };
+        CloseOverlay();
+        _overlay = window;
         window.Show();
+        FocusOverlay(window);
+    }
+
+    private static void ArmEscape(Window window)
+    {
+        var hwnd = new WindowInteropHelper(window).Handle;
+        if (hwnd == IntPtr.Zero)
+            return;
+
+        var source = HwndSource.FromHwnd(hwnd);
+        source?.AddHook((IntPtr _, int msg, IntPtr wParam, IntPtr __, ref bool handled) =>
+        {
+            var escape = (msg == WmKeyDown || msg == WmSysKeyDown) && wParam == (IntPtr)0x1B;
+            var hotkey = msg == WmHotkey && wParam.ToInt32() == EscHotkeyId;
+            if (!escape && !hotkey)
+                return IntPtr.Zero;
+
+            handled = true;
+            window.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (window.IsLoaded)
+                    window.Close();
+            }));
+            return IntPtr.Zero;
+        });
+        RegisterHotKey(hwnd, EscHotkeyId, 0x4000, 0x1B);
+        FocusOverlay(window);
+    }
+
+    private static void ReleaseEscape(Window window)
+    {
+        var hwnd = new WindowInteropHelper(window).Handle;
+        if (hwnd != IntPtr.Zero)
+            UnregisterHotKey(hwnd, EscHotkeyId);
+    }
+
+    private static void FocusOverlay(Window window)
+    {
         window.Activate();
         window.Focus();
+        Keyboard.Focus(window);
+        var hwnd = new WindowInteropHelper(window).Handle;
+        if (hwnd != IntPtr.Zero)
+            SetForegroundWindow(hwnd);
     }
+
+    [DllImport("user32.dll")]
+    private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint modifiers, uint vk);
+
+    [DllImport("user32.dll")]
+    private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 
     private static (double X, double Y, double Width) TranslationBox(RegionPick pick, OcrLineBox line, double dipWidth, double dipHeight)
     {
