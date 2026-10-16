@@ -254,6 +254,8 @@ public class CoreLogicTests
         var service = new SettingsService(new TestProtector(), path);
         service.Current.DeepLKey = "secret-key";
         service.Current.AbuseIpDbKey = "abuse";
+        service.Current.ScamalyticsUser = "scam-user";
+        service.Current.ScamalyticsKey = "scam-secret";
         service.Current.VirusTotalKey = "vt-secret";
         service.Current.UploadApiKey = "upload";
         service.Current.Snippets.Add(new Snippet { Trigger = ":imza", Body = "Kutu" });
@@ -261,12 +263,16 @@ public class CoreLogicTests
 
         var raw = File.ReadAllText(path);
         Assert.DoesNotContain("secret-key", raw);
+        Assert.DoesNotContain("scam-secret", raw);
+        Assert.DoesNotContain("scam-user", raw);
         Assert.Contains("enc:", raw);
 
         var loaded = new SettingsService(new TestProtector(), path);
         await loaded.LoadAsync();
         Assert.Equal("secret-key", loaded.Current.DeepLKey);
         Assert.Equal("abuse", loaded.Current.AbuseIpDbKey);
+        Assert.Equal("scam-user", loaded.Current.ScamalyticsUser);
+        Assert.Equal("scam-secret", loaded.Current.ScamalyticsKey);
         Assert.Equal("vt-secret", loaded.Current.VirusTotalKey);
         Assert.Equal("upload", loaded.Current.UploadApiKey);
         Assert.Equal(":imza", loaded.Current.Snippets[0].Trigger);

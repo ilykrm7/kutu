@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using Kutu.Core.Geometry;
 using Kutu.Core.Security;
 using Kutu.Core.Hotkeys;
@@ -359,10 +360,14 @@ public class V11LogicTests
     {
         var csv = BulkCsv.Write(
         [
-            new BulkIpExport("8.8.8.8", "6", "US", "City, X", "ISP", "15169", "0", "no", "https://example.test/a,b")
+            new BulkIpExport("8.8.8.8", "6", "US", "City, X", "ISP", "15169", "0", "no", "87", "high", "https://example.test/a,b")
         ]);
+        Assert.StartsWith("ip,risk,country,city,isp,asn,dnsbl,tor,scamalytics_score,scamalytics_risk,symantec_url", csv);
+        Assert.Contains(",87,high,", csv);
         Assert.Contains("\"City, X\"", csv);
         Assert.Contains("\"https://example.test/a,b\"", csv);
+        Assert.Equal("87 yüksek", ScamalyticsApi.Cell(87, "high"));
+        Assert.Equal("", ScamalyticsApi.Cell(null, null));
         Assert.True(ReleaseVersion.IsNewer("v1.2.0", new Version(1, 1, 0)));
         Assert.True(ReleaseVersion.IsNewer("v1.1.1", new Version(1, 1, 0)));
         Assert.False(ReleaseVersion.IsNewer("v1.1.1", new Version(1, 1, 1)));
@@ -371,6 +376,10 @@ public class V11LogicTests
         Assert.True(ReleaseVersion.IsNewer("v1.1.2", new Version(1, 1, 0)));
         Assert.True(ReleaseVersion.IsNewer("v1.1.2", new Version(1, 1, 1)));
         Assert.False(ReleaseVersion.IsNewer("v1.1.2", new Version(1, 1, 2)));
+        Assert.True(ReleaseVersion.IsNewer("v1.1.3", new Version(1, 1, 0)));
+        Assert.True(ReleaseVersion.IsNewer("v1.1.3", new Version(1, 1, 1)));
+        Assert.True(ReleaseVersion.IsNewer("v1.1.3", new Version(1, 1, 2)));
+        Assert.False(ReleaseVersion.IsNewer("v1.1.3", new Version(1, 1, 3)));
         var patched = ReleaseVersion.ParseLatest("""
             {"tag_name":"v1.1.2","assets":[{"name":"Kutu.zip","browser_download_url":"https://example.test/Kutu.zip"},{"name":"Kutu.exe","browser_download_url":"https://example.test/Kutu.exe"},{"name":"Kutu.exe.sha256","browser_download_url":"https://example.test/Kutu.exe.sha256"}]}
             """);
@@ -385,6 +394,53 @@ public class V11LogicTests
         Assert.NotNull(release);
         Assert.Equal("v1.2.0", release!.Version);
         Assert.Equal("https://example.test/Kutu.exe", ReleaseVersion.Find(release.Assets, "Kutu.exe")!.Url);
+        var current = ReleaseVersion.ParseLatest("""
+            {"tag_name":"v1.1.3","assets":[{"name":"Kutu.zip","browser_download_url":"https://example.test/Kutu.zip"},{"name":"Kutu.exe","browser_download_url":"https://example.test/v113/Kutu.exe"},{"name":"Kutu.exe.sha256","browser_download_url":"https://example.test/v113/Kutu.exe.sha256"}]}
+            """);
+        Assert.Equal("v1.1.3", current!.Version);
+        Assert.Equal("https://example.test/v113/Kutu.exe", ReleaseVersion.Find(current.Assets, "Kutu.exe")!.Url);
+        Assert.Equal("https://example.test/v113/Kutu.exe.sha256", ReleaseVersion.Find(current.Assets, "Kutu.exe.sha256")!.Url);
+    }
+
+    [Fact]
+    public void Scamalytics_reads_the_official_score_and_ignores_the_website()
+    {
+        Assert.False(ScamalyticsApi.HasCredentials("", "key"));
+        Assert.False(ScamalyticsApi.HasCredentials("user", " "));
+        Assert.False(ScamalyticsApi.HasCredentials(null, null));
+        Assert.True(ScamalyticsApi.HasCredentials("kerim", "secret"));
+        var url = ScamalyticsApi.Url("kerim", "secret key", "8.8.8.8");
+        Assert.StartsWith("https://api12.scamalytics.com/v3/kerim?key=secret%20key&ip=8.8.8.8", url);
+        Assert.DoesNotContain("scamalytics.com/ip", url);
+        using var doc = JsonDocument.Parse("""
+            {"scamalytics":{"status":"ok","scamalytics_score":87,"scamalytics_risk":"high","scamalytics_proxy":{"is_datacenter":true,"is_vpn":false,"is_resproxy":null},"scamalytics_url":"https://scamalytics.com/ip/8.8.8.8"}}
+            """);
+        var reading = ScamalyticsApi.Read(doc.RootElement);
+        Assert.True(reading.Ok);
+        Assert.Equal(87, reading.Score);
+        Assert.Equal("high", reading.Risk);
+        Assert.True(reading.Datacenter);
+        Assert.False(reading.Vpn);
+        Assert.Equal("", reading.Error);
+        Assert.True(ScamalyticsApi.IsRisk(reading.Score, reading.Risk));
+        Assert.Equal("yüksek", ScamalyticsApi.RiskLabel("high"));
+        Assert.Equal("çok yüksek", ScamalyticsApi.RiskLabel("very high"));
+        Assert.Equal("düşük", ScamalyticsApi.RiskLabel("low"));
+        Assert.Equal("orta", ScamalyticsApi.RiskLabel("medium"));
+        using var low = JsonDocument.Parse("""{"scamalytics":{"status":"ok","scamalytics_score":0,"scamalytics_risk":"low"}}""");
+        var clean = ScamalyticsApi.Read(low.RootElement);
+        Assert.False(ScamalyticsApi.IsRisk(clean.Score, clean.Risk));
+        Assert.Null(clean.Vpn);
+        Assert.Null(clean.Datacenter);
+        using var bad = JsonDocument.Parse("""{"scamalytics":{"status":"error","error":"Unauthorized: invalid API key secret-value"}}""");
+        var failed = ScamalyticsApi.Read(bad.RootElement);
+        Assert.False(failed.Ok);
+        Assert.Equal("Anahtar kabul edilmedi", failed.Error);
+        Assert.DoesNotContain("secret-value", failed.Error);
+        using var other = JsonDocument.Parse("""{"scamalytics":{"status":"error","error":"Excess limit: credits exhausted"}}""");
+        Assert.Equal("Sorgu tamamlanamadı", ScamalyticsApi.Read(other.RootElement).Error);
+        using var missing = JsonDocument.Parse("""{"external_datasources":{}}""");
+        Assert.Equal("Ulaşılamadı", ScamalyticsApi.Read(missing.RootElement).Error);
     }
 
     [Fact]

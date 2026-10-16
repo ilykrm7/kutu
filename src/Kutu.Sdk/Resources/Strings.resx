@@ -194,6 +194,8 @@
   <data name="Menu_ModernFail" xml:space="preserve"><value>Modern menü kurulamadı. Klasik menü Daha fazla seçenek altında duruyor.</value></data>
   <data name="Settings_VirusTotalKey" xml:space="preserve"><value>VirusTotal anahtarı</value></data>
   <data name="Settings_IpqsKey" xml:space="preserve"><value>IPQualityScore anahtarı</value></data>
+  <data name="Settings_ScamalyticsUser" xml:space="preserve"><value>Scamalytics kullanıcı adı</value></data>
+  <data name="Settings_ScamalyticsKey" xml:space="preserve"><value>Scamalytics API anahtarı</value></data>
   <data name="Settings_OtxKey" xml:space="preserve"><value>AlienVault OTX anahtarı</value></data>
   <data name="Settings_GreyNoiseKey" xml:space="preserve"><value>GreyNoise anahtarı</value></data>
   <data name="Settings_ShodanKey" xml:space="preserve"><value>Shodan anahtarı</value></data>

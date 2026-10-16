@@ -194,6 +194,8 @@
   <data name="Menu_ModernFail" xml:space="preserve"><value>The modern menu could not be installed. The classic entry stays under Show more options.</value></data>
   <data name="Settings_VirusTotalKey" xml:space="preserve"><value>VirusTotal key</value></data>
   <data name="Settings_IpqsKey" xml:space="preserve"><value>IPQualityScore key</value></data>
+  <data name="Settings_ScamalyticsUser" xml:space="preserve"><value>Scamalytics username</value></data>
+  <data name="Settings_ScamalyticsKey" xml:space="preserve"><value>Scamalytics API key</value></data>
   <data name="Settings_OtxKey" xml:space="preserve"><value>AlienVault OTX key</value></data>
   <data name="Settings_GreyNoiseKey" xml:space="preserve"><value>GreyNoise key</value></data>
   <data name="Settings_ShodanKey" xml:space="preserve"><value>Shodan key</value></data>
