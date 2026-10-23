@@ -380,6 +380,11 @@ public class V11LogicTests
         Assert.True(ReleaseVersion.IsNewer("v1.1.3", new Version(1, 1, 1)));
         Assert.True(ReleaseVersion.IsNewer("v1.1.3", new Version(1, 1, 2)));
         Assert.False(ReleaseVersion.IsNewer("v1.1.3", new Version(1, 1, 3)));
+        Assert.True(ReleaseVersion.IsNewer("v1.1.4", new Version(1, 1, 0)));
+        Assert.True(ReleaseVersion.IsNewer("v1.1.4", new Version(1, 1, 1)));
+        Assert.True(ReleaseVersion.IsNewer("v1.1.4", new Version(1, 1, 2)));
+        Assert.True(ReleaseVersion.IsNewer("v1.1.4", new Version(1, 1, 3)));
+        Assert.False(ReleaseVersion.IsNewer("v1.1.4", new Version(1, 1, 4)));
         var patched = ReleaseVersion.ParseLatest("""
             {"tag_name":"v1.1.2","assets":[{"name":"Kutu.zip","browser_download_url":"https://example.test/Kutu.zip"},{"name":"Kutu.exe","browser_download_url":"https://example.test/Kutu.exe"},{"name":"Kutu.exe.sha256","browser_download_url":"https://example.test/Kutu.exe.sha256"}]}
             """);

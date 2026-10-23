@@ -52,54 +52,81 @@ public static class TranslateClient
         CancellationToken cancellationToken = default)
     {
         var normalizedTarget = string.IsNullOrWhiteSpace(target) ? "EN" : target;
-        if (string.IsNullOrWhiteSpace(text))
+        if (string.IsNullOrEmpty(text))
             return new TranslationResult("", false, null, normalizedTarget);
 
-        try
+        var deepLConfigured = !string.IsNullOrWhiteSpace(deepLKey);
+        string? detected = null;
+        string provider = "";
+
+        async Task<string> TranslateChunkAsync(string chunk, CancellationToken token)
         {
-            var google = await GoogleAllAsync(text, normalizedTarget, cancellationToken);
-            AppLog.Write("translate provider=Google chars=" + text.Length);
-            return Finish(text, google, normalizedTarget, false, "Google");
-        }
-        catch
-        {
-            // Google did not return an ordered translation. Try DeepL next.
+            foreach (var name in TranslationPlan.ProviderOrder(chunk, deepLConfigured))
+            {
+                try
+                {
+                    var attempt = name switch
+                    {
+                        "DeepL" => await DeepLAsync(chunk, source, normalizedTarget, deepLKey ?? "", deepLEndpoint, token).ConfigureAwait(false),
+                        "MyMemory" => await MyMemoryAsync(chunk, source, normalizedTarget, token).ConfigureAwait(false),
+                        _ => await GooglePostAsync(chunk, normalizedTarget, token).ConfigureAwait(false)
+                    };
+                    if (name == "Google" && string.IsNullOrWhiteSpace(attempt.Text))
+                        continue;
+                    if (string.IsNullOrWhiteSpace(detected) && !string.IsNullOrWhiteSpace(attempt.Detected))
+                        detected = attempt.Detected;
+                    provider = PreferProvider(provider, name);
+                    AppLog.Write("translate provider=" + name + " chars=" + chunk.Length);
+                    return OneLine(attempt.Text);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (InvalidOperationException ex) when (IsSameLanguage(ex.Message))
+                {
+                    provider = PreferProvider(provider, name);
+                    return chunk;
+                }
+                catch
+                {
+                    // This provider missed the chunk. The next one in order tries the same text.
+                }
+            }
+
+            if (chunk.Length <= TranslationPlan.MyMemoryMaxChars)
+                throw new InvalidOperationException("translate-failed");
+
+            return await TranslationPlan.TranslateInOrderAsync(chunk, TranslationPlan.MyMemoryMaxChars, TranslateChunkAsync, token).ConfigureAwait(false);
         }
 
-        if (!string.IsNullOrWhiteSpace(deepLKey))
-        {
-            try
-            {
-                var attempt = await DeepLAllAsync(text, source, normalizedTarget, deepLKey, deepLEndpoint, cancellationToken);
-                AppLog.Write("translate provider=DeepL chars=" + text.Length);
-                return Finish(text, attempt, normalizedTarget, true, "DeepL");
-            }
-            catch (InvalidOperationException ex) when (IsSameLanguage(ex.Message))
-            {
-                AppLog.Write("translate provider=DeepL chars=" + text.Length);
-                return new TranslationResult(text, true, TranslateDirection.NormalizeLang(normalizedTarget), normalizedTarget, "DeepL");
-            }
-            catch
-            {
-                // DeepL failed. MyMemory is only a short-text last resort.
-            }
-        }
+        var combined = await TranslationPlan.TranslateInOrderAsync(text, TranslationPlan.GoogleChunkChars, TranslateChunkAsync, cancellationToken).ConfigureAwait(false);
+        return Finish(text, new Attempt(combined, detected), normalizedTarget, provider != "Google", provider);
+    }
 
-        if (TranslationPlan.AllowMyMemory(text))
-        {
-            try
-            {
-                var memory = await MyMemoryAsync(text, source, normalizedTarget, cancellationToken);
-                AppLog.Write("translate provider=MyMemory chars=" + text.Length);
-                return Finish(text, memory, normalizedTarget, true, "MyMemory");
-            }
-            catch (InvalidOperationException ex) when (IsSameLanguage(ex.Message))
-            {
-                return new TranslationResult(text, true, null, normalizedTarget, "MyMemory");
-            }
-        }
+    private static string PreferProvider(string current, string next)
+    {
+        if (next == "MyMemory" || current.Length == 0)
+            return next;
+        if (next == "DeepL" && current == "Google")
+            return next;
+        return current;
+    }
 
-        throw new InvalidOperationException("translate-failed");
+    private static string OneLine(string translated)
+    {
+        if (string.IsNullOrEmpty(translated))
+            return "";
+        var start = 0;
+        var end = translated.Length;
+        while (start < end && (translated[start] == '\n' || translated[start] == '\r'))
+            start++;
+        while (end > start && (translated[end - 1] == '\n' || translated[end - 1] == '\r'))
+            end--;
+        var slice = translated.Substring(start, end - start);
+        if (slice.IndexOf('\n') < 0 && slice.IndexOf('\r') < 0)
+            return slice;
+        return slice.Replace("\r\n", " ").Replace('\n', ' ').Replace('\r', ' ');
     }
 
     private readonly record struct Attempt(string Text, string? Detected);
@@ -112,20 +139,6 @@ public static class TranslateClient
         if (IsSameLanguage(text))
             text = original;
         return new TranslationResult(text, usedFallback, detected.Length == 0 ? null : detected, target, provider);
-    }
-
-    private static Task<Attempt> GoogleAllAsync(string text, string target, CancellationToken cancellationToken)
-    {
-        string? detected = null;
-        return ReadCombinedAsync(text, TranslationPlan.GoogleChunkChars, async (chunk, token) =>
-        {
-            var attempt = await GooglePostAsync(chunk, target, token);
-            if (string.IsNullOrWhiteSpace(detected) && !string.IsNullOrWhiteSpace(attempt.Detected))
-                detected = attempt.Detected;
-            if (string.IsNullOrWhiteSpace(attempt.Text))
-                throw new InvalidOperationException("empty");
-            return attempt.Text;
-        }, () => detected, cancellationToken);
     }
 
     private static async Task<Attempt> GooglePostAsync(string text, string target, CancellationToken cancellationToken)
@@ -142,29 +155,6 @@ public static class TranslateClient
         if (!response.IsSuccessStatusCode || !TranslationPlan.TryJoinGoogle(body, out var translated, out var detected))
             throw new InvalidOperationException("google");
         return new Attempt(translated, detected);
-    }
-
-    private static Task<Attempt> DeepLAllAsync(string text, string source, string target, string key, string endpoint, CancellationToken cancellationToken)
-    {
-        string? detected = null;
-        return ReadCombinedAsync(text, TranslationPlan.DeepLChunkChars, async (chunk, token) =>
-        {
-            var attempt = await DeepLAsync(chunk, source, target, key, endpoint, token);
-            if (string.IsNullOrWhiteSpace(detected) && !string.IsNullOrWhiteSpace(attempt.Detected))
-                detected = attempt.Detected;
-            return attempt.Text;
-        }, () => detected, cancellationToken);
-    }
-
-    private static async Task<Attempt> ReadCombinedAsync(
-        string text,
-        int maxChars,
-        Func<string, CancellationToken, Task<string>> translate,
-        Func<string?> detected,
-        CancellationToken cancellationToken)
-    {
-        var combined = await TranslationPlan.TranslateInOrderAsync(text, maxChars, translate, cancellationToken).ConfigureAwait(false);
-        return new Attempt(combined, detected());
     }
 
     private static async Task<Attempt> DeepLAsync(string text, string source, string target, string key, string endpoint, CancellationToken cancellationToken)
