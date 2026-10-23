@@ -4,9 +4,9 @@ using System.Text.Json;
 namespace Kutu.Core.Text;
 
 /// <summary>
-/// Splits long text only when a single request would be too large, and joins
-/// provider segments in their original order. Whitespace between pieces is kept
-/// as-is so newlines survive reassembly.
+/// Splits text on every original line break, then splits a long line into
+/// sentences under the provider limit. Pieces stay in source order. Newlines
+/// live only in <see cref="Piece.Trailing"/> so a provider cannot flatten them.
 /// </summary>
 public static class TranslationPlan
 {
@@ -21,38 +21,57 @@ public static class TranslationPlan
     public static bool AllowMyMemory(string? text) =>
         !string.IsNullOrEmpty(text) && text.Length <= MyMemoryMaxChars;
 
+    /// <summary>Google first, then DeepL when a key is configured, then MyMemory for a short chunk only.</summary>
+    public static IReadOnlyList<string> ProviderOrder(string? chunk, bool deepLConfigured)
+    {
+        var order = new List<string> { "Google" };
+        if (deepLConfigured)
+            order.Add("DeepL");
+        if (AllowMyMemory(chunk))
+            order.Add("MyMemory");
+        return order;
+    }
+
     public static IReadOnlyList<Piece> Pieces(string? text, int maxChars)
     {
         if (maxChars < 1)
             maxChars = 1;
         text ??= "";
-        if (text.Length <= maxChars)
-            return new[] { new Piece(text, "") };
+        if (text.Length == 0)
+            return new[] { new Piece("", "") };
 
         var pieces = new List<Piece>();
         var start = 0;
-        while (start < text.Length)
+        for (var i = 0; i < text.Length; i++)
         {
-            var breakAt = FindParagraphBreak(text, start);
-            var end = breakAt < 0 ? text.Length : breakAt;
-            var body = text.Substring(start, end - start);
-            var trailing = "";
-            var next = end;
-            if (breakAt >= 0)
-            {
-                var length = ParagraphBreakLength(text, breakAt);
-                trailing = text.Substring(breakAt, length);
-                next = breakAt + length;
-            }
-
-            if (body.Length <= maxChars)
-                pieces.Add(new Piece(body, trailing));
-            else
-                SplitSentences(body, trailing, maxChars, pieces);
-            start = next;
+            var length = NewlineLength(text, i);
+            if (length == 0)
+                continue;
+            AddBody(text.Substring(start, i - start), text.Substring(i, length), maxChars, pieces);
+            i += length - 1;
+            start = i + 1;
         }
 
-        return pieces.Count == 0 ? new[] { new Piece("", text) } : pieces;
+        if (start < text.Length)
+            AddBody(text.Substring(start), "", maxChars, pieces);
+        return pieces.Count == 0 ? new[] { new Piece("", "") } : pieces;
+    }
+
+    private static void AddBody(string body, string trailing, int maxChars, List<Piece> pieces)
+    {
+        if (body.Length <= maxChars)
+            pieces.Add(new Piece(body, trailing));
+        else
+            SplitSentences(body, trailing, maxChars, pieces);
+    }
+
+    private static int NewlineLength(string text, int index)
+    {
+        if (text[index] == '\r' && index + 1 < text.Length && text[index + 1] == '\n')
+            return 2;
+        if (text[index] == '\n' || text[index] == '\r')
+            return 1;
+        return 0;
     }
 
     public static async Task<string> TranslateInOrderAsync(
@@ -229,30 +248,6 @@ public static class TranslationPlan
         if (builder.Length > 0)
             chunks.Add(builder.ToString());
         return chunks;
-    }
-
-    private static int FindParagraphBreak(string text, int start)
-    {
-        for (var i = start; i < text.Length; i++)
-        {
-            if (ParagraphBreakLength(text, i) > 0)
-                return i;
-        }
-
-        return -1;
-    }
-
-    private static int ParagraphBreakLength(string text, int index)
-    {
-        if (index + 3 < text.Length
-            && text[index] == '\r' && text[index + 1] == '\n'
-            && text[index + 2] == '\r' && text[index + 3] == '\n')
-            return 4;
-        if (index + 1 < text.Length && text[index] == '\n' && text[index + 1] == '\n')
-            return 2;
-        if (index + 1 < text.Length && text[index] == '\r' && text[index + 1] == '\r')
-            return 2;
-        return 0;
     }
 
     private static bool IsSentenceEnd(string text, int index)

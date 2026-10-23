@@ -65,24 +65,19 @@ public sealed class CaptureStudio : Window
         Background = Brushes.Black;
         Cursor = Cursors.Cross;
         Focusable = true;
+        UseLayoutRounding = true;
+        SnapsToDevicePixels = true;
         Left = SystemParameters.VirtualScreenLeft;
         Top = SystemParameters.VirtualScreenTop;
         Width = SystemParameters.VirtualScreenWidth;
         Height = SystemParameters.VirtualScreenHeight;
-
-        var image = new Image
-        {
-            Source = screen.Bitmap,
-            Stretch = Stretch.Fill,
-            IsHitTestVisible = false
-        };
         _dimTop = Dim();
         _dimLeft = Dim();
         _dimRight = Dim();
         _dimBottom = Dim();
         _frame = new Rectangle
         {
-            Stroke = new SolidColorBrush(Color.FromRgb(0x4B, 0xDF, 0xB3)),
+            Stroke = Brushes.White,
             StrokeThickness = 2,
             Fill = Brushes.Transparent,
             IsHitTestVisible = false,
@@ -133,9 +128,11 @@ public sealed class CaptureStudio : Window
             _overlay.Children.Add(handle);
         }
 
+        Cover();
         Content = new Grid
         {
-            Children = { image, _overlay }
+            Background = Brushes.Transparent,
+            Children = { FrozenFrame.Create(screen), _overlay }
         };
         _layer.MouseLeftButtonDown += OnDrawDown;
         _layer.MouseMove += OnDrawMove;
@@ -194,8 +191,15 @@ public sealed class CaptureStudio : Window
         };
         Loaded += (_, _) =>
         {
+            if (!_selecting && !_editing)
+                Cover();
             Activate();
             Focus();
+        };
+        SizeChanged += (_, _) =>
+        {
+            if (!_selecting && !_editing)
+                Cover();
         };
     }
 
@@ -731,10 +735,13 @@ public sealed class CaptureStudio : Window
         _size.Text = $"{pixels.Width} × {pixels.Height}";
         Canvas.SetLeft(_size, _sel.X);
         Canvas.SetTop(_size, Math.Max(0, _sel.Y - 26));
-        Place(_dimTop, 0, 0, Width, _sel.Y);
-        Place(_dimLeft, 0, _sel.Y, _sel.X, _sel.Height);
-        Place(_dimRight, _sel.Right, _sel.Y, Math.Max(0, Width - _sel.Right), _sel.Height);
-        Place(_dimBottom, 0, _sel.Bottom, Width, Math.Max(0, Height - _sel.Bottom));
+        var boundsW = ActualWidth > 1 ? ActualWidth : Width;
+        var boundsH = ActualHeight > 1 ? ActualHeight : Height;
+        var shade = SelectionShade.Around(boundsW, boundsH, _sel.X, _sel.Y, _sel.Width, _sel.Height);
+        Place(_dimTop, shade[0]);
+        Place(_dimLeft, shade[1]);
+        Place(_dimRight, shade[2]);
+        Place(_dimBottom, shade[3]);
         Canvas.SetLeft(_layer, _sel.X);
         Canvas.SetTop(_layer, _sel.Y);
         _layer.Width = _sel.Width;
@@ -816,7 +823,7 @@ public sealed class CaptureStudio : Window
         _toolbar.Visibility = Visibility.Collapsed;
         foreach (var handle in _handles)
             handle.Visibility = Visibility.Collapsed;
-        Place(_dimTop, 0, 0, 0, 0);
+        Cover();
     }
 
     private void RefreshCrop()
@@ -829,8 +836,8 @@ public sealed class CaptureStudio : Window
         _crop = crop;
         _layer.Source = crop;
         _layer.Items = _items;
-        _layer.ScaleX = _screen.ScaleX;
-        _layer.ScaleY = _screen.ScaleY;
+        _layer.ScaleX = _sel.Width >= 1 ? rect.Width / _sel.Width : _screen.ScaleX;
+        _layer.ScaleY = _sel.Height >= 1 ? rect.Height / _sel.Height : _screen.ScaleY;
         _layer.InvalidateVisual();
     }
 
@@ -890,14 +897,31 @@ public sealed class CaptureStudio : Window
         return bitmap;
     }
 
-    private Point ToPixel(Point dip) => new(dip.X * _screen.ScaleX, dip.Y * _screen.ScaleY);
+    private Point ToPixel(Point dip)
+    {
+        if (_crop is not null && _sel.Width >= 1 && _sel.Height >= 1)
+            return new Point(dip.X * _crop.PixelWidth / _sel.Width, dip.Y * _crop.PixelHeight / _sel.Height);
+        return new Point(dip.X * _screen.ScaleX, dip.Y * _screen.ScaleY);
+    }
 
     private Int32Rect ToPixels(Rect dip)
     {
-        var x = (int)Math.Round(dip.X * _screen.ScaleX);
-        var y = (int)Math.Round(dip.Y * _screen.ScaleY);
-        var w = (int)Math.Round(dip.Width * _screen.ScaleX);
-        var h = (int)Math.Round(dip.Height * _screen.ScaleY);
+        int x, y, w, h;
+        if (_screen.PerMonitor && _screen.Monitors.Count > 0)
+        {
+            var physical = MonitorLayout.PhysicalBounds(Left + dip.X, Top + dip.Y, dip.Width, dip.Height, _screen.Monitors);
+            x = physical.X - _screen.OriginX;
+            y = physical.Y - _screen.OriginY;
+            w = physical.Width;
+            h = physical.Height;
+        }
+        else
+        {
+            x = (int)Math.Round(dip.X * _screen.ScaleX);
+            y = (int)Math.Round(dip.Y * _screen.ScaleY);
+            w = (int)Math.Round(dip.Width * _screen.ScaleX);
+            h = (int)Math.Round(dip.Height * _screen.ScaleY);
+        }
         x = Num.Clamp(x, 0, Math.Max(0, _screen.Bitmap.PixelWidth - 1));
         y = Num.Clamp(y, 0, Math.Max(0, _screen.Bitmap.PixelHeight - 1));
         w = Num.Clamp(w, 1, _screen.Bitmap.PixelWidth - x);
@@ -960,9 +984,23 @@ public sealed class CaptureStudio : Window
 
     private static Rectangle Dim() => new()
     {
-        Fill = new SolidColorBrush(Color.FromArgb(120, 7, 11, 20)),
+        Fill = new SolidColorBrush(Color.FromArgb(160, 0, 0, 0)),
         IsHitTestVisible = false
     };
+
+    private void Cover()
+    {
+        var width = ActualWidth > 1 ? ActualWidth : Width;
+        var height = ActualHeight > 1 ? ActualHeight : Height;
+        var shade = SelectionShade.Cover(width, height);
+        Place(_dimTop, shade[0]);
+        Place(_dimLeft, shade[1]);
+        Place(_dimRight, shade[2]);
+        Place(_dimBottom, shade[3]);
+    }
+
+    private static void Place(Rectangle rect, SelectionShade.Band band) =>
+        Place(rect, band.X, band.Y, band.Width, band.Height);
 
     private static void Place(Rectangle rect, double x, double y, double w, double h)
     {

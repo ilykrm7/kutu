@@ -25,6 +25,10 @@ public sealed record RegionPick(
 public sealed class RegionOverlay : Window
 {
     private readonly CapturedScreen _screen;
+    private readonly Rectangle _dimTop;
+    private readonly Rectangle _dimLeft;
+    private readonly Rectangle _dimRight;
+    private readonly Rectangle _dimBottom;
     private readonly Rectangle _band;
     private readonly TextBlock _size;
     private Point _start;
@@ -39,15 +43,22 @@ public sealed class RegionOverlay : Window
         ShowInTaskbar = false;
         Background = Brushes.Black;
         Cursor = Cursors.Cross;
+        UseLayoutRounding = true;
+        SnapsToDevicePixels = true;
         Left = SystemParameters.VirtualScreenLeft;
         Top = SystemParameters.VirtualScreenTop;
         Width = SystemParameters.VirtualScreenWidth;
         Height = SystemParameters.VirtualScreenHeight;
+        _dimTop = Dim();
+        _dimLeft = Dim();
+        _dimRight = Dim();
+        _dimBottom = Dim();
         _band = new Rectangle
         {
-            Stroke = new SolidColorBrush(Color.FromRgb(0x4B, 0xDF, 0xB3)),
+            Stroke = Brushes.White,
             StrokeThickness = 2,
-            Fill = new SolidColorBrush(Color.FromArgb(40, 40, 160, 241)),
+            Fill = Brushes.Transparent,
+            IsHitTestVisible = false,
             Visibility = Visibility.Collapsed
         };
         _size = new TextBlock
@@ -57,18 +68,14 @@ public sealed class RegionOverlay : Window
             Padding = new Thickness(6, 2, 6, 2),
             Visibility = Visibility.Collapsed
         };
-        var canvas = new Canvas();
-        canvas.Children.Add(new Rectangle
-        {
-            Width = Width,
-            Height = Height,
-            Fill = new SolidColorBrush(Color.FromArgb(48, 7, 11, 20)),
-            IsHitTestVisible = false
-        });
+        var canvas = new Canvas { IsHitTestVisible = false };
+        foreach (var dim in new[] { _dimTop, _dimLeft, _dimRight, _dimBottom })
+            canvas.Children.Add(dim);
         canvas.Children.Add(_band);
         canvas.Children.Add(_size);
-        var root = new Grid();
-        root.Children.Add(CaptureImage(screen));
+        Cover();
+        var root = new Grid { Background = Brushes.Transparent };
+        root.Children.Add(FrozenFrame.Create(screen));
         root.Children.Add(canvas);
         if (offerFullScreen)
         {
@@ -100,7 +107,47 @@ public sealed class RegionOverlay : Window
                 AcceptFull();
             }
         };
-        Loaded += (_, _) => Activate();
+        Loaded += (_, _) =>
+        {
+            if (!_dragging)
+                Cover();
+            Activate();
+        };
+        SizeChanged += (_, _) =>
+        {
+            if (!_dragging)
+                Cover();
+        };
+    }
+
+    private static Rectangle Dim() => new()
+    {
+        Fill = new SolidColorBrush(Color.FromArgb(160, 0, 0, 0)),
+        IsHitTestVisible = false
+    };
+
+    private void Cover()
+    {
+        var width = ActualWidth > 1 ? ActualWidth : Width;
+        var height = ActualHeight > 1 ? ActualHeight : Height;
+        Apply(SelectionShade.Cover(width, height));
+        _band.Visibility = Visibility.Collapsed;
+    }
+
+    private void Apply(SelectionShade.Band[] bands)
+    {
+        Place(_dimTop, bands[0]);
+        Place(_dimLeft, bands[1]);
+        Place(_dimRight, bands[2]);
+        Place(_dimBottom, bands[3]);
+    }
+
+    private static void Place(Rectangle rect, SelectionShade.Band band)
+    {
+        Canvas.SetLeft(rect, band.X);
+        Canvas.SetTop(rect, band.Y);
+        rect.Width = Math.Max(0, band.Width);
+        rect.Height = Math.Max(0, band.Height);
     }
 
     public BitmapSource? Crop { get; private set; }
@@ -133,6 +180,9 @@ public sealed class RegionOverlay : Window
         _size.Text = $"{pixels.Width} × {pixels.Height}";
         Canvas.SetLeft(_size, rect.X);
         Canvas.SetTop(_size, Math.Max(0, rect.Y - 26));
+        var width = ActualWidth > 1 ? ActualWidth : Width;
+        var height = ActualHeight > 1 ? ActualHeight : Height;
+        Apply(SelectionShade.Around(width, height, rect.X, rect.Y, rect.Width, rect.Height));
     }
 
     private void OnUp(object sender, MouseButtonEventArgs e)
@@ -194,40 +244,6 @@ public sealed class RegionOverlay : Window
             dip.Height,
             screen.PerMonitor,
             screen.Monitors);
-    }
-
-    private static UIElement CaptureImage(CapturedScreen screen)
-    {
-        if (!screen.PerMonitor || screen.Monitors.Count == 0)
-            return new Image { Source = screen.Bitmap, Stretch = Stretch.Fill, IsHitTestVisible = false };
-
-        var canvas = new Canvas { IsHitTestVisible = false };
-        foreach (var band in screen.Monitors)
-        {
-            var localX = band.X - screen.OriginX;
-            var localY = band.Y - screen.OriginY;
-            var width = Math.Min(band.Width, screen.Bitmap.PixelWidth - localX);
-            var height = Math.Min(band.Height, screen.Bitmap.PixelHeight - localY);
-            if (localX < 0 || localY < 0 || width <= 0 || height <= 0)
-                continue;
-            var crop = new CroppedBitmap(screen.Bitmap, new Int32Rect(localX, localY, width, height));
-            crop.Freeze();
-            var image = new Image
-            {
-                Source = crop,
-                Stretch = Stretch.Fill,
-                Width = band.DipWidth,
-                Height = band.DipHeight,
-                IsHitTestVisible = false
-            };
-            Canvas.SetLeft(image, band.DipX - SystemParameters.VirtualScreenLeft);
-            Canvas.SetTop(image, band.DipY - SystemParameters.VirtualScreenTop);
-            canvas.Children.Add(image);
-        }
-
-        return canvas.Children.Count > 0
-            ? canvas
-            : new Image { Source = screen.Bitmap, Stretch = Stretch.Fill, IsHitTestVisible = false };
     }
 
     private Rect Rect(Point current)

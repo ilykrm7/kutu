@@ -101,6 +101,40 @@ public class TranslationPlanTests
     }
 
     [Fact]
+    public void Every_line_keeps_its_own_newline_even_when_the_text_is_short()
+    {
+        const string text = "same line stays together\nnext line\r\n\r\nblank above\n";
+        var pieces = TranslationPlan.Pieces(text, TranslationPlan.GoogleChunkChars);
+        Assert.Equal(text, string.Concat(pieces.Select(piece => piece.Text + piece.Trailing)));
+        Assert.Equal(
+            new[] { "same line stays together", "next line", "", "blank above" },
+            pieces.Select(piece => piece.Text).ToArray());
+        Assert.Equal(new[] { "\n", "\r\n", "\r\n", "\n" }, pieces.Select(piece => piece.Trailing).ToArray());
+        Assert.All(pieces, piece =>
+        {
+            Assert.DoesNotContain("\n", piece.Text);
+            Assert.DoesNotContain("\r", piece.Text);
+        });
+
+        var same = TranslationPlan.Pieces("left and right stay on one line", TranslationPlan.GoogleChunkChars);
+        Assert.Single(same);
+        Assert.Equal("left and right stay on one line", same[0].Text);
+        Assert.Equal("", same[0].Trailing);
+    }
+
+    [Fact]
+    public void Provider_order_is_google_then_deepl_then_short_mymemory()
+    {
+        Assert.Equal(new[] { "Google", "DeepL", "MyMemory" }, TranslationPlan.ProviderOrder("merhaba", true));
+        Assert.Equal(new[] { "Google", "MyMemory" }, TranslationPlan.ProviderOrder("merhaba", false));
+        var longLine = new string('a', TranslationPlan.MyMemoryMaxChars + 1);
+        Assert.Equal(new[] { "Google", "DeepL" }, TranslationPlan.ProviderOrder(longLine, true));
+        Assert.Equal(new[] { "Google" }, TranslationPlan.ProviderOrder(longLine, false));
+        Assert.DoesNotContain("MyMemory", TranslationPlan.ProviderOrder(Turkish, true));
+        Assert.DoesNotContain("MyMemory", TranslationPlan.ProviderOrder(English, false));
+    }
+
+    [Fact]
     public void MyMemory_is_only_for_short_text()
     {
         Assert.True(TranslationPlan.AllowMyMemory("merhaba"));

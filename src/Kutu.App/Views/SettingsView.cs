@@ -514,7 +514,7 @@ public sealed class SettingsView : UserControl
     private static string CurrentVersion()
     {
         var version = typeof(SettingsView).Assembly.GetName().Version;
-        return version is null ? "1.1.3" : $"{version.Major}.{version.Minor}.{version.Build}";
+        return version is null ? "1.1.4" : $"{version.Major}.{version.Minor}.{version.Build}";
     }
 
     private static UIElement Footer()
