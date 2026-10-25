@@ -5,7 +5,6 @@ using System.Windows.Input;
 using Kutu.App.Services;
 using Kutu.Core.Hotkeys;
 using Kutu.Core.IO;
-using Kutu.Core.Text;
 using Kutu.Sdk.Hosting;
 using Kutu.Tools.ScreenRecord;
 using Kutu.Sdk.Localization;
@@ -61,9 +60,7 @@ public sealed class SettingsView : UserControl
         _language = new ComboBox { Width = 180, Height = 36 };
         _language.Items.Add(L.Get("Lang_Tr"));
         _language.Items.Add(L.Get("Lang_En"));
-        _screenLang = new ComboBox { Width = 180, Height = 36 };
-        foreach (var code in TranslateDirection.Targets)
-            _screenLang.Items.Add(code);
+        _screenLang = LanguageBox.Create(host.Settings.ScreenTranslateTarget, null);
         _checkUpdates = new ToggleSwitch { Content = L.Get("Update_Check") };
         _autoUpdate = new ToggleSwitch { Content = L.Get("Update_Auto") };
         _version = Chrome.Hint("");
@@ -135,7 +132,7 @@ public sealed class SettingsView : UserControl
         foreach (var editor in _hotkeys)
             editor.Box.Text = ToolHotkeyMap.Get(settings, editor.Id);
         PaintHotkeyConflicts();
-        _screenLang.SelectedItem = TranslateDirection.Targets.Contains(settings.ScreenTranslateTarget) ? settings.ScreenTranslateTarget : "TR";
+        LanguageBox.Select(_screenLang, settings.ScreenTranslateTarget);
         _checkUpdates.IsChecked = settings.CheckForUpdates;
         _autoUpdate.IsChecked = settings.AutoUpdate;
         _version.Text = L.Get("Update_Current") + "  v" + CurrentVersion();
@@ -444,7 +441,7 @@ public sealed class SettingsView : UserControl
         settings.Language = language;
         foreach (var editor in _hotkeys)
             ToolHotkeyMap.Set(settings, editor.Id, editor.Box.Text.Trim());
-        settings.ScreenTranslateTarget = _screenLang.SelectedItem as string ?? "TR";
+        settings.ScreenTranslateTarget = LanguageBox.Selected(_screenLang);
         settings.CheckForUpdates = _checkUpdates.IsChecked == true;
         settings.AutoUpdate = _autoUpdate.IsChecked == true;
         if (!int.TryParse(_passwordLength.Text.Trim(), out var length) || length is < 4 or > 128)

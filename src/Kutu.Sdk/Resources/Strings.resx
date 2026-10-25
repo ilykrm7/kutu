@@ -30,7 +30,7 @@
   <data name="Tool_Upload_Title" xml:space="preserve"><value>Bağlantıya yükle</value></data>
   <data name="Tool_Upload_Desc" xml:space="preserve"><value>Metin veya görseli paylaşılabilir bağlantıya çevir.</value></data>
   <data name="Tool_Translate_Title" xml:space="preserve"><value>Çeviri</value></data>
-  <data name="Tool_Translate_Desc" xml:space="preserve"><value>Türkçe metni İngilizceye, diğerlerini Türkçeye çevirir.</value></data>
+  <data name="Tool_Translate_Desc" xml:space="preserve"><value>Seçtiğin dile çevirir. Seçim kaydedilir, sonra değişir.</value></data>
   <data name="Action_Back" xml:space="preserve"><value>Geri</value></data>
   <data name="Action_Copy" xml:space="preserve"><value>Kopyala</value></data>
   <data name="Action_Save" xml:space="preserve"><value>Kaydet</value></data>
@@ -334,7 +334,22 @@
   <data name="Settings_ScreenHotkey" xml:space="preserve"><value>Ekran çevirisi</value></data>
   <data name="Settings_RecordHotkey" xml:space="preserve"><value>Ekran kaydı</value></data>
   <data name="Settings_PassDefaults" xml:space="preserve"><value>Parola varsayılanları</value></data>
-  <data name="Settings_ScreenLang" xml:space="preserve"><value>Ekran çevirisi dili</value></data>
+  <data name="Settings_ScreenLang" xml:space="preserve"><value>Çeviri dili</value></data>
+  <data name="Translate_Sticky" xml:space="preserve"><value>Hedef dil kaydedilir. İstediğinde yeniden değiştirirsin.</value></data>
+  <data name="Screen_None" xml:space="preserve"><value>Bu bölgede çevrilecek yeni satır çıkmadı.</value></data>
+  <data name="Target_TR" xml:space="preserve"><value>Türkçe</value></data>
+  <data name="Target_EN" xml:space="preserve"><value>İngilizce</value></data>
+  <data name="Target_DE" xml:space="preserve"><value>Almanca</value></data>
+  <data name="Target_FR" xml:space="preserve"><value>Fransızca</value></data>
+  <data name="Target_ES" xml:space="preserve"><value>İspanyolca</value></data>
+  <data name="Target_IT" xml:space="preserve"><value>İtalyanca</value></data>
+  <data name="Target_PT" xml:space="preserve"><value>Portekizce</value></data>
+  <data name="Target_NL" xml:space="preserve"><value>Felemenkçe</value></data>
+  <data name="Target_RU" xml:space="preserve"><value>Rusça</value></data>
+  <data name="Target_AR" xml:space="preserve"><value>Arapça</value></data>
+  <data name="Target_ZH" xml:space="preserve"><value>Çince</value></data>
+  <data name="Target_JA" xml:space="preserve"><value>Japonca</value></data>
+  <data name="Target_KO" xml:space="preserve"><value>Korece</value></data>
   <data name="Tool_Matte_Title" xml:space="preserve"><value>Arka plan sil</value></data>
   <data name="Tool_Matte_Desc" xml:space="preserve"><value>Düz renkli zemini saydam yapar.</value></data>
   <data name="Tool_Font_Title" xml:space="preserve"><value>Yazı tipi</value></data>

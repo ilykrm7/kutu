@@ -30,7 +30,7 @@
   <data name="Tool_Upload_Title" xml:space="preserve"><value>Upload to link</value></data>
   <data name="Tool_Upload_Desc" xml:space="preserve"><value>Turn text or an image into a shareable link.</value></data>
   <data name="Tool_Translate_Title" xml:space="preserve"><value>Translate</value></data>
-  <data name="Tool_Translate_Desc" xml:space="preserve"><value>Translates Turkish into English and other languages into Turkish.</value></data>
+  <data name="Tool_Translate_Desc" xml:space="preserve"><value>Translates into the language you pick. The choice is saved.</value></data>
   <data name="Action_Back" xml:space="preserve"><value>Back</value></data>
   <data name="Action_Copy" xml:space="preserve"><value>Copy</value></data>
   <data name="Action_Save" xml:space="preserve"><value>Save</value></data>
@@ -334,7 +334,22 @@
   <data name="Settings_ScreenHotkey" xml:space="preserve"><value>Screen translate</value></data>
   <data name="Settings_RecordHotkey" xml:space="preserve"><value>Screen recording</value></data>
   <data name="Settings_PassDefaults" xml:space="preserve"><value>Password defaults</value></data>
-  <data name="Settings_ScreenLang" xml:space="preserve"><value>Screen translate language</value></data>
+  <data name="Settings_ScreenLang" xml:space="preserve"><value>Translation language</value></data>
+  <data name="Translate_Sticky" xml:space="preserve"><value>The target language is saved. Change it whenever you need to.</value></data>
+  <data name="Screen_None" xml:space="preserve"><value>Nothing new to translate in that region.</value></data>
+  <data name="Target_TR" xml:space="preserve"><value>Turkish</value></data>
+  <data name="Target_EN" xml:space="preserve"><value>English</value></data>
+  <data name="Target_DE" xml:space="preserve"><value>German</value></data>
+  <data name="Target_FR" xml:space="preserve"><value>French</value></data>
+  <data name="Target_ES" xml:space="preserve"><value>Spanish</value></data>
+  <data name="Target_IT" xml:space="preserve"><value>Italian</value></data>
+  <data name="Target_PT" xml:space="preserve"><value>Portuguese</value></data>
+  <data name="Target_NL" xml:space="preserve"><value>Dutch</value></data>
+  <data name="Target_RU" xml:space="preserve"><value>Russian</value></data>
+  <data name="Target_AR" xml:space="preserve"><value>Arabic</value></data>
+  <data name="Target_ZH" xml:space="preserve"><value>Chinese</value></data>
+  <data name="Target_JA" xml:space="preserve"><value>Japanese</value></data>
+  <data name="Target_KO" xml:space="preserve"><value>Korean</value></data>
   <data name="Tool_Matte_Title" xml:space="preserve"><value>Remove background</value></data>
   <data name="Tool_Matte_Desc" xml:space="preserve"><value>Makes a flat-colored backdrop transparent.</value></data>
   <data name="Tool_Font_Title" xml:space="preserve"><value>Fonts</value></data>

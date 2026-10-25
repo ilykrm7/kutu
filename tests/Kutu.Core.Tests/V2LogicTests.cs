@@ -1,5 +1,6 @@
 using Kutu.Core.Imaging;
 using Kutu.Core.Security;
+using Kutu.Core.Text;
 
 namespace Kutu.Core.Tests;
 
@@ -67,6 +68,38 @@ public class V2LogicTests
         var holes = Matte.ClearBackground(pixels, 7, 7, 8, holes: true, feather: 0);
         Assert.Equal(0, Alpha(holes, 7, 3, 3));
         Assert.Equal(255, Alpha(holes, 7, 2, 2));
+    }
+
+    [Fact]
+    public void Saved_target_language_is_a_known_code()
+    {
+        Assert.Equal("RU", TranslateDirection.RememberedTarget("ru"));
+        Assert.Equal("EN", TranslateDirection.RememberedTarget("en-US"));
+        Assert.Equal("TR", TranslateDirection.RememberedTarget("nope"));
+        Assert.Equal("zh-CN", TranslateDirection.GoogleCode("ZH"));
+        Assert.Equal("ZH-HANS", TranslateDirection.DeepLCode("zh"));
+        Assert.Equal("RU", TranslateDirection.DeepLCode("ru"));
+    }
+
+    [Fact]
+    public void Screen_lines_skip_text_already_written_in_the_target_script()
+    {
+        Assert.True(TranslateDirection.AlreadyInTarget("Привет мир", "RU"));
+        Assert.False(TranslateDirection.AlreadyInTarget("Привет мир", "EN"));
+        Assert.False(TranslateDirection.AlreadyInTarget("hello world", "RU"));
+        Assert.True(TranslateDirection.AlreadyInTarget("こんにちは", "JA"));
+        Assert.False(TranslateDirection.AlreadyInTarget("こんにちは", "ZH"));
+        var marked = ScreenLinePlan.Mark(["Привет", "merhaba"], "RU");
+        Assert.True(marked[0].Skip);
+        Assert.False(marked[1].Skip);
+    }
+
+    [Fact]
+    public void Ocr_rank_keeps_the_first_result_until_a_clearer_one_appears()
+    {
+        Assert.Equal(0, ScreenLinePlan.BestOcr(["", ""]));
+        Assert.Equal(1, ScreenLinePlan.BestOcr(["??", "Привет"]));
+        Assert.Equal(0, ScreenLinePlan.BestOcr(["hello", "hello"]));
     }
 
     [Fact]

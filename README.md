@@ -20,10 +20,10 @@ Arayüz Türkçe. Metinler `src/Kutu.Sdk/Resources/Strings.resx` içinde. İngil
 - **Ping ve port** — gecikme, tek port, aralık, sık kullanılanlar ve **Tüm portlar** (1–65535). Dört kip tek seçimdir; yalnız seçili olan işaretlidir. 3389 ve 22, aralıkta varsa önce taranır. Tablo, kopya ve CSV yalnız açık portları içerir; kapalı ve filtrelenenler yazılmaz. Hiçbiri açık değilse “Açık port bulunamadı” görünür. Açık portta banner ve RDP / HTTP / TLS yoklaması yapılır. İlerleme satırı `x / y · açık n · kalan` olarak kalır.
 - **SSL kontrol** — yayıncı, konu, SAN, geçerlilik, kalan gün, zincir, TLS sürümü.
 - **Bağlantıya yükle** — metin veya dosyayı Ayarlar’daki uca gönderir, dönen adresi kopyalar. Ekran görüntüsünden de yüklenir.
-- **Çeviri** — Türkçe metin İngilizceye, diğer diller Türkçeye. Yerel ipucu, sonra sağlayıcının algıladığı dil; Türkçeye gidip Türkçe dönerse İngilizceye yeniden sorulur. Önce Google, sonra DeepL, kısa metinde MyMemory. Uzun metin tek POST ile gider; bölünürse paragraf ve cümle sınırında, sırayı ve satır sonlarını koruyarak birleşir. Ctrl+Alt+T seçili metni yerinde çevirir.
+- **Çeviri** — hedef dil seçilir ve kaydedilir: Türkçe, İngilizce, Rusça ve listedeki diğer diller. Aynı seçim ekran çevirisinde ve Ctrl+Alt+T ile de kullanılır. İstendiğinde yeniden değişir. Önce Google, sonra DeepL, kısa metinde MyMemory. Uzun metin paragraf ve cümle sınırında, sırayı ve satır sonlarını koruyarak birleşir.
 - **QR** — oluştur, PNG kopyala veya kaydet. Ekran bölgesi, dosya ve panodan oku.
 - **OCR** — ekran bölgesi veya görsel. Windows OCR (Türkçe / İngilizce dil paketi gerekir).
-- **Ekran çevirisi** — Ctrl+Alt+E. Önce donmuş ekran görüntüsü, sonra bölge veya tam ekran. Kutu yalnız çevrilen satırın altında durur; hedef dildeki satır gösterilmez. Hedef dil Ayarlar'da, varsayılan Türkçe. Esc kapatır.
+- **Ekran çevirisi** — Ctrl+Alt+E. Önce donmuş ekran görüntüsü, sonra bölge veya tam ekran. Her satır ayrı çevrilir. Kurulu OCR dilleri denenir, en okunaklı sonuç kalır. Çeviri satırın altında durur; hedef dildeki satır yeniden gösterilmez. Hedef dil çeviri aracıyla ortaktır, varsayılan Türkçe. Esc kapatır.
 - **Parola** — uzunluk, büyük/küçük/rakam/simge, belirsiz karakterleri çıkar. Kriptografik rastgelelik. Varsayılanlar Ayarlar'da.
 - **UUID** — sürüm 4 veya zamana bağlı sürüm 7. Büyük harf, tire ve süslü parantez.
 - **Özet** — metin veya dosya için MD5, SHA-1, SHA-256, SHA-384 ve SHA-512.

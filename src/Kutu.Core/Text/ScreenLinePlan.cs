@@ -21,6 +21,40 @@ public static class ScreenLinePlan
         return marked;
     }
 
+    public static int OcrScore(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return 0;
+
+        var score = 0;
+        foreach (var ch in text)
+        {
+            if (char.IsLetter(ch))
+                score += 2;
+            else if (!char.IsWhiteSpace(ch))
+                score += 1;
+        }
+
+        return score;
+    }
+
+    public static int BestOcr(IReadOnlyList<string?> texts)
+    {
+        var best = 0;
+        var score = -1;
+        for (var i = 0; i < texts.Count; i++)
+        {
+            var next = OcrScore(texts[i]);
+            if (next > score)
+            {
+                score = next;
+                best = i;
+            }
+        }
+
+        return best;
+    }
+
     public static bool ShowTranslation(string? source, string? translation)
     {
         if (string.IsNullOrWhiteSpace(translation))

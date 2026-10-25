@@ -108,11 +108,78 @@ public static class TranslateDirection
             return true;
 
         var code = NormalizeLang(target);
+        var script = DominantScript(line);
+        if (script.Length > 0)
+            return script == code;
         if (code == "TR")
             return LooksTurkish(line);
         if (code == "EN")
             return LooksEnglish(line);
         return false;
+    }
+
+    public static string GoogleCode(string? target)
+    {
+        var code = NormalizeLang(target);
+        return code switch
+        {
+            "ZH" => "zh-CN",
+            "" => "en",
+            _ => code.ToLowerInvariant()
+        };
+    }
+
+    public static string DeepLCode(string? target)
+    {
+        var code = NormalizeLang(target);
+        return code switch
+        {
+            "ZH" => "ZH-HANS",
+            "PT" => "PT-PT",
+            "" => "EN",
+            _ => code
+        };
+    }
+
+    public static string RememberedTarget(string? code)
+    {
+        var normalized = NormalizeLang(code);
+        return Targets.Contains(normalized) ? normalized : "TR";
+    }
+
+    private static string DominantScript(string text)
+    {
+        var cyrillic = 0;
+        var arabic = 0;
+        var kana = 0;
+        var hangul = 0;
+        var han = 0;
+        foreach (var ch in text)
+        {
+            if (ch is >= '\u0400' and <= '\u04FF')
+                cyrillic++;
+            else if (ch is >= '\u0600' and <= '\u06FF')
+                arabic++;
+            else if (ch is >= '\u3040' and <= '\u30FF')
+                kana++;
+            else if (ch is >= '\uAC00' and <= '\uD7AF')
+                hangul++;
+            else if (ch is >= '\u4E00' and <= '\u9FFF')
+                han++;
+        }
+
+        if (kana > 0)
+            return "JA";
+        var best = Math.Max(cyrillic, Math.Max(arabic, Math.Max(hangul, han)));
+        if (best < 1)
+            return "";
+        if (cyrillic == best)
+            return "RU";
+        if (arabic == best)
+            return "AR";
+        if (hangul == best)
+            return "KO";
+        return "ZH";
     }
 
     private static IEnumerable<string> Words(string text)
