@@ -108,7 +108,7 @@ public static class TranslateDirection
             return true;
 
         var code = NormalizeLang(target);
-        var script = DominantScript(line);
+        var script = DominantScript(line ?? "");
         if (script.Length > 0)
             return script == code;
         if (code == "TR")
