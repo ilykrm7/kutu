@@ -335,4 +335,36 @@
   <data name="Settings_RecordHotkey" xml:space="preserve"><value>Screen recording</value></data>
   <data name="Settings_PassDefaults" xml:space="preserve"><value>Password defaults</value></data>
   <data name="Settings_ScreenLang" xml:space="preserve"><value>Screen translate language</value></data>
+  <data name="Tool_Matte_Title" xml:space="preserve"><value>Remove background</value></data>
+  <data name="Tool_Matte_Desc" xml:space="preserve"><value>Makes a flat-colored backdrop transparent.</value></data>
+  <data name="Tool_Font_Title" xml:space="preserve"><value>Fonts</value></data>
+  <data name="Tool_Font_Desc" xml:space="preserve"><value>Search installed fonts, preview them, copy the name.</value></data>
+  <data name="Tool_Uuid_Title" xml:space="preserve"><value>UUID</value></data>
+  <data name="Tool_Uuid_Desc" xml:space="preserve"><value>Creates a version 4 or time-ordered version 7 id.</value></data>
+  <data name="Tool_Digest_Title" xml:space="preserve"><value>Digest</value></data>
+  <data name="Tool_Digest_Desc" xml:space="preserve"><value>MD5 and SHA digests for text or a file.</value></data>
+  <data name="Matte_Tolerance" xml:space="preserve"><value>Tolerance</value></data>
+  <data name="Matte_Holes" xml:space="preserve"><value>Also clear enclosed holes</value></data>
+  <data name="Matte_Hint" xml:space="preserve"><value>Pixels close to the corner color are removed. It suits flat backdrops; it does not use a portrait model.</value></data>
+  <data name="Matte_Empty" xml:space="preserve"><value>Drop an image.</value></data>
+  <data name="Matte_Saved" xml:space="preserve"><value>PNG saved.</value></data>
+  <data name="Font_Search" xml:space="preserve"><value>Search fonts</value></data>
+  <data name="Font_Sample" xml:space="preserve"><value>Preview text</value></data>
+  <data name="Font_SampleDefault" xml:space="preserve"><value>Kutu — clear, round, quiet.</value></data>
+  <data name="Font_Size" xml:space="preserve"><value>Size</value></data>
+  <data name="Font_Copy" xml:space="preserve"><value>Copy name</value></data>
+  <data name="Font_Empty" xml:space="preserve"><value>No matching font.</value></data>
+  <data name="Uuid_Count" xml:space="preserve"><value>Count</value></data>
+  <data name="Uuid_Upper" xml:space="preserve"><value>Uppercase</value></data>
+  <data name="Uuid_Braces" xml:space="preserve"><value>Braces</value></data>
+  <data name="Uuid_Hyphens" xml:space="preserve"><value>Hyphens</value></data>
+  <data name="Uuid_V7" xml:space="preserve"><value>Version 7</value></data>
+  <data name="Uuid_Generate" xml:space="preserve"><value>Generate</value></data>
+  <data name="Digest_Text" xml:space="preserve"><value>Text</value></data>
+  <data name="Digest_File" xml:space="preserve"><value>File</value></data>
+  <data name="Digest_Run" xml:space="preserve"><value>Digest</value></data>
+  <data name="Digest_Placeholder" xml:space="preserve"><value>Text to digest</value></data>
+  <data name="Digest_Drop" xml:space="preserve"><value>Drop a file here.</value></data>
+  <data name="Digest_Empty" xml:space="preserve"><value>Type text or choose a file.</value></data>
+  <data name="Digest_Clear" xml:space="preserve"><value>Clear</value></data>
 </root>

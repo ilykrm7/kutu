@@ -64,8 +64,7 @@ public sealed class UploadView : UserControl
                 dropLabel.Text = Path.GetFileName(_filePath);
             }
         }));
-        buttons.Children.Add(Chrome.Soon(L.Get("Action_Upload"), SymbolRegular.CloudArrowUp24));
-        buttons.Children.Add(Chrome.Hint(L.Get("Dash_Soon")));
+        buttons.Children.Add(Chrome.Primary(L.Get("Action_Upload"), SymbolRegular.CloudArrowUp24, async (_, _) => await UploadAsync()));
         _url = Chrome.Input(L.Get("Upload_Result"));
         _url.IsReadOnly = true;
         _status = Chrome.Hint("");

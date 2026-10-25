@@ -514,7 +514,7 @@ public sealed class SettingsView : UserControl
     private static string CurrentVersion()
     {
         var version = typeof(SettingsView).Assembly.GetName().Version;
-        return version is null ? "1.1.4" : $"{version.Major}.{version.Minor}.{version.Build}";
+        return version is null ? "2.0.0" : $"{version.Major}.{version.Minor}.{version.Build}";
     }
 
     private static UIElement Footer()
@@ -601,10 +601,13 @@ public sealed class SettingsView : UserControl
 
     private static UIElement Section(string title, UIElement body)
     {
-        var stack = new StackPanel();
-        stack.Children.Add(Chrome.Heading(title));
-        stack.Children.Add(body);
-        return Chrome.Card(stack);
+        var stack = new StackPanel { Margin = new Thickness(0, 0, 0, 8) };
+        var heading = Chrome.Label(title);
+        heading.FontSize = 13;
+        heading.Margin = new Thickness(14, 8, 0, 8);
+        stack.Children.Add(heading);
+        stack.Children.Add(Chrome.Card(body));
+        return stack;
     }
 
     private static UIElement KeyRow(string label, UIElement input)
