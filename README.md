@@ -32,7 +32,7 @@ Arayüz Türkçe. Metinler `src/Kutu.Sdk/Resources/Strings.resx` içinde. İngil
 - **Video indir** — bağlantıdan MP4 veya MP3. yt-dlp ve ffmpeg kuruluma gömülmez. Eksik olanlar için **İndir (boyut)** resmi sürümü `%AppData%\Kutu\tools` altına alır, SHA256 doğrular ve `indirilen / toplam MB · hız · kalan` gösterir. İkisi de kuruluysa İndir gizlenir.
 - **Ekran kaydı** — Ctrl+Alt+R. Bölge veya tam ekran, MP4 veya GIF, isteğe bağlı imleç. **Kaydı başlat** ffmpeg kurulana kadar kapalıdır; **Durdur** yalnız kayıt sürerken açıktır. ffmpeg aynı klasöre, yalnız kullanıcı isterse.
 
-Sürüm 2.0 açılışta ve yaklaşık 12 saatte bir GitHub Releases'a bakar. Yeni sürüm varsa pencerenin üstünde ince bir şerit görünür: **Güncelle** ve kapat. Kapatmak o sürümün şeridini gizler; Ayarlar'daki “Yeni sürüm mevcut” satırı kalır. **Güncellemeleri denetle** varsayılan açıktır. **Otomatik güncelle** varsayılan kapalıdır. Ağ hatası sessizdir.
+Uygulama açılışta ve yaklaşık 12 saatte bir GitHub Releases'a bakar. Yeni sürüm varsa pencerenin üstünde ince bir şerit görünür: **Güncelle** ve kapat. Kapatmak o sürümün şeridini gizler; Ayarlar'daki “Yeni sürüm mevcut” satırı kalır. **Güncellemeleri denetle** varsayılan açıktır. **Otomatik güncelle** varsayılan kapalıdır. Ağ hatası sessizdir.
 
 **Alt+Space** Spotlight benzeri başlatıcı açar: `ss`, `renk`, `whois`, `çevir`.
 

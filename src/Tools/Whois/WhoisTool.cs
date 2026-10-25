@@ -301,7 +301,7 @@ public static class RdapClient
     {
         TlsPolicy.Enable();
         using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(8) };
-        http.DefaultRequestHeaders.UserAgent.ParseAdd("Kutu/2.0.0 (+https://github.com/ilykrm7/kutu)");
+        http.DefaultRequestHeaders.UserAgent.ParseAdd("Kutu/1.1.5 (+https://github.com/ilykrm7/kutu)");
         http.DefaultRequestHeaders.Accept.ParseAdd("application/rdap+json");
         Exception? last = null;
         var notFound = 0;

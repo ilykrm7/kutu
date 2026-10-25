@@ -33,7 +33,7 @@ public partial class MainWindow : FluentWindow
         SettingsButton.Content = NavLabel("Settings24", L.Get("Nav_Settings"));
         UpdateApplyButton.Content = L.Get("Update_Action");
         var version = typeof(MainWindow).Assembly.GetName().Version;
-        SidebarVersion.Text = version is null ? "v2.0.0" : $"v{version.Major}.{version.Minor}.{version.Build}";
+        SidebarVersion.Text = version is null ? "v1.1.5" : $"v{version.Major}.{version.Minor}.{version.Build}";
         SourceInitialized += (_, _) => ApplyDarkChrome();
         ShowDashboard();
     }
