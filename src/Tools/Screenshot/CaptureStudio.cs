@@ -223,9 +223,7 @@ public sealed class CaptureStudio : Window
         HighlightWidth();
         _tools.Children.Add(IconButton($"{L.Get("Action_Copy")} (Ctrl+C)", SymbolRegular.Copy24, (_, _) => Copy()));
         _tools.Children.Add(IconButton($"{L.Get("Action_Save")} (Ctrl+S)", SymbolRegular.Save24, (_, _) => Save()));
-        var upload = IconButton($"{L.Get("Action_Upload")} · {L.Get("Dash_Soon")}", SymbolRegular.CloudArrowUp24, (_, _) => { });
-        upload.IsEnabled = false;
-        _tools.Children.Add(upload);
+        _tools.Children.Add(IconButton(L.Get("Action_Upload"), SymbolRegular.CloudArrowUp24, async (_, _) => await UploadShotAsync()));
         return new Border
         {
             Background = new SolidColorBrush(Color.FromArgb(0xF2, 0x10, 0x18, 0x28)),
@@ -875,6 +873,28 @@ public sealed class CaptureStudio : Window
         encoder.Save(stream);
         _host.Toast(L.Get("Shot_Saved"));
         Close();
+    }
+
+    private async Task UploadShotAsync()
+    {
+        var image = RenderResult();
+        if (image is null)
+            return;
+
+        try
+        {
+            var url = await _host.UploadAsync(BitmapFiles.ToPng(image), "kutu.png", "image/png");
+            if (string.IsNullOrWhiteSpace(url))
+                return;
+            _host.CopyText(url);
+            _host.Toast(L.Get("Shot_Uploaded"));
+            Close();
+        }
+        catch (Exception ex)
+        {
+            _host.Log(ex.ToString());
+            _host.Toast(ex.Message);
+        }
     }
 
     private BitmapSource? RenderResult()

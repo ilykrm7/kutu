@@ -7,33 +7,33 @@
                  Height="780"
                  MinWidth="980"
                  MinHeight="640"
-                 Background="#070B14"
+                 Background="#1C1C1E"
                  WindowStartupLocation="CenterScreen"
                  WindowBackdropType="Mica"
                  WindowCornerPreference="Round"
                  ExtendsContentIntoTitleBar="True"
                  Icon="pack://application:,,,/Assets/kutu.ico"
                  FontFamily="Segoe UI Variable Text, Segoe UI">
-    <Grid Background="#070B14">
+    <Grid Background="#1C1C1E">
         <Grid.RowDefinitions>
             <RowDefinition Height="48" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <ui:TitleBar x:Name="AppTitleBar" Grid.Row="0" Title="Kutu" Background="#070B14" Foreground="#F4F7FB" />
+        <ui:TitleBar x:Name="AppTitleBar" Grid.Row="0" Title="Kutu" Background="#1C1C1E" Foreground="#F5F5F7" />
 
-        <Border x:Name="UpdateBar" Grid.Row="1" Height="48" Visibility="Collapsed"
-                Background="#1A28A0F1" BorderBrush="{StaticResource KutuAccentBrush}" BorderThickness="0,1,0,0">
+        <Border x:Name="UpdateBar" Grid.Row="1" Height="44" Visibility="Collapsed"
+                Background="#260A84FF" BorderBrush="#0A84FF" BorderThickness="0,1,0,0">
             <Grid>
-                <ProgressBar x:Name="UpdateProgress" Height="8" VerticalAlignment="Bottom" Maximum="1" Value="0"
-                             Visibility="Collapsed" Foreground="{StaticResource KutuAccentBrush}" Background="#3328A0F1" BorderThickness="0" />
-                <DockPanel Margin="18,0,10,0" LastChildFill="False">
+                <ProgressBar x:Name="UpdateProgress" Height="3" VerticalAlignment="Bottom" Maximum="1" Value="0"
+                             Visibility="Collapsed" Foreground="#0A84FF" Background="#330A84FF" BorderThickness="0" />
+                <DockPanel Margin="22,0,12,0" LastChildFill="False">
                     <Button x:Name="UpdateCloseButton" DockPanel.Dock="Right" Click="UpdateClose_Click" Content="×"
                             Width="28" Height="28" Margin="4,0,0,0" Padding="0" VerticalAlignment="Center"
                             Background="Transparent" BorderThickness="0" Foreground="{StaticResource KutuMutedBrush}" FontSize="16" />
                     <Button x:Name="UpdateApplyButton" DockPanel.Dock="Right" Click="UpdateApply_Click"
-                            Padding="12,4" Margin="12,0,0,0" VerticalAlignment="Center" />
+                            Padding="14,5" Margin="12,0,0,0" VerticalAlignment="Center" />
                     <TextBlock x:Name="UpdateText" VerticalAlignment="Center" Foreground="{StaticResource KutuTextBrush}" FontSize="13" />
                 </DockPanel>
             </Grid>
@@ -41,28 +41,32 @@
 
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="248" />
+                <ColumnDefinition Width="236" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <Border Grid.Column="0" Background="#B80B1220" BorderBrush="{StaticResource KutuLineBrush}" BorderThickness="0,0,1,0">
-                <StackPanel Margin="16,8,16,16">
-                    <StackPanel Orientation="Horizontal" Margin="8,8,8,22">
-                        <Image Width="40" Height="40" Source="pack://application:,,,/Assets/kutu-mark.png" RenderOptions.BitmapScalingMode="HighQuality" />
-                        <TextBlock Text="Kutu" Margin="12,0,0,0" FontSize="20" FontWeight="SemiBold"
-                                   Foreground="{StaticResource KutuTextBrush}" VerticalAlignment="Center" />
+            <Border Grid.Column="0" Background="#161618" BorderBrush="{StaticResource KutuLineBrush}" BorderThickness="0,0,1,0">
+                <DockPanel Margin="14,6,14,16">
+                    <TextBlock x:Name="SidebarVersion" DockPanel.Dock="Bottom" Margin="12,16,0,0"
+                               Foreground="{StaticResource KutuMutedBrush}" FontSize="12" />
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="10,10,8,22">
+                            <Image Width="36" Height="36" Source="pack://application:,,,/Assets/kutu-mark.png" RenderOptions.BitmapScalingMode="HighQuality" />
+                            <TextBlock Text="Kutu" Margin="12,0,0,0" FontSize="22" FontWeight="SemiBold"
+                                       Foreground="{StaticResource KutuTextBrush}" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <Button x:Name="DashboardButton" Style="{StaticResource NavButton}" Click="Dashboard_Click" />
+                        <Button x:Name="FavoritesButton" Style="{StaticResource NavButton}" Click="Favorites_Click" />
+                        <Button x:Name="SettingsButton" Style="{StaticResource NavButton}" Click="Settings_Click" />
                     </StackPanel>
-                    <Button x:Name="DashboardButton" Style="{StaticResource NavButton}" Click="Dashboard_Click" />
-                    <Button x:Name="FavoritesButton" Style="{StaticResource NavButton}" Click="Favorites_Click" />
-                    <Button x:Name="SettingsButton" Style="{StaticResource NavButton}" Click="Settings_Click" />
-                </StackPanel>
+                </DockPanel>
             </Border>
 
-            <Grid Grid.Column="1">
+            <Grid Grid.Column="1" Background="#1C1C1E">
                 <ContentControl x:Name="Pages" />
-                <Border x:Name="ToastCard" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,24"
-                        Background="#F2141C2E" BorderBrush="{StaticResource KutuAccentBrush}" BorderThickness="1"
-                        CornerRadius="14" Padding="16,10" Visibility="Collapsed">
+                <Border x:Name="ToastCard" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,28"
+                        Background="#F22C2C2E" BorderBrush="#38383A" BorderThickness="1"
+                        CornerRadius="22" Padding="18,10" Visibility="Collapsed">
                     <TextBlock x:Name="ToastText" Foreground="{StaticResource KutuTextBrush}" FontSize="13" />
                 </Border>
             </Grid>

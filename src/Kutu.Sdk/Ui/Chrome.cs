@@ -55,8 +55,8 @@ public static class Chrome
     {
         Background = CardBrush,
         BorderBrush = Line,
-        BorderThickness = new Thickness(1),
-        CornerRadius = new CornerRadius(18),
+        BorderThickness = new Thickness(0),
+        CornerRadius = new CornerRadius(16),
         Padding = padding ?? new Thickness(18),
         Child = child
     };
@@ -68,9 +68,10 @@ public static class Chrome
             Content = text,
             Appearance = ControlAppearance.Primary,
             Icon = new SymbolIcon { Symbol = symbol, FontSize = 16 },
-            Padding = new Thickness(14, 8, 14, 8),
+            Padding = new Thickness(16, 8, 16, 8),
             Margin = new Thickness(0, 0, 8, 0),
-            FontWeight = FontWeights.SemiBold
+            FontWeight = FontWeights.SemiBold,
+            FontSize = 13
         };
         button.Click += click;
         Motion.Pressable(button);
@@ -148,7 +149,7 @@ public static class Chrome
             Padding = new Thickness(14, 8, 14, 8),
             Margin = new Thickness(0, 0, 8, 0),
             IsEnabled = false,
-            ToolTip = "Yakında"
+            ToolTip = Localization.L.Get("Dash_Soon")
         };
         return button;
     }
@@ -178,7 +179,7 @@ public static class Chrome
             var button = Secondary("", SymbolRegular.Copy24, (_, _) => copy());
             button.Padding = new Thickness(8, 4, 8, 4);
             button.Margin = new Thickness(8, 0, 0, 0);
-            button.ToolTip = "Kopyala";
+            button.ToolTip = Localization.L.Get("Action_Copy");
             Grid.SetColumn(button, 2);
             grid.Children.Add(button);
         }
@@ -188,40 +189,29 @@ public static class Chrome
 
     public static Border Section(string title, SymbolRegular symbol, UIElement body)
     {
-        var icon = new SymbolIcon
+        var header = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(4, 0, 0, 8) };
+        header.Children.Add(new SymbolIcon
         {
             Symbol = symbol,
-            FontSize = 16,
-            Foreground = Brushes.White,
-            HorizontalAlignment = HorizontalAlignment.Center,
+            FontSize = 14,
+            Foreground = Muted,
+            Margin = new Thickness(0, 0, 8, 0),
             VerticalAlignment = VerticalAlignment.Center
-        };
-        var bubble = new Border
-        {
-            Width = 28,
-            Height = 28,
-            CornerRadius = new CornerRadius(8),
-            Background = Accent,
-            Child = icon,
-            Margin = new Thickness(0, 0, 10, 0)
-        };
-        var heading = new TextBlock
+        });
+        header.Children.Add(new TextBlock
         {
             Text = title,
-            FontSize = 15,
+            FontSize = 13,
             FontWeight = FontWeights.SemiBold,
-            Foreground = Text,
+            Foreground = Muted,
             VerticalAlignment = VerticalAlignment.Center
-        };
-        var header = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 12) };
-        header.Children.Add(bubble);
-        header.Children.Add(heading);
-        var stack = new StackPanel();
+        });
+        var stack = new StackPanel { Margin = new Thickness(0, 0, 0, 12) };
         stack.Children.Add(header);
-        stack.Children.Add(body);
-        var card = Card(stack);
-        card.Margin = new Thickness(0, 0, 0, 12);
-        return card;
+        var card = Card(body);
+        card.Margin = new Thickness(0);
+        stack.Children.Add(card);
+        return new Border { Child = stack };
     }
 
     public static void BubbleWheel(UIElement element)
@@ -312,11 +302,11 @@ public static class Chrome
 
         return key switch
         {
-            "KutuAccentBrush" => new LinearGradientBrush(Color.FromRgb(0x28, 0xA0, 0xF1), Color.FromRgb(0x4B, 0xDF, 0xB3), 45),
-            "KutuMutedBrush" => new SolidColorBrush(Color.FromRgb(0x93, 0xA0, 0xB8)),
-            "KutuFieldBrush" => new SolidColorBrush(Color.FromRgb(0x0E, 0x15, 0x26)),
-            "KutuLineBrush" => new SolidColorBrush(Color.FromRgb(0x2A, 0x3A, 0x58)),
-            _ => new SolidColorBrush(Color.FromRgb(0x14, 0x1C, 0x2E))
+            "KutuAccentBrush" => new SolidColorBrush(Color.FromRgb(0x0A, 0x84, 0xFF)),
+            "KutuMutedBrush" => new SolidColorBrush(Color.FromRgb(0x98, 0x98, 0x9D)),
+            "KutuFieldBrush" => new SolidColorBrush(Color.FromRgb(0x1C, 0x1C, 0x1E)),
+            "KutuLineBrush" => new SolidColorBrush(Color.FromRgb(0x38, 0x38, 0x3A)),
+            _ => new SolidColorBrush(Color.FromRgb(0x2C, 0x2C, 0x2E))
         };
     }
 }

@@ -30,7 +30,7 @@
   <data name="Tool_Upload_Title" xml:space="preserve"><value>Bağlantıya yükle</value></data>
   <data name="Tool_Upload_Desc" xml:space="preserve"><value>Metin veya görseli paylaşılabilir bağlantıya çevir.</value></data>
   <data name="Tool_Translate_Title" xml:space="preserve"><value>Çeviri</value></data>
-  <data name="Tool_Translate_Desc" xml:space="preserve"><value>Türkçe metni İngilizceye, diğerlerini Türkçeye çevirir.</value></data>
+  <data name="Tool_Translate_Desc" xml:space="preserve"><value>Seçtiğin dile çevirir. Seçim kaydedilir, sonra değişir.</value></data>
   <data name="Action_Back" xml:space="preserve"><value>Geri</value></data>
   <data name="Action_Copy" xml:space="preserve"><value>Kopyala</value></data>
   <data name="Action_Save" xml:space="preserve"><value>Kaydet</value></data>
@@ -334,5 +334,52 @@
   <data name="Settings_ScreenHotkey" xml:space="preserve"><value>Ekran çevirisi</value></data>
   <data name="Settings_RecordHotkey" xml:space="preserve"><value>Ekran kaydı</value></data>
   <data name="Settings_PassDefaults" xml:space="preserve"><value>Parola varsayılanları</value></data>
-  <data name="Settings_ScreenLang" xml:space="preserve"><value>Ekran çevirisi dili</value></data>
+  <data name="Settings_ScreenLang" xml:space="preserve"><value>Çeviri dili</value></data>
+  <data name="Translate_Sticky" xml:space="preserve"><value>Hedef dil kaydedilir. İstediğinde yeniden değiştirirsin.</value></data>
+  <data name="Screen_None" xml:space="preserve"><value>Bu bölgede çevrilecek yeni satır çıkmadı.</value></data>
+  <data name="Target_TR" xml:space="preserve"><value>Türkçe</value></data>
+  <data name="Target_EN" xml:space="preserve"><value>İngilizce</value></data>
+  <data name="Target_DE" xml:space="preserve"><value>Almanca</value></data>
+  <data name="Target_FR" xml:space="preserve"><value>Fransızca</value></data>
+  <data name="Target_ES" xml:space="preserve"><value>İspanyolca</value></data>
+  <data name="Target_IT" xml:space="preserve"><value>İtalyanca</value></data>
+  <data name="Target_PT" xml:space="preserve"><value>Portekizce</value></data>
+  <data name="Target_NL" xml:space="preserve"><value>Felemenkçe</value></data>
+  <data name="Target_RU" xml:space="preserve"><value>Rusça</value></data>
+  <data name="Target_AR" xml:space="preserve"><value>Arapça</value></data>
+  <data name="Target_ZH" xml:space="preserve"><value>Çince</value></data>
+  <data name="Target_JA" xml:space="preserve"><value>Japonca</value></data>
+  <data name="Target_KO" xml:space="preserve"><value>Korece</value></data>
+  <data name="Tool_Matte_Title" xml:space="preserve"><value>Arka plan sil</value></data>
+  <data name="Tool_Matte_Desc" xml:space="preserve"><value>Düz renkli zemini saydam yapar.</value></data>
+  <data name="Tool_Font_Title" xml:space="preserve"><value>Yazı tipi</value></data>
+  <data name="Tool_Font_Desc" xml:space="preserve"><value>Yüklü yazı tiplerini ara, önizle, adını kopyala.</value></data>
+  <data name="Tool_Uuid_Title" xml:space="preserve"><value>UUID</value></data>
+  <data name="Tool_Uuid_Desc" xml:space="preserve"><value>Sürüm 4 veya zamana bağlı sürüm 7 kimlik üretir.</value></data>
+  <data name="Tool_Digest_Title" xml:space="preserve"><value>Özet</value></data>
+  <data name="Tool_Digest_Desc" xml:space="preserve"><value>Metin veya dosya için MD5 ve SHA özeti.</value></data>
+  <data name="Matte_Tolerance" xml:space="preserve"><value>Tolerans</value></data>
+  <data name="Matte_Holes" xml:space="preserve"><value>İç boşlukları da sil</value></data>
+  <data name="Matte_Hint" xml:space="preserve"><value>Köşelerdeki renge yakın pikseller silinir. Düz renkli zeminlerde işe yarar; portre için bir model kullanmaz.</value></data>
+  <data name="Matte_Empty" xml:space="preserve"><value>Bir görsel bırakın.</value></data>
+  <data name="Matte_Saved" xml:space="preserve"><value>PNG kaydedildi.</value></data>
+  <data name="Font_Search" xml:space="preserve"><value>Yazı tipi ara</value></data>
+  <data name="Font_Sample" xml:space="preserve"><value>Önizleme metni</value></data>
+  <data name="Font_SampleDefault" xml:space="preserve"><value>Kutu — duru, yuvarlak, sade.</value></data>
+  <data name="Font_Size" xml:space="preserve"><value>Boyut</value></data>
+  <data name="Font_Copy" xml:space="preserve"><value>Adı kopyala</value></data>
+  <data name="Font_Empty" xml:space="preserve"><value>Eşleşen yazı tipi yok.</value></data>
+  <data name="Uuid_Count" xml:space="preserve"><value>Adet</value></data>
+  <data name="Uuid_Upper" xml:space="preserve"><value>Büyük harf</value></data>
+  <data name="Uuid_Braces" xml:space="preserve"><value>Süslü parantez</value></data>
+  <data name="Uuid_Hyphens" xml:space="preserve"><value>Tire</value></data>
+  <data name="Uuid_V7" xml:space="preserve"><value>Sürüm 7</value></data>
+  <data name="Uuid_Generate" xml:space="preserve"><value>Üret</value></data>
+  <data name="Digest_Text" xml:space="preserve"><value>Metin</value></data>
+  <data name="Digest_File" xml:space="preserve"><value>Dosya</value></data>
+  <data name="Digest_Run" xml:space="preserve"><value>Özetle</value></data>
+  <data name="Digest_Placeholder" xml:space="preserve"><value>Özeti alınacak metin</value></data>
+  <data name="Digest_Drop" xml:space="preserve"><value>Dosyayı buraya bırakın.</value></data>
+  <data name="Digest_Empty" xml:space="preserve"><value>Metin yazın veya dosya seçin.</value></data>
+  <data name="Digest_Clear" xml:space="preserve"><value>Temizle</value></data>
 </root>

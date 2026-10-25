@@ -37,7 +37,7 @@ public sealed class EditorWindow : Window
         MinWidth = 860;
         MinHeight = 560;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
-        Background = new SolidColorBrush(MediaColor.FromRgb(0x07, 0x0B, 0x14));
+        Background = new SolidColorBrush(MediaColor.FromRgb(0x1C, 0x1C, 0x1E));
         _canvas = new ShotCanvas(_source, _items);
         _text = new TextBox
         {
@@ -45,9 +45,9 @@ public sealed class EditorWindow : Window
             Height = 32,
             Text = L.Get("Shot_Text"),
             VerticalContentAlignment = VerticalAlignment.Center,
-            Background = new SolidColorBrush(MediaColor.FromRgb(0x10, 0x18, 0x28)),
+            Background = new SolidColorBrush(MediaColor.FromRgb(0x2C, 0x2C, 0x2E)),
             Foreground = Brushes.White,
-            BorderBrush = new SolidColorBrush(MediaColor.FromRgb(0x2A, 0x3A, 0x58))
+            BorderBrush = new SolidColorBrush(MediaColor.FromRgb(0x38, 0x38, 0x3A))
         };
 
         var tools = new StackPanel { Orientation = Orientation.Horizontal };
@@ -70,7 +70,7 @@ public sealed class EditorWindow : Window
         var actions = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
         actions.Children.Add(Chrome.Secondary(L.Get("Action_Copy"), SymbolRegular.Copy24, (_, _) => Copy()));
         actions.Children.Add(Chrome.Secondary(L.Get("Action_Save"), SymbolRegular.Save24, (_, _) => Save()));
-        actions.Children.Add(Chrome.Soon(L.Get("Action_Upload"), SymbolRegular.CloudArrowUp24));
+        actions.Children.Add(Chrome.Primary(L.Get("Action_Upload"), SymbolRegular.CloudArrowUp24, async (_, _) => await UploadAsync()));
 
         var bar = new DockPanel { Margin = new Thickness(16, 12, 16, 8) };
         DockPanel.SetDock(actions, Dock.Right);

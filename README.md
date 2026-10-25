@@ -10,7 +10,7 @@ Arayüz Türkçe. Metinler `src/Kutu.Sdk/Resources/Strings.resx` içinde. İngil
 
 - **Görsel dönüştür** — sağ tık menüsünde **Kutu ile dönüştür** (JPEG, PNG, WebP, ICO, PDF, BMP). PNG, JPG, WebP, BMP, ICO, PDF ve HEIC. HEIC, Windows HEIF koduyla okunur (Microsoft Store: HEIF Image Extensions). ImageMagick yok.
 - **Toplu boyut ve sıkıştırma** — uzun kenar, genişlik, yükseklik veya yüzde; JPG / WebP / PNG.
-- **Ekran görüntüsü** — donmuş ekranda bölge seçimi ve yerinde işaretleme. Kopyala veya kaydet. Yükle kapalıdır (Yakında). Esc vazgeçer.
+- **Ekran görüntüsü** — donmuş ekranda bölge seçimi ve yerinde işaretleme. Kopyala, kaydet veya bağlantıya yükle. Esc vazgeçer.
 - **Renk seçici** — HEX, RGB, HSL, kopyala, geçmiş.
 - **Pano geçmişi** — Ctrl+Alt+V ile açılır; son 50 kayıt, arama, sabitleme. Karttaki anahtar kapatır.
 - **Metin genişletici** — tetikleyici tam yazılınca hemen genişler (`:adm`, `mail:imza`). Ayrı bir kanca iş parçacığı. Karttaki anahtar kapatır.
@@ -19,16 +19,20 @@ Arayüz Türkçe. Metinler `src/Kutu.Sdk/Resources/Strings.resx` içinde. İngil
 - **Toplu IP** — yapıştırılan liste veya txt. Aynı sağlayıcılar ve DNSBL. CSV. “Benim IP'm”.
 - **Ping ve port** — gecikme, tek port, aralık, sık kullanılanlar ve **Tüm portlar** (1–65535). Dört kip tek seçimdir; yalnız seçili olan işaretlidir. 3389 ve 22, aralıkta varsa önce taranır. Tablo, kopya ve CSV yalnız açık portları içerir; kapalı ve filtrelenenler yazılmaz. Hiçbiri açık değilse “Açık port bulunamadı” görünür. Açık portta banner ve RDP / HTTP / TLS yoklaması yapılır. İlerleme satırı `x / y · açık n · kalan` olarak kalır.
 - **SSL kontrol** — yayıncı, konu, SAN, geçerlilik, kalan gün, zincir, TLS sürümü.
-- **Bağlantıya yükle** — kart soluk, düğme tıklanmaz, ipucu Yakında.
-- **Çeviri** — Türkçe metin İngilizceye, diğer diller Türkçeye. Yerel ipucu, sonra sağlayıcının algıladığı dil; Türkçeye gidip Türkçe dönerse İngilizceye yeniden sorulur. Önce Google, sonra DeepL, kısa metinde MyMemory. Uzun metin tek POST ile gider; bölünürse paragraf ve cümle sınırında, sırayı ve satır sonlarını koruyarak birleşir. Ctrl+Alt+T seçili metni yerinde çevirir.
+- **Bağlantıya yükle** — metin veya dosyayı Ayarlar’daki uca gönderir, dönen adresi kopyalar. Ekran görüntüsünden de yüklenir.
+- **Çeviri** — hedef dil seçilir ve kaydedilir: Türkçe, İngilizce, Rusça ve listedeki diğer diller. Aynı seçim ekran çevirisinde ve Ctrl+Alt+T ile de kullanılır. İstendiğinde yeniden değişir. Önce Google, sonra DeepL, kısa metinde MyMemory. Uzun metin paragraf ve cümle sınırında, sırayı ve satır sonlarını koruyarak birleşir.
 - **QR** — oluştur, PNG kopyala veya kaydet. Ekran bölgesi, dosya ve panodan oku.
 - **OCR** — ekran bölgesi veya görsel. Windows OCR (Türkçe / İngilizce dil paketi gerekir).
-- **Ekran çevirisi** — Ctrl+Alt+E. Önce donmuş ekran görüntüsü, sonra bölge veya tam ekran. Kutu yalnız çevrilen satırın altında durur; hedef dildeki satır gösterilmez. Hedef dil Ayarlar'da, varsayılan Türkçe. Esc kapatır.
+- **Ekran çevirisi** — Ctrl+Alt+E. Önce donmuş ekran görüntüsü, sonra bölge veya tam ekran. Her satır ayrı çevrilir. Kurulu OCR dilleri denenir, en okunaklı sonuç kalır. Çeviri satırın altında durur; hedef dildeki satır yeniden gösterilmez. Hedef dil çeviri aracıyla ortaktır, varsayılan Türkçe. Esc kapatır.
 - **Parola** — uzunluk, büyük/küçük/rakam/simge, belirsiz karakterleri çıkar. Kriptografik rastgelelik. Varsayılanlar Ayarlar'da.
+- **UUID** — sürüm 4 veya zamana bağlı sürüm 7. Büyük harf, tire ve süslü parantez.
+- **Özet** — metin veya dosya için MD5, SHA-1, SHA-256, SHA-384 ve SHA-512.
+- **Yazı tipi** — Windows’ta yüklü aileleri arar, örnek metni o yazı tipiyle gösterir, adı kopyalar.
+- **Arka plan sil** — köşe rengine yakın pikselleri saydam yapar. Düz zemin içindir; portre modeli yoktur. İç boşluklar ayrıca seçilir. PNG kaydeder.
 - **Video indir** — bağlantıdan MP4 veya MP3. yt-dlp ve ffmpeg kuruluma gömülmez. Eksik olanlar için **İndir (boyut)** resmi sürümü `%AppData%\Kutu\tools` altına alır, SHA256 doğrular ve `indirilen / toplam MB · hız · kalan` gösterir. İkisi de kuruluysa İndir gizlenir.
 - **Ekran kaydı** — Ctrl+Alt+R. Bölge veya tam ekran, MP4 veya GIF, isteğe bağlı imleç. **Kaydı başlat** ffmpeg kurulana kadar kapalıdır; **Durdur** yalnız kayıt sürerken açıktır. ffmpeg aynı klasöre, yalnız kullanıcı isterse.
 
-Sürüm 1.1 açılışta ve yaklaşık 12 saatte bir GitHub Releases'a bakar. Yeni sürüm varsa pencerenin üstünde ince bir şerit görünür: **Güncelle** ve kapat. Kapatmak o sürümün şeridini gizler; Ayarlar'daki “Yeni sürüm mevcut” satırı kalır. **Güncellemeleri denetle** varsayılan açıktır. **Otomatik güncelle** varsayılan kapalıdır. Ağ hatası sessizdir.
+Uygulama açılışta ve yaklaşık 12 saatte bir GitHub Releases'a bakar. Yeni sürüm varsa pencerenin üstünde ince bir şerit görünür: **Güncelle** ve kapat. Kapatmak o sürümün şeridini gizler; Ayarlar'daki “Yeni sürüm mevcut” satırı kalır. **Güncellemeleri denetle** varsayılan açıktır. **Otomatik güncelle** varsayılan kapalıdır. Ağ hatası sessizdir.
 
 **Alt+Space** Spotlight benzeri başlatıcı açar: `ss`, `renk`, `whois`, `çevir`.
 
@@ -61,8 +65,6 @@ Uygulama `net48` hedefler. Çekirdek testler `net48` ve `net8.0` olarak derlenir
 1. `src/Tools/YeniArac` projesini aç, `IKutuTool` uygula (`Id`, `TitleKey`, `DescriptionKey`, `Symbol`, `Aliases`, `CreateView`).
 2. Metin anahtarlarını `Strings.resx` ve `Strings.en.resx` dosyalarına ekle.
 3. `src/Kutu.App/Kutu.App.csproj` içine proje başvurusu ve `App.xaml.cs` içindeki diziye bir satır ekle.
-
-v2 için bırakılan yerler: yazı tipi bulucu, arka plan silme, UUID ve özet.
 
 ## Symantec / Broadcom
 

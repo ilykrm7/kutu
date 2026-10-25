@@ -32,6 +32,8 @@ public partial class MainWindow : FluentWindow
         FavoritesButton.Content = NavLabel("Star24", L.Get("Nav_Favorites"));
         SettingsButton.Content = NavLabel("Settings24", L.Get("Nav_Settings"));
         UpdateApplyButton.Content = L.Get("Update_Action");
+        var version = typeof(MainWindow).Assembly.GetName().Version;
+        SidebarVersion.Text = version is null ? "v1.1.5" : $"v{version.Major}.{version.Minor}.{version.Build}";
         SourceInitialized += (_, _) => ApplyDarkChrome();
         ShowDashboard();
     }
@@ -193,9 +195,9 @@ public partial class MainWindow : FluentWindow
         var hwnd = new WindowInteropHelper(this).Handle;
         var dark = 1;
         DwmSetWindowAttribute(hwnd, 20, ref dark, sizeof(int));
-        var caption = 0x00140B07;
+        var caption = 0x001E1C1C;
         DwmSetWindowAttribute(hwnd, 35, ref caption, sizeof(int));
-        var text = 0x00FBF7F4;
+        var text = 0x00F7F5F5;
         DwmSetWindowAttribute(hwnd, 36, ref text, sizeof(int));
     }
 
