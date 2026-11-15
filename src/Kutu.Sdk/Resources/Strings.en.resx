@@ -30,7 +30,7 @@
   <data name="Tool_Upload_Title" xml:space="preserve"><value>Upload to link</value></data>
   <data name="Tool_Upload_Desc" xml:space="preserve"><value>Turn text or an image into a shareable link.</value></data>
   <data name="Tool_Translate_Title" xml:space="preserve"><value>Translate</value></data>
-  <data name="Tool_Translate_Desc" xml:space="preserve"><value>Translates Turkish into English and other languages into Turkish.</value></data>
+  <data name="Tool_Translate_Desc" xml:space="preserve"><value>Translates into the language you pick. The choice is saved.</value></data>
   <data name="Action_Back" xml:space="preserve"><value>Back</value></data>
   <data name="Action_Copy" xml:space="preserve"><value>Copy</value></data>
   <data name="Action_Save" xml:space="preserve"><value>Save</value></data>
@@ -328,11 +328,55 @@
   <data name="Update_Current" xml:space="preserve"><value>Installed version</value></data>
   <data name="Update_Progress" xml:space="preserve"><value>Downloading… {0}%</value></data>
   <data name="Update_Fail" xml:space="preserve"><value>The update did not finish.</value></data>
+  <data name="Update_FailHttp" xml:space="preserve"><value>The update could not be downloaded.</value></data>
+  <data name="Update_FailHash" xml:space="preserve"><value>The downloaded file does not match its checksum.</value></data>
+  <data name="Update_FailBlocked" xml:space="preserve"><value>Security software blocked or removed the downloaded file.</value></data>
+  <data name="Update_FailReplace" xml:space="preserve"><value>The new file could not replace the current app.</value></data>
+  <data name="Update_FailLaunch" xml:space="preserve"><value>The new version could not be started.</value></data>
+  <data name="Update_OpenPage" xml:space="preserve"><value>Download from the page</value></data>
   <data name="Update_None" xml:space="preserve"><value>You're up to date.</value></data>
   <data name="Update_Offline" xml:space="preserve"><value>The check could not be completed.</value></data>
   <data name="Settings_Updates" xml:space="preserve"><value>Updates</value></data>
   <data name="Settings_ScreenHotkey" xml:space="preserve"><value>Screen translate</value></data>
   <data name="Settings_RecordHotkey" xml:space="preserve"><value>Screen recording</value></data>
   <data name="Settings_PassDefaults" xml:space="preserve"><value>Password defaults</value></data>
-  <data name="Settings_ScreenLang" xml:space="preserve"><value>Screen translate language</value></data>
+  <data name="Settings_ScreenLang" xml:space="preserve"><value>Translation language</value></data>
+  <data name="Translate_Sticky" xml:space="preserve"><value>The target language is saved. Change it whenever you need to.</value></data>
+  <data name="Screen_None" xml:space="preserve"><value>Nothing new to translate in that region.</value></data>
+  <data name="Target_TR" xml:space="preserve"><value>Turkish</value></data>
+  <data name="Target_EN" xml:space="preserve"><value>English</value></data>
+  <data name="Target_DE" xml:space="preserve"><value>German</value></data>
+  <data name="Target_FR" xml:space="preserve"><value>French</value></data>
+  <data name="Target_ES" xml:space="preserve"><value>Spanish</value></data>
+  <data name="Target_IT" xml:space="preserve"><value>Italian</value></data>
+  <data name="Target_PT" xml:space="preserve"><value>Portuguese</value></data>
+  <data name="Target_NL" xml:space="preserve"><value>Dutch</value></data>
+  <data name="Target_RU" xml:space="preserve"><value>Russian</value></data>
+  <data name="Target_AR" xml:space="preserve"><value>Arabic</value></data>
+  <data name="Target_ZH" xml:space="preserve"><value>Chinese</value></data>
+  <data name="Target_JA" xml:space="preserve"><value>Japanese</value></data>
+  <data name="Target_KO" xml:space="preserve"><value>Korean</value></data>
+  <data name="Tool_Matte_Title" xml:space="preserve"><value>Remove background</value></data>
+  <data name="Tool_Matte_Desc" xml:space="preserve"><value>Makes a flat-colored backdrop transparent.</value></data>
+  <data name="Tool_Font_Title" xml:space="preserve"><value>Fonts</value></data>
+  <data name="Tool_Font_Desc" xml:space="preserve"><value>Search installed fonts, preview them, copy the name.</value></data>
+  <data name="Tool_Uuid_Title" xml:space="preserve"><value>UUID</value></data>
+  <data name="Tool_Uuid_Desc" xml:space="preserve"><value>Creates a version 4 or time-ordered version 7 id.</value></data>
+  <data name="Matte_Tolerance" xml:space="preserve"><value>Tolerance</value></data>
+  <data name="Matte_Holes" xml:space="preserve"><value>Also clear enclosed holes</value></data>
+  <data name="Matte_Hint" xml:space="preserve"><value>Pixels close to the corner color are removed. It suits flat backdrops; it does not use a portrait model.</value></data>
+  <data name="Matte_Empty" xml:space="preserve"><value>Drop an image.</value></data>
+  <data name="Matte_Saved" xml:space="preserve"><value>PNG saved.</value></data>
+  <data name="Font_Search" xml:space="preserve"><value>Search fonts</value></data>
+  <data name="Font_Sample" xml:space="preserve"><value>Preview text</value></data>
+  <data name="Font_SampleDefault" xml:space="preserve"><value>Kutu — clear, round, quiet.</value></data>
+  <data name="Font_Size" xml:space="preserve"><value>Size</value></data>
+  <data name="Font_Copy" xml:space="preserve"><value>Copy name</value></data>
+  <data name="Font_Empty" xml:space="preserve"><value>No matching font.</value></data>
+  <data name="Uuid_Count" xml:space="preserve"><value>Count</value></data>
+  <data name="Uuid_Upper" xml:space="preserve"><value>Uppercase</value></data>
+  <data name="Uuid_Braces" xml:space="preserve"><value>Braces</value></data>
+  <data name="Uuid_Hyphens" xml:space="preserve"><value>Hyphens</value></data>
+  <data name="Uuid_V7" xml:space="preserve"><value>Version 7</value></data>
+  <data name="Uuid_Generate" xml:space="preserve"><value>Generate</value></data>
 </root>

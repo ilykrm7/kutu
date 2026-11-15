@@ -12,9 +12,11 @@ using Kutu.Sdk.Localization;
 using Kutu.Tools.BulkIp;
 using Kutu.Tools.ClipboardHistory;
 using Kutu.Tools.ColorPicker;
+using Kutu.Tools.Fonts;
 using Kutu.Tools.ImageConverter;
 using Kutu.Tools.ImageResize;
 using Kutu.Tools.IpReputation;
+using Kutu.Tools.Matte;
 using Kutu.Tools.NetProbe;
 using Kutu.Tools.Ocr;
 using Kutu.Tools.Password;
@@ -26,6 +28,7 @@ using Kutu.Tools.SslCheck;
 using Kutu.Tools.TextExpander;
 using Kutu.Tools.Translate;
 using Kutu.Tools.Upload;
+using Kutu.Tools.Uuid;
 using Kutu.Tools.VideoDownload;
 using Kutu.Tools.Whois;
 using Wpf.Ui.Appearance;
@@ -79,15 +82,19 @@ public partial class App : Application
 
             L.SetCulture(settings.Current.Language);
             ApplicationThemeManager.Apply(ApplicationTheme.Dark, Wpf.Ui.Controls.WindowBackdropType.Mica, false);
-            ApplicationAccentColorManager.Apply(SystemAccent(), ApplicationTheme.Dark, false, false);
+            ApplicationAccentColorManager.Apply(Color.FromRgb(0x0A, 0x84, 0xFF), ApplicationTheme.Dark, false, false);
 
             var clipboard = new ClipboardHistoryService { Enabled = settings.Current.ClipboardHistoryEnabled };
+            // Hypothesis, not a confirmed detection: 1.1.5's digest tool added MD5/SHA-1
+            // and whole-file reads that 1.1.4 did not have. It is omitted here.
             IKutuTool[] tools =
             [
                 new ImageConverterTool(),
                 new ImageResizeTool(),
+                new MatteTool(),
                 new ScreenshotTool(),
                 new ColorPickerTool(),
+                new FontsTool(),
                 new ClipboardTool(),
                 new TextExpanderTool(),
                 new WhoisTool(),
@@ -101,6 +108,7 @@ public partial class App : Application
                 new OcrTool(),
                 new ScreenTranslateTool(),
                 new PasswordTool(),
+                new UuidTool(),
                 new VideoDownloadTool(),
                 new ScreenRecordTool()
             ];
@@ -108,6 +116,9 @@ public partial class App : Application
             _host = new AppHost(settings, clipboard, tools, ExitApplication, BindHotkeys);
             _window = new MainWindow(_host);
             _host.Attach(_window);
+            if (ToolSmoke.Requested(e.Args))
+                Environment.Exit(ToolSmoke.Run(_host));
+
             _window.SourceInitialized += (_, _) =>
             {
                 _hotkeys.Attach(_window);
@@ -132,22 +143,6 @@ public partial class App : Application
             MessageBox.Show(ex.Message, "Kutu");
             Shutdown();
         }
-    }
-
-    private static Color SystemAccent()
-    {
-        try
-        {
-            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\DWM");
-            if (key?.GetValue("AccentColor") is int abgr)
-                return Color.FromRgb((byte)(abgr & 0xFF), (byte)((abgr >> 8) & 0xFF), (byte)((abgr >> 16) & 0xFF));
-        }
-        catch
-        {
-            // Keep the brand accent when the registry value is missing.
-        }
-
-        return Color.FromRgb(0x28, 0xA0, 0xF1);
     }
 
     private void BindHotkeys()

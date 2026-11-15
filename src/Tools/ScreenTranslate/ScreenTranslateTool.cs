@@ -98,30 +98,24 @@ public static class ScreenTranslateController
             return;
         }
 
-        var target = string.IsNullOrWhiteSpace(host.Settings.ScreenTranslateTarget) ? "TR" : host.Settings.ScreenTranslateTarget;
+        var target = TranslateDirection.RememberedTarget(host.Settings.ScreenTranslateTarget);
         var texts = page.Lines.Select(line => line.Text).ToList();
         var marked = ScreenLinePlan.Mark(texts, target);
-        var pending = ScreenLinePlan.Pending(marked).ToList();
-        var translated = new List<string>();
+        var translated = new string[marked.Length];
+        using var gate = new SemaphoreSlim(4);
+        var jobs = new List<Task>();
+        for (var i = 0; i < marked.Length; i++)
+        {
+            if (marked[i].Skip || marked[i].Text.Length == 0)
+                continue;
+            var index = i;
+            var line = marked[i].Text;
+            jobs.Add(TranslateLineAsync(host, line, target, gate, value => translated[index] = value));
+        }
+
         try
         {
-            for (var offset = 0; offset < pending.Count; offset += 20)
-            {
-                var slice = pending.Skip(offset).Take(20).ToList();
-                var packed = ScreenLinePlan.Pack(slice, slice.Count)[0];
-                var result = await TranslateClient.TranslateAsync(packed, "auto", target, host.Settings.DeepLKey, host.Settings.DeepLEndpoint);
-                var parts = ScreenLinePlan.Unpack(result.Text, slice.Count);
-                if (parts.All(string.IsNullOrWhiteSpace) && slice.Count > 1)
-                {
-                    for (var i = 0; i < slice.Count; i++)
-                    {
-                        var single = await TranslateClient.TranslateAsync(slice[i], "auto", target, host.Settings.DeepLKey, host.Settings.DeepLEndpoint);
-                        parts[i] = single.Text;
-                    }
-                }
-
-                translated.AddRange(parts);
-            }
+            await Task.WhenAll(jobs);
         }
         catch (Exception ex)
         {
@@ -130,14 +124,35 @@ public static class ScreenTranslateController
         }
 
         var pairs = new List<(OcrLineBox Line, string Translation)>();
-        var cursor = 0;
         for (var i = 0; i < marked.Length; i++)
+            pairs.Add((page.Lines[i], translated[i] ?? ""));
+
+        if (!pairs.Any(pair => ScreenLinePlan.ShowTranslation(pair.Line.Text, pair.Translation)))
         {
-            var translation = marked[i].Skip ? "" : (cursor < translated.Count ? translated[cursor++] : "");
-            pairs.Add((page.Lines[i], translation));
+            host.Toast(L.Get("Screen_None"));
+            return;
         }
 
         ShowOverlay(pick, pairs);
+    }
+
+    private static async Task TranslateLineAsync(IKutuHost host, string line, string target, SemaphoreSlim gate, Action<string> store)
+    {
+        await gate.WaitAsync();
+        try
+        {
+            var result = await TranslateClient.TranslateAsync(line, "auto", target, host.Settings.DeepLKey, host.Settings.DeepLEndpoint);
+            store(result.Text ?? "");
+        }
+        catch (Exception ex)
+        {
+            host.Log("screen translate: " + ex.Message);
+            store("");
+        }
+        finally
+        {
+            gate.Release();
+        }
     }
 
     private static void ShowOverlay(RegionPick pick, IReadOnlyList<(OcrLineBox Line, string Translation)> pairs)
@@ -154,30 +169,32 @@ public static class ScreenTranslateController
             copy.AppendLine(translation.Trim());
             copy.AppendLine();
             var box = TranslationBox(pick, line, dipWidth, dipHeight);
-            var maxWidth = Math.Max(72, Math.Min(box.Width, Math.Max(72, dipWidth - box.X - 8)));
+            var maxWidth = Math.Max(160, Math.Min(Math.Max(box.Width, 220), Math.Max(160, dipWidth - box.X - 12)));
             var top = box.Y;
-            if (top > dipHeight - 18)
-                top = Math.Max(0, dipHeight - 36);
+            var room = dipHeight - top - 12;
+            if (room < 48)
+                top = Math.Max(8, dipHeight - 120);
+            var maxHeight = Math.Max(48, dipHeight - top - 8);
             var card = new Border
             {
-                Background = new SolidColorBrush(Color.FromArgb(0xE8, 0x10, 0x18, 0x28)),
-                BorderBrush = new SolidColorBrush(Color.FromRgb(0x28, 0xA0, 0xF1)),
+                Background = new SolidColorBrush(Color.FromArgb(0xF2, 0x1C, 0x1C, 0x1E)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(0x0A, 0x84, 0xFF)),
                 BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(8),
-                Padding = new Thickness(8, 3, 8, 4),
+                CornerRadius = new CornerRadius(10),
+                Padding = new Thickness(10, 6, 10, 6),
                 MaxWidth = maxWidth,
-                MaxHeight = 42,
+                MaxHeight = maxHeight,
                 IsHitTestVisible = false,
                 Child = new TextBlock
                 {
                     Text = translation.Trim(),
                     Foreground = Brushes.White,
-                    FontSize = 14,
+                    FontSize = 15,
                     FontWeight = FontWeights.SemiBold,
                     TextWrapping = TextWrapping.Wrap,
                     TextTrimming = TextTrimming.CharacterEllipsis,
-                    MaxWidth = Math.Max(56, maxWidth - 16),
-                    MaxHeight = 34
+                    MaxWidth = Math.Max(140, maxWidth - 20),
+                    MaxHeight = Math.Max(36, maxHeight - 12)
                 }
             };
             Canvas.SetLeft(card, Math.Max(0, box.X));
@@ -370,7 +387,9 @@ public sealed class ScreenTranslateView : UserControl
         var gesture = ToolHotkeyMap.Get(host.Settings, "screen-translate");
         if (!string.IsNullOrWhiteSpace(gesture))
             stack.Children.Add(Chrome.Hint(string.Format(L.Get("Dash_Hint"), gesture)));
-        stack.Children.Add(Chrome.Hint(L.Get("Screen_Target") + ": " + host.Settings.ScreenTranslateTarget));
+        stack.Children.Add(Chrome.Hint(L.Get("Translate_Sticky")));
+        stack.Children.Add(Chrome.Label(L.Get("Translate_Target")));
+        stack.Children.Add(LanguageBox.Create(host.Settings.ScreenTranslateTarget, code => TranslatePopup.Remember(host, code)));
         stack.Children.Add(Chrome.Primary(L.Get("Action_ReadScreen"), SymbolRegular.Translate24, async (_, _) => await ScreenTranslateController.StartAsync(host)));
         Content = stack;
     }

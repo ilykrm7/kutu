@@ -44,14 +44,14 @@ public sealed class LauncherWindow : Window
         root.Children.Add(_results);
         Content = new Border
         {
-            Background = new SolidColorBrush(Color.FromArgb(0xF5, 0x0C, 0x12, 0x1E)),
-            BorderBrush = new LinearGradientBrush(Color.FromRgb(0x28, 0xA0, 0xF1), Color.FromRgb(0x4B, 0xDF, 0xB3), 0),
-            BorderThickness = new Thickness(1.4),
-            CornerRadius = new CornerRadius(22),
-            Padding = new Thickness(16),
+            Background = new SolidColorBrush(Color.FromArgb(0xF7, 0x1C, 0x1C, 0x1E)),
+            BorderBrush = new SolidColorBrush(Color.FromArgb(0x33, 0xFF, 0xFF, 0xFF)),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(20),
+            Padding = new Thickness(14),
             Effect = new System.Windows.Media.Effects.DropShadowEffect
             {
-                BlurRadius = 40,
+                BlurRadius = 48,
                 ShadowDepth = 0,
                 Opacity = 0.45,
                 Color = Colors.Black
@@ -156,10 +156,9 @@ public sealed class LauncherWindow : Window
                 FontSize = 15,
                 VerticalAlignment = VerticalAlignment.Center
             };
-            var soon = tool.Id == "upload";
             var alias = new TextBlock
             {
-                Text = soon ? L.Get("Dash_Soon") : tool.Aliases.FirstOrDefault() ?? "",
+                Text = tool.Aliases.FirstOrDefault() ?? "",
                 Foreground = Chrome.Muted,
                 VerticalAlignment = VerticalAlignment.Center
             };
@@ -170,25 +169,21 @@ public sealed class LauncherWindow : Window
             row.Children.Add(alias);
             var card = new Border
             {
-                Background = selected ? new SolidColorBrush(Color.FromRgb(0x1A, 0x27, 0x42)) : Brushes.Transparent,
+                Background = selected ? new SolidColorBrush(Color.FromRgb(0x3A, 0x3A, 0x3C)) : Brushes.Transparent,
                 CornerRadius = new CornerRadius(12),
                 Padding = new Thickness(10, 8, 10, 8),
-                Cursor = soon ? Cursors.Arrow : Cursors.Hand,
-                Opacity = soon ? 0.55 : 1,
+                Cursor = Cursors.Hand,
                 Child = row,
                 Tag = tool
             };
             var index = i;
-            if (!soon)
-                card.MouseLeftButtonUp += (_, _) => Open(_matches[index]);
+            card.MouseLeftButtonUp += (_, _) => Open(_matches[index]);
             _results.Children.Add(card);
         }
     }
 
     private void Open(IKutuTool tool)
     {
-        if (tool.Id == "upload")
-            return;
         Dismiss();
         _host.OpenTool(tool.Id);
     }

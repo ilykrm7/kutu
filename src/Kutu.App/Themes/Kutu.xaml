@@ -1,12 +1,12 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Color x:Key="KutuBgColor">#070B14</Color>
-    <Color x:Key="KutuCardColor">#141C2E</Color>
-    <Color x:Key="KutuCardHoverColor">#1C2944</Color>
-    <Color x:Key="KutuLineColor">#2A3A58</Color>
-    <Color x:Key="KutuTextColor">#F4F7FB</Color>
-    <Color x:Key="KutuMutedColor">#93A0B8</Color>
-    <Color x:Key="KutuFieldColor">#0E1526</Color>
+    <Color x:Key="KutuBgColor">#1C1C1E</Color>
+    <Color x:Key="KutuCardColor">#2C2C2E</Color>
+    <Color x:Key="KutuCardHoverColor">#3A3A3C</Color>
+    <Color x:Key="KutuLineColor">#38383A</Color>
+    <Color x:Key="KutuTextColor">#F5F5F7</Color>
+    <Color x:Key="KutuMutedColor">#98989D</Color>
+    <Color x:Key="KutuFieldColor">#1C1C1E</Color>
 
     <SolidColorBrush x:Key="KutuBgBrush" Color="{StaticResource KutuBgColor}" />
     <SolidColorBrush x:Key="KutuCardBrush" Color="{StaticResource KutuCardColor}" />
@@ -15,16 +15,13 @@
     <SolidColorBrush x:Key="KutuTextBrush" Color="{StaticResource KutuTextColor}" />
     <SolidColorBrush x:Key="KutuMutedBrush" Color="{StaticResource KutuMutedColor}" />
     <SolidColorBrush x:Key="KutuFieldBrush" Color="{StaticResource KutuFieldColor}" />
-    <LinearGradientBrush x:Key="KutuAccentBrush" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#28A0F1" Offset="0" />
-        <GradientStop Color="#4BDFB3" Offset="1" />
-    </LinearGradientBrush>
+    <SolidColorBrush x:Key="KutuAccentBrush" Color="#0A84FF" />
 
-    <SolidColorBrush x:Key="{x:Static SystemColors.WindowBrushKey}" Color="#141C2E" />
-    <SolidColorBrush x:Key="{x:Static SystemColors.WindowTextBrushKey}" Color="#F4F7FB" />
-    <SolidColorBrush x:Key="{x:Static SystemColors.ControlBrushKey}" Color="#101828" />
-    <SolidColorBrush x:Key="{x:Static SystemColors.ControlTextBrushKey}" Color="#F4F7FB" />
-    <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#28A0F1" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.WindowBrushKey}" Color="#2C2C2E" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.WindowTextBrushKey}" Color="#F5F5F7" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.ControlBrushKey}" Color="#1C1C1E" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.ControlTextBrushKey}" Color="#F5F5F7" />
+    <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#0A84FF" />
     <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#FFFFFF" />
 
     <Style x:Key="NavButton" TargetType="Button">
@@ -32,22 +29,22 @@
         <Setter Property="Foreground" Value="{StaticResource KutuTextBrush}" />
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="HorizontalContentAlignment" Value="Left" />
-        <Setter Property="Padding" Value="12,10" />
-        <Setter Property="Margin" Value="0,2" />
+        <Setter Property="Padding" Value="12,8" />
+        <Setter Property="Margin" Value="0,1" />
         <Setter Property="FontSize" Value="14" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="12" Padding="{TemplateBinding Padding}">
+                    <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="10" Padding="{TemplateBinding Padding}">
                         <ContentPresenter />
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource KutuCardHoverBrush}" />
+                            <Setter TargetName="Bd" Property="Background" Value="#14FFFFFF" />
                         </Trigger>
                         <Trigger Property="Tag" Value="on">
-                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource KutuCardBrush}" />
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource KutuCardHoverBrush}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

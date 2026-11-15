@@ -1,4 +1,5 @@
 using System.Windows.Media.Imaging;
+using Kutu.Core.Text;
 using Kutu.Tools.Screenshot;
 using Windows.Globalization;
 using Windows.Graphics.Imaging;
@@ -20,21 +21,35 @@ public static class WindowsOcr
 {
     public static async Task<OcrPage> ReadAsync(BitmapSource source)
     {
-        var engine = Engine();
-        if (engine is null)
+        var engines = Engines();
+        if (engines.Count == 0)
             throw new InvalidOperationException("ocr-missing");
 
         var png = BitmapFiles.ToPng(source);
-        var stream = new InMemoryRandomAccessStream();
-        var writer = new DataWriter(stream.GetOutputStreamAt(0));
-        writer.WriteBytes(png);
-        await writer.StoreAsync();
-        await writer.FlushAsync();
-        writer.DetachStream();
-        stream.Seek(0);
-        var decoder = await Windows.Graphics.Imaging.BitmapDecoder.CreateAsync(stream);
-        var bitmap = await decoder.GetSoftwareBitmapAsync();
-        var result = await engine.RecognizeAsync(bitmap);
+        OcrResult? result = null;
+        var best = -1;
+        foreach (var engine in engines)
+        {
+            var stream = new InMemoryRandomAccessStream();
+            var writer = new DataWriter(stream.GetOutputStreamAt(0));
+            writer.WriteBytes(png);
+            await writer.StoreAsync();
+            await writer.FlushAsync();
+            writer.DetachStream();
+            stream.Seek(0);
+            var decoder = await Windows.Graphics.Imaging.BitmapDecoder.CreateAsync(stream);
+            var bitmap = await decoder.GetSoftwareBitmapAsync();
+            var attempt = await engine.RecognizeAsync(bitmap);
+            var score = ScreenLinePlan.OcrScore(attempt.Text);
+            if (score > best)
+            {
+                best = score;
+                result = attempt;
+            }
+        }
+
+        if (result is null)
+            throw new InvalidOperationException("ocr-missing");
         var page = new OcrPage { Text = result.Text ?? "" };
         foreach (var line in result.Lines)
         {
@@ -47,30 +62,24 @@ public static class WindowsOcr
         return page;
     }
 
-    private static OcrEngine? Engine()
+    private static List<OcrEngine> Engines()
     {
-        var profile = OcrEngine.TryCreateFromUserProfileLanguages();
-        if (profile is not null)
-            return profile;
-
-        foreach (var tag in new[] { "tr-TR", "tr", "en-US", "en" })
+        var engines = new List<OcrEngine>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        void Add(OcrEngine? engine)
         {
-            try
-            {
-                var language = new Language(tag);
-                if (!OcrEngine.IsLanguageSupported(language))
-                    continue;
-                var engine = OcrEngine.TryCreateFromLanguage(language);
-                if (engine is not null)
-                    return engine;
-            }
-            catch
-            {
-                // This language tag is not a Windows language.
-            }
+            if (engine is null)
+                return;
+            var tag = engine.RecognizerLanguage?.LanguageTag ?? "";
+            if (tag.Length > 0 && !seen.Add(tag))
+                return;
+            engines.Add(engine);
         }
 
-        return null;
+        Add(OcrEngine.TryCreateFromUserProfileLanguages());
+        foreach (var language in OcrEngine.AvailableRecognizerLanguages)
+            Add(OcrEngine.TryCreateFromLanguage(language));
+        return engines;
     }
 
     private static Windows.Foundation.Rect Bounds(OcrLine line)

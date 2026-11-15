@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using Kutu.Core.Text;
 using Kutu.Sdk.Hosting;
 using Kutu.Sdk.Localization;
 using Kutu.Sdk.Ui;
@@ -40,6 +41,7 @@ public sealed class TranslateView : UserControl
         _output = Chrome.Input(L.Get("Translate_Output"), multiline: true);
         _output.IsReadOnly = true;
         _status = Chrome.Hint("");
+        var target = LanguageBox.Create(host.Settings.ScreenTranslateTarget, code => TranslatePopup.Remember(host, code));
 
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 0) };
         buttons.Children.Add(Chrome.Primary(L.Get("Action_Translate"), SymbolRegular.Translate24, async (_, _) => await RunAsync(clipboard: false)));
@@ -54,7 +56,10 @@ public sealed class TranslateView : UserControl
         }));
 
         var stack = new StackPanel();
-        stack.Children.Add(Chrome.Hint(L.Get("Translate_Auto")));
+        stack.Children.Add(Chrome.Hint(L.Get("Translate_Sticky")));
+        stack.Children.Add(Chrome.Label(L.Get("Translate_Target")));
+        stack.Children.Add(target);
+        stack.Children.Add(new Border { Height = 8 });
         stack.Children.Add(Chrome.Label(L.Get("Translate_Input")));
         stack.Children.Add(_input);
         stack.Children.Add(buttons);
@@ -78,7 +83,7 @@ public sealed class TranslateView : UserControl
             }
 
             _status.Text = "";
-            var result = await TranslateClient.TranslateAutoAsync(text, _host.Settings.DeepLKey, _host.Settings.DeepLEndpoint);
+            var result = await TranslateClient.TranslateAsync(text, "auto", TranslatePopup.Target(_host), _host.Settings.DeepLKey, _host.Settings.DeepLEndpoint);
             _output.Text = result.Text;
             _status.Text = string.IsNullOrWhiteSpace(result.Provider) ? "" : string.Format(L.Get("Translate_Provider"), result.Provider);
         }
@@ -130,6 +135,7 @@ public static class TranslatePopup
             ResizeMode = ResizeMode.NoResize
         };
 
+        var target = LanguageBox.Create(host.Settings.ScreenTranslateTarget, code => TranslatePopup.Remember(host, code));
         var input = Chrome.Input(L.Get("Translate_PopupHint"), multiline: true);
         input.Text = text;
         input.MinHeight = 90;
@@ -139,7 +145,9 @@ public static class TranslatePopup
         var status = Chrome.Hint("");
         var card = new StackPanel();
         card.Children.Add(Chrome.Heading(L.Get("Tool_Translate_Title")));
-        card.Children.Add(Chrome.Hint(L.Get("Translate_Auto")));
+        card.Children.Add(Chrome.Label(L.Get("Translate_Target")));
+        card.Children.Add(target);
+        card.Children.Add(new Border { Height = 8 });
         card.Children.Add(input);
         card.Children.Add(new Border { Height = 8 });
         card.Children.Add(output);
@@ -155,8 +163,10 @@ public static class TranslatePopup
                     return;
                 }
 
-                var result = await TranslateClient.TranslateAutoAsync(
+                var result = await TranslateClient.TranslateAsync(
                     input.Text,
+                    "auto",
+                    Target(host),
                     host.Settings.DeepLKey,
                     host.Settings.DeepLEndpoint);
                 output.Text = result.Text;
@@ -177,8 +187,8 @@ public static class TranslatePopup
         card.Children.Add(status);
         window.Content = new Border
         {
-            Background = new SolidColorBrush(Color.FromRgb(0x10, 0x18, 0x28)),
-            BorderBrush = new SolidColorBrush(Color.FromRgb(0x28, 0xA0, 0xF1)),
+            Background = new SolidColorBrush(Color.FromRgb(0x1C, 0x1C, 0x1E)),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(0x3A, 0x3A, 0x3C)),
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(20),
             Padding = new Thickness(18),
@@ -187,5 +197,24 @@ public static class TranslatePopup
         window.Deactivated += (_, _) => window.Close();
         window.Show();
         input.Focus();
+    }
+
+    public static string Target(IKutuHost host) => TranslateDirection.RememberedTarget(host.Settings.ScreenTranslateTarget);
+
+    public static async void Remember(IKutuHost host, string code)
+    {
+        var next = TranslateDirection.RememberedTarget(code);
+        if (string.Equals(host.Settings.ScreenTranslateTarget, next, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        host.Settings.ScreenTranslateTarget = next;
+        try
+        {
+            await host.SaveSettingsAsync();
+        }
+        catch (Exception ex)
+        {
+            host.Log(ex.ToString());
+        }
     }
 }

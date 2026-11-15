@@ -37,14 +37,14 @@ public static class Motion
             BlurRadius = 0,
             ShadowDepth = 0,
             Opacity = 0,
-            Color = Color.FromRgb(0x28, 0xA0, 0xF1)
+            Color = Colors.Black
         };
         element.Effect = shadow;
         element.MouseEnter += (_, _) =>
         {
-            Animate(move, TranslateTransform.YProperty, -3, 180);
-            Animate(shadow, DropShadowEffect.BlurRadiusProperty, 18, 180);
-            Animate(shadow, DropShadowEffect.OpacityProperty, 0.28, 180);
+            Animate(move, TranslateTransform.YProperty, -2, 180);
+            Animate(shadow, DropShadowEffect.BlurRadiusProperty, 22, 180);
+            Animate(shadow, DropShadowEffect.OpacityProperty, 0.35, 180);
         };
         element.MouseLeave += (_, _) =>
         {

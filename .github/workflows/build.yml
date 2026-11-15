@@ -194,6 +194,39 @@ jobs:
           Copy-Item artifacts/Kutu.exe.sha256 artifacts/ship/Kutu.exe.sha256 -Force
           Assert-Started (Resolve-Path 'artifacts\ship\Kutu.exe') 20
 
+      - name: Smoke every tool view
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $false
+          Get-Process -Name Kutu -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+          Start-Sleep -Seconds 1
+          $log = Join-Path $env:APPDATA 'Kutu\kutu.log'
+          $list = Join-Path $env:APPDATA 'Kutu\smoke-tools.txt'
+          if (Test-Path $log) { Remove-Item $log -Force }
+          if (Test-Path $list) { Remove-Item $list -Force }
+          $exe = (Resolve-Path 'artifacts\ship\Kutu.exe').Path
+          $proc = Start-Process -FilePath $exe -ArgumentList '--smoke-tools' -PassThru
+          if (-not $proc.WaitForExit(120000)) {
+            Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+            throw 'tool smoke timed out'
+          }
+          if ($proc.ExitCode -ne 0) {
+            $body = if (Test-Path $log) { Get-Content $log -Raw } else { '' }
+            throw "tool smoke exited $($proc.ExitCode).`n$body"
+          }
+          if (Test-Path $log) { throw "tool smoke wrote kutu.log:`n$(Get-Content $log -Raw)" }
+          $expected = @(
+            'image-converter','image-resize','matte','screenshot','color-picker','fonts',
+            'clipboard','text-expander','whois','ip-reputation','bulk-ip','net-probe','ssl',
+            'upload','translate','qr','ocr','screen-translate','password','uuid','video','screen-record'
+          )
+          $actual = @(Get-Content $list)
+          if (($actual -join ',') -ne ($expected -join ',')) {
+            throw "tool smoke built [$($actual -join ', ')]"
+          }
+          Write-Host "tool smoke built $($actual.Count) views"
+
       - name: Context menu command
         shell: pwsh
         run: |
@@ -347,6 +380,39 @@ jobs:
           foreach ($name in 'KutuShell.dll','KutuShell.exe','Square44x44Logo.png','Square150x150Logo.png','kutu-shell.ps1','kutu.sparse','kutu.sparse.txt','kutu.path','AppxManifest.xml','StoreLogo.png') {
             if (Test-Path (Join-Path artifacts/ship $name)) { throw "$name was published beside Kutu.exe" }
           }
+
+      - name: Defender scan zip
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $false
+          $mp = Join-Path $env:ProgramFiles 'Windows Defender\MpCmdRun.exe'
+          if (-not (Test-Path $mp)) { throw "MpCmdRun.exe was not found at $mp" }
+          $service = Get-Service WinDefend -ErrorAction SilentlyContinue
+          if ($service -and $service.Status -ne 'Running') { Start-Service WinDefend }
+          $updated = $false
+          foreach ($try in 1..3) {
+            & $mp -SignatureUpdate
+            Write-Host "signature update exit $LASTEXITCODE"
+            if ($LASTEXITCODE -eq 0) { $updated = $true; break }
+            Start-Sleep -Seconds 10
+          }
+          if (-not $updated) { throw 'Defender signature update failed' }
+          foreach ($pref in @(
+            { Set-MpPreference -MAPSReporting Advanced },
+            { Set-MpPreference -SubmitSamplesConsent SendAllSamples },
+            { Set-MpPreference -CloudBlockLevel High },
+            { Set-MpPreference -DisableBlockAtFirstSeen $false }
+          )) {
+            try { & $pref } catch { Write-Host "cloud preference skipped: $_" }
+          }
+          Get-MpComputerStatus | Select-Object AMEngineVersion, AntivirusSignatureVersion, AntivirusSignatureLastUpdated, NISSignatureVersion, DefenderSignaturesOutOfDate, MAPSReporting, RealTimeProtectionEnabled, IoavProtectionEnabled | Format-List | Out-String | Write-Host
+          Write-Host 'On-demand zip scan only. Real-time protection, IOAV, and cloud reputation are reported above and are not simulated here.'
+          $zip = (Resolve-Path 'artifacts\ship\Kutu.zip').Path
+          & $mp -Scan -ScanType 3 -File $zip -DisableRemediation
+          Write-Host "zip scan exit $LASTEXITCODE"
+          if ($LASTEXITCODE -ne 0) { throw "Defender scan flagged $zip (exit $LASTEXITCODE)" }
+          Write-Host 'Defender zip: clean'
 
       - name: Upload exe artifact
         uses: actions/upload-artifact@v4

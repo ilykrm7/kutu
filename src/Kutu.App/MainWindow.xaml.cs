@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -22,6 +23,7 @@ public partial class MainWindow : FluentWindow
     private SettingsView? _settings;
     private LauncherWindow? _launcher;
     private DispatcherTimer? _toastTimer;
+    private string? _releasePage;
     private bool _exit;
 
     public MainWindow(IKutuHost host)
@@ -32,6 +34,8 @@ public partial class MainWindow : FluentWindow
         FavoritesButton.Content = NavLabel("Star24", L.Get("Nav_Favorites"));
         SettingsButton.Content = NavLabel("Settings24", L.Get("Nav_Settings"));
         UpdateApplyButton.Content = L.Get("Update_Action");
+        var version = typeof(MainWindow).Assembly.GetName().Version;
+        SidebarVersion.Text = version is null ? "v1.1.6" : $"v{version.Major}.{version.Minor}.{version.Build}";
         SourceInitialized += (_, _) => ApplyDarkChrome();
         ShowDashboard();
     }
@@ -71,6 +75,7 @@ public partial class MainWindow : FluentWindow
         UpdateText.Text = string.Format(L.Get("Update_Available"), version);
         UpdateApplyButton.Content = L.Get("Update_Action");
         UpdateApplyButton.Visibility = Visibility.Visible;
+        HideReleasePage();
         UpdateProgress.Visibility = Visibility.Collapsed;
         UpdateProgress.Value = 0;
         UpdateBar.Visibility = Visibility.Visible;
@@ -84,6 +89,7 @@ public partial class MainWindow : FluentWindow
         if (fraction > 1)
             fraction = 1;
         UpdateText.Text = TransferStatus.Format(progress.Received, progress.Total, progress.BytesPerSecond);
+        HideReleasePage();
         UpdateApplyButton.Visibility = Visibility.Collapsed;
         UpdateProgress.IsIndeterminate = progress.Total <= 0;
         UpdateProgress.Visibility = Visibility.Visible;
@@ -96,7 +102,21 @@ public partial class MainWindow : FluentWindow
         UpdateText.Text = message;
         UpdateApplyButton.Content = L.Get("Update_Action");
         UpdateApplyButton.Visibility = Visibility.Visible;
+        HideReleasePage();
         UpdateBar.Visibility = Visibility.Visible;
+    }
+
+    public void OfferReleasePage(string url)
+    {
+        _releasePage = url;
+        UpdatePageButton.Content = L.Get("Update_OpenPage");
+        UpdatePageButton.Visibility = Visibility.Visible;
+    }
+
+    public void HideReleasePage()
+    {
+        _releasePage = null;
+        UpdatePageButton.Visibility = Visibility.Collapsed;
     }
 
     public void HideUpdateBar()
@@ -104,6 +124,7 @@ public partial class MainWindow : FluentWindow
         UpdateBar.Visibility = Visibility.Collapsed;
         UpdateProgress.Visibility = Visibility.Collapsed;
         UpdateProgress.Value = 0;
+        HideReleasePage();
     }
 
     public void ShowToast(string message)
@@ -188,14 +209,22 @@ public partial class MainWindow : FluentWindow
 
     private void UpdateClose_Click(object sender, RoutedEventArgs e) => UpdateController.Current?.DismissBar();
 
+    private void UpdatePage_Click(object sender, RoutedEventArgs e)
+    {
+        var url = _releasePage;
+        if (string.IsNullOrWhiteSpace(url))
+            return;
+        Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+    }
+
     private void ApplyDarkChrome()
     {
         var hwnd = new WindowInteropHelper(this).Handle;
         var dark = 1;
         DwmSetWindowAttribute(hwnd, 20, ref dark, sizeof(int));
-        var caption = 0x00140B07;
+        var caption = 0x001E1C1C;
         DwmSetWindowAttribute(hwnd, 35, ref caption, sizeof(int));
-        var text = 0x00FBF7F4;
+        var text = 0x00F7F5F5;
         DwmSetWindowAttribute(hwnd, 36, ref text, sizeof(int));
     }
 

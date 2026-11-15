@@ -19,9 +19,9 @@ public sealed class ToolHostView : UserControl
         };
         var bubble = new Border
         {
-            Width = 46,
-            Height = 46,
-            CornerRadius = new CornerRadius(14),
+            Width = 44,
+            Height = 44,
+            CornerRadius = new CornerRadius(12),
             Background = Chrome.Accent,
             Child = icon,
             Margin = new Thickness(12, 0, 0, 0)
@@ -29,7 +29,7 @@ public sealed class ToolHostView : UserControl
         var title = new TextBlock
         {
             Text = L.Get(tool.TitleKey),
-            FontSize = 26,
+            FontSize = 28,
             FontWeight = FontWeights.SemiBold,
             Foreground = Chrome.Text
         };

@@ -144,7 +144,7 @@ public static class TranslateClient
     private static async Task<Attempt> GooglePostAsync(string text, string target, CancellationToken cancellationToken)
     {
         var url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl="
-            + Uri.EscapeDataString(target.ToLowerInvariant())
+            + Uri.EscapeDataString(TranslateDirection.GoogleCode(target))
             + "&dt=t";
         using var request = new HttpRequestMessage(HttpMethod.Post, url)
         {
@@ -162,7 +162,7 @@ public static class TranslateClient
         var payload = new Dictionary<string, object?>
         {
             ["text"] = new[] { text },
-            ["target_lang"] = target.ToUpperInvariant()
+            ["target_lang"] = TranslateDirection.DeepLCode(target)
         };
         if (!source.Equals("auto", StringComparison.OrdinalIgnoreCase))
             payload["source_lang"] = source.ToUpperInvariant();
@@ -190,8 +190,8 @@ public static class TranslateClient
 
     private static async Task<Attempt> MyMemoryAsync(string text, string source, string target, CancellationToken cancellationToken)
     {
-        var from = source.Equals("auto", StringComparison.OrdinalIgnoreCase) ? "autodetect" : source.ToLowerInvariant();
-        var to = target.ToLowerInvariant();
+        var from = source.Equals("auto", StringComparison.OrdinalIgnoreCase) ? "autodetect" : TranslateDirection.GoogleCode(source);
+        var to = TranslateDirection.GoogleCode(target);
         using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.mymemory.translated.net/get")
         {
             Content = new FormUrlEncodedContent(new Dictionary<string, string>

@@ -53,7 +53,12 @@ public static class SelectionTranslator
                 return;
             }
 
-            var result = await TranslateClient.TranslateAutoAsync(captured.text, host.Settings.DeepLKey, host.Settings.DeepLEndpoint);
+            var result = await TranslateClient.TranslateAsync(
+                captured.text,
+                "auto",
+                TranslateDirection.RememberedTarget(host.Settings.ScreenTranslateTarget),
+                host.Settings.DeepLKey,
+                host.Settings.DeepLEndpoint);
             var translated = string.IsNullOrWhiteSpace(result.Text) ? captured.text : result.Text;
             host.SuppressClipboard(TimeSpan.FromMilliseconds(1500));
             await KeyInjector.RunAsync(() =>
