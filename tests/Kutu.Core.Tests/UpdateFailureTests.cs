@@ -19,10 +19,8 @@ public class UpdateFailureTests
     [Fact]
     public void Virus_hresults_are_a_blocked_download()
     {
-        var infected = new IOException("infected");
-        infected.HResult = UpdateFailure.VirusInfected;
-        var deleted = new UnauthorizedAccessException("deleted");
-        deleted.HResult = UpdateFailure.VirusDeleted;
+        var infected = new CodedIoException(UpdateFailure.VirusInfected);
+        var deleted = new CodedAccessException(UpdateFailure.VirusDeleted);
 
         Assert.Equal(UpdateFailureKind.Blocked, UpdateFailure.Download(infected, fileStillThere: true));
         Assert.Equal(UpdateFailureKind.Blocked, UpdateFailure.Download(deleted, fileStillThere: false));
@@ -54,5 +52,15 @@ public class UpdateFailureTests
         Assert.True(ReleaseVersion.IsNewer("v1.1.6", new Version(1, 1, 4)));
         Assert.True(ReleaseVersion.IsNewer("v1.1.6", new Version(1, 1, 5)));
         Assert.False(ReleaseVersion.IsNewer("v1.1.6", new Version(1, 1, 6)));
+    }
+
+    private sealed class CodedIoException : IOException
+    {
+        public CodedIoException(int hresult) : base("io") => HResult = hresult;
+    }
+
+    private sealed class CodedAccessException : UnauthorizedAccessException
+    {
+        public CodedAccessException(int hresult) : base("access") => HResult = hresult;
     }
 }
