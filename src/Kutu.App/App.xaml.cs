@@ -12,7 +12,6 @@ using Kutu.Sdk.Localization;
 using Kutu.Tools.BulkIp;
 using Kutu.Tools.ClipboardHistory;
 using Kutu.Tools.ColorPicker;
-using Kutu.Tools.Digest;
 using Kutu.Tools.Fonts;
 using Kutu.Tools.ImageConverter;
 using Kutu.Tools.ImageResize;
@@ -86,6 +85,8 @@ public partial class App : Application
             ApplicationAccentColorManager.Apply(Color.FromRgb(0x0A, 0x84, 0xFF), ApplicationTheme.Dark, false, false);
 
             var clipboard = new ClipboardHistoryService { Enabled = settings.Current.ClipboardHistoryEnabled };
+            // Hypothesis, not a confirmed detection: 1.1.5's digest tool added MD5/SHA-1
+            // and whole-file reads that 1.1.4 did not have. It is omitted here.
             IKutuTool[] tools =
             [
                 new ImageConverterTool(),
@@ -108,7 +109,6 @@ public partial class App : Application
                 new ScreenTranslateTool(),
                 new PasswordTool(),
                 new UuidTool(),
-                new DigestTool(),
                 new VideoDownloadTool(),
                 new ScreenRecordTool()
             ];
@@ -116,6 +116,9 @@ public partial class App : Application
             _host = new AppHost(settings, clipboard, tools, ExitApplication, BindHotkeys);
             _window = new MainWindow(_host);
             _host.Attach(_window);
+            if (ToolSmoke.Requested(e.Args))
+                Environment.Exit(ToolSmoke.Run(_host));
+
             _window.SourceInitialized += (_, _) =>
             {
                 _hotkeys.Attach(_window);

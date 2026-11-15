@@ -328,6 +328,12 @@
   <data name="Update_Current" xml:space="preserve"><value>Yüklü sürüm</value></data>
   <data name="Update_Progress" xml:space="preserve"><value>İndiriliyor… {0}%</value></data>
   <data name="Update_Fail" xml:space="preserve"><value>Güncelleme tamamlanamadı.</value></data>
+  <data name="Update_FailHttp" xml:space="preserve"><value>Güncelleme indirilemedi.</value></data>
+  <data name="Update_FailHash" xml:space="preserve"><value>İndirilen dosyanın özeti uyuşmuyor.</value></data>
+  <data name="Update_FailBlocked" xml:space="preserve"><value>İndirilen dosya güvenlik yazılımı tarafından engellendi veya silindi.</value></data>
+  <data name="Update_FailReplace" xml:space="preserve"><value>Yeni dosya mevcut uygulamanın yerine konamadı.</value></data>
+  <data name="Update_FailLaunch" xml:space="preserve"><value>Yeni sürüm başlatılamadı.</value></data>
+  <data name="Update_OpenPage" xml:space="preserve"><value>Sayfadan indir</value></data>
   <data name="Update_None" xml:space="preserve"><value>Güncelsiniz.</value></data>
   <data name="Update_Offline" xml:space="preserve"><value>Denetleme şu an yapılamadı.</value></data>
   <data name="Settings_Updates" xml:space="preserve"><value>Güncellemeler</value></data>
@@ -356,8 +362,6 @@
   <data name="Tool_Font_Desc" xml:space="preserve"><value>Yüklü yazı tiplerini ara, önizle, adını kopyala.</value></data>
   <data name="Tool_Uuid_Title" xml:space="preserve"><value>UUID</value></data>
   <data name="Tool_Uuid_Desc" xml:space="preserve"><value>Sürüm 4 veya zamana bağlı sürüm 7 kimlik üretir.</value></data>
-  <data name="Tool_Digest_Title" xml:space="preserve"><value>Özet</value></data>
-  <data name="Tool_Digest_Desc" xml:space="preserve"><value>Metin veya dosya için MD5 ve SHA özeti.</value></data>
   <data name="Matte_Tolerance" xml:space="preserve"><value>Tolerans</value></data>
   <data name="Matte_Holes" xml:space="preserve"><value>İç boşlukları da sil</value></data>
   <data name="Matte_Hint" xml:space="preserve"><value>Köşelerdeki renge yakın pikseller silinir. Düz renkli zeminlerde işe yarar; portre için bir model kullanmaz.</value></data>
@@ -375,11 +379,4 @@
   <data name="Uuid_Hyphens" xml:space="preserve"><value>Tire</value></data>
   <data name="Uuid_V7" xml:space="preserve"><value>Sürüm 7</value></data>
   <data name="Uuid_Generate" xml:space="preserve"><value>Üret</value></data>
-  <data name="Digest_Text" xml:space="preserve"><value>Metin</value></data>
-  <data name="Digest_File" xml:space="preserve"><value>Dosya</value></data>
-  <data name="Digest_Run" xml:space="preserve"><value>Özetle</value></data>
-  <data name="Digest_Placeholder" xml:space="preserve"><value>Özeti alınacak metin</value></data>
-  <data name="Digest_Drop" xml:space="preserve"><value>Dosyayı buraya bırakın.</value></data>
-  <data name="Digest_Empty" xml:space="preserve"><value>Metin yazın veya dosya seçin.</value></data>
-  <data name="Digest_Clear" xml:space="preserve"><value>Temizle</value></data>
 </root>

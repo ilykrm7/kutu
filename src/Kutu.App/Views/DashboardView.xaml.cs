@@ -374,7 +374,7 @@ public partial class DashboardView : UserControl
     private static string Category(string id) => id switch
     {
         "image-converter" or "image-resize" or "matte" or "screenshot" or "color-picker" or "qr" or "screen-record" or "video" => "image",
-        "clipboard" or "text-expander" or "translate" or "ocr" or "screen-translate" or "password" or "fonts" or "uuid" or "digest" => "text",
+        "clipboard" or "text-expander" or "translate" or "ocr" or "screen-translate" or "password" or "fonts" or "uuid" => "text",
         _ => "net"
     };
 
@@ -396,7 +396,6 @@ public partial class DashboardView : UserControl
         "screen-translate" => Color.FromRgb(0x64, 0xD2, 0xFF),
         "password" => Color.FromRgb(0xFF, 0xD6, 0x0A),
         "uuid" => Color.FromRgb(0xBF, 0x5A, 0xF2),
-        "digest" => Color.FromRgb(0x5E, 0x5C, 0xE6),
         "whois" => Color.FromRgb(0x30, 0xD1, 0x58),
         "ip-reputation" => Color.FromRgb(0x0A, 0x84, 0xFF),
         "bulk-ip" => Color.FromRgb(0x64, 0xD2, 0xFF),

@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Net.Http;
 using System.Windows.Threading;
 using Kutu.Core;
+using Kutu.Core.Diagnostics;
 using Kutu.Core.IO;
 using Kutu.Core.Settings;
 using Kutu.Core.Updates;
@@ -128,6 +129,7 @@ public sealed class UpdateController
         var current = HostProcess.Executable;
         if (exe is null || hash is null || string.IsNullOrWhiteSpace(current))
         {
+            AppLog.Write("update failed kind=assets message=missing exe, checksum, or current path");
             _window.ShowUpdateBar(Available);
             _window.SetUpdateMessage(L.Get("Update_Fail"));
             return;
@@ -144,45 +146,83 @@ public sealed class UpdateController
         try
         {
             var progress = new Progress<FetchProgress>(value => _window.ShowUpdateProgress(version, value));
-            await ExternalToolFetch.DownloadFileAsync(exe.Url, incoming, progress, cancel.Token);
+            try
+            {
+                await ExternalToolFetch.DownloadFileAsync(exe.Url, incoming, progress, cancel.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                throw new UpdateStepException(UpdateFailure.Download(ex, File.Exists(incoming)), ex);
+            }
+
             _window.SetUpdateMessage(L.Get("Update_Progress").Replace("{0}", "…"));
-            var sums = await ExternalToolFetch.GetTextAsync(hash.Url, CancellationToken.None);
-            if (!Sha256Check.Matches(incoming, sums, "Kutu.exe"))
-                throw new InvalidOperationException("hash");
+            try
+            {
+                var sums = await ExternalToolFetch.GetTextAsync(hash.Url, CancellationToken.None);
+                var matches = Sha256Check.Matches(incoming, sums, "Kutu.exe");
+                if (!File.Exists(incoming) || !matches)
+                    throw new UpdateStepException(UpdateFailure.Hash(null, File.Exists(incoming), matches), new InvalidOperationException("hash"));
+            }
+            catch (UpdateStepException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                throw new UpdateStepException(UpdateFailure.Hash(ex, File.Exists(incoming), matches: false), ex);
+            }
 
             var folder = Path.GetDirectoryName(current)!;
             var old = Path.Combine(folder, "Kutu.old.exe");
-            if (File.Exists(old))
+            try
             {
+                if (File.Exists(old))
+                {
+                    try
+                    {
+                        File.Delete(old);
+                    }
+                    catch
+                    {
+                        old = Path.Combine(folder, "Kutu.old." + DateTime.UtcNow.Ticks + ".exe");
+                    }
+                }
+
+                File.Move(current, old);
                 try
                 {
-                    File.Delete(old);
+                    File.Copy(incoming, current, overwrite: true);
                 }
                 catch
                 {
-                    old = Path.Combine(folder, "Kutu.old." + DateTime.UtcNow.Ticks + ".exe");
+                    if (!File.Exists(current) && File.Exists(old))
+                        File.Move(old, current);
+                    throw;
                 }
             }
+            catch (Exception ex)
+            {
+                throw new UpdateStepException(UpdateFailure.Replace(ex), ex);
+            }
 
-            File.Move(current, old);
             try
             {
-                File.Copy(incoming, current, overwrite: true);
+                _releaseInstance();
+                Process.Start(new ProcessStartInfo(current)
+                {
+                    Arguments = "--cleanup",
+                    UseShellExecute = true
+                });
+                _host.Exit();
             }
-            catch
+            catch (Exception ex)
             {
-                if (!File.Exists(current) && File.Exists(old))
-                    File.Move(old, current);
-                throw;
+                throw new UpdateStepException(UpdateFailure.Launch(ex), ex);
             }
-
-            _releaseInstance();
-            Process.Start(new ProcessStartInfo(current)
-            {
-                Arguments = "--cleanup",
-                UseShellExecute = true
-            });
-            _host.Exit();
         }
         catch (OperationCanceledException)
         {
@@ -199,7 +239,7 @@ public sealed class UpdateController
             if (!string.IsNullOrWhiteSpace(version))
                 _window.ShowUpdateBar(version);
         }
-        catch
+        catch (Exception ex)
         {
             try
             {
@@ -211,12 +251,38 @@ public sealed class UpdateController
                 // The rejected download is removed on the next attempt.
             }
 
+            var kind = ex is UpdateStepException step ? step.Kind : UpdateFailureKind.Http;
+            var detail = ex.InnerException ?? ex;
+            AppLog.Write(
+                "update failed kind=" + kind
+                + " hresult=" + detail.HResult.ToString("X8")
+                + " type=" + detail.GetType().Name
+                + " message=" + detail.Message);
             _window.ShowUpdateBar(version);
-            _window.SetUpdateMessage(L.Get("Update_Fail"));
+            _window.SetUpdateMessage(FailureText(kind));
+            if (kind == UpdateFailureKind.Blocked)
+                _window.OfferReleasePage(UpdateFailure.ReleasePage(version));
         }
         finally
         {
             _applying = false;
         }
+    }
+
+    private static string FailureText(UpdateFailureKind kind) => kind switch
+    {
+        UpdateFailureKind.Http => L.Get("Update_FailHttp"),
+        UpdateFailureKind.Hash => L.Get("Update_FailHash"),
+        UpdateFailureKind.Blocked => L.Get("Update_FailBlocked"),
+        UpdateFailureKind.Replace => L.Get("Update_FailReplace"),
+        UpdateFailureKind.Relaunch => L.Get("Update_FailLaunch"),
+        _ => L.Get("Update_Fail")
+    };
+
+    private sealed class UpdateStepException : Exception
+    {
+        public UpdateStepException(UpdateFailureKind kind, Exception inner) : base(inner.Message, inner) => Kind = kind;
+
+        public UpdateFailureKind Kind { get; }
     }
 }

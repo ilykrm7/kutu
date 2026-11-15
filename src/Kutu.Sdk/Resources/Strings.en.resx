@@ -328,6 +328,12 @@
   <data name="Update_Current" xml:space="preserve"><value>Installed version</value></data>
   <data name="Update_Progress" xml:space="preserve"><value>Downloading… {0}%</value></data>
   <data name="Update_Fail" xml:space="preserve"><value>The update did not finish.</value></data>
+  <data name="Update_FailHttp" xml:space="preserve"><value>The update could not be downloaded.</value></data>
+  <data name="Update_FailHash" xml:space="preserve"><value>The downloaded file does not match its checksum.</value></data>
+  <data name="Update_FailBlocked" xml:space="preserve"><value>Security software blocked or removed the downloaded file.</value></data>
+  <data name="Update_FailReplace" xml:space="preserve"><value>The new file could not replace the current app.</value></data>
+  <data name="Update_FailLaunch" xml:space="preserve"><value>The new version could not be started.</value></data>
+  <data name="Update_OpenPage" xml:space="preserve"><value>Download from the page</value></data>
   <data name="Update_None" xml:space="preserve"><value>You're up to date.</value></data>
   <data name="Update_Offline" xml:space="preserve"><value>The check could not be completed.</value></data>
   <data name="Settings_Updates" xml:space="preserve"><value>Updates</value></data>
@@ -356,8 +362,6 @@
   <data name="Tool_Font_Desc" xml:space="preserve"><value>Search installed fonts, preview them, copy the name.</value></data>
   <data name="Tool_Uuid_Title" xml:space="preserve"><value>UUID</value></data>
   <data name="Tool_Uuid_Desc" xml:space="preserve"><value>Creates a version 4 or time-ordered version 7 id.</value></data>
-  <data name="Tool_Digest_Title" xml:space="preserve"><value>Digest</value></data>
-  <data name="Tool_Digest_Desc" xml:space="preserve"><value>MD5 and SHA digests for text or a file.</value></data>
   <data name="Matte_Tolerance" xml:space="preserve"><value>Tolerance</value></data>
   <data name="Matte_Holes" xml:space="preserve"><value>Also clear enclosed holes</value></data>
   <data name="Matte_Hint" xml:space="preserve"><value>Pixels close to the corner color are removed. It suits flat backdrops; it does not use a portrait model.</value></data>
@@ -375,11 +379,4 @@
   <data name="Uuid_Hyphens" xml:space="preserve"><value>Hyphens</value></data>
   <data name="Uuid_V7" xml:space="preserve"><value>Version 7</value></data>
   <data name="Uuid_Generate" xml:space="preserve"><value>Generate</value></data>
-  <data name="Digest_Text" xml:space="preserve"><value>Text</value></data>
-  <data name="Digest_File" xml:space="preserve"><value>File</value></data>
-  <data name="Digest_Run" xml:space="preserve"><value>Digest</value></data>
-  <data name="Digest_Placeholder" xml:space="preserve"><value>Text to digest</value></data>
-  <data name="Digest_Drop" xml:space="preserve"><value>Drop a file here.</value></data>
-  <data name="Digest_Empty" xml:space="preserve"><value>Type text or choose a file.</value></data>
-  <data name="Digest_Clear" xml:space="preserve"><value>Clear</value></data>
 </root>

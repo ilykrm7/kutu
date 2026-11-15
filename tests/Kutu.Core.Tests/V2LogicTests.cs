@@ -7,15 +7,6 @@ namespace Kutu.Core.Tests;
 public class V2LogicTests
 {
     [Fact]
-    public void Digests_match_known_vectors()
-    {
-        Assert.Equal("d41d8cd98f00b204e9800998ecf8427e", Digests.Compute("MD5", Digests.Utf8("")));
-        Assert.Equal("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", Digests.Compute("SHA256", Digests.Utf8("abc")));
-        Assert.Equal(64, Digests.Compute("SHA256", Digests.Utf8("kutu")).Length);
-        Assert.Equal(128, Digests.Compute("SHA512", Digests.Utf8("kutu")).Length);
-    }
-
-    [Fact]
     public void Uuid_v7_keeps_time_version_and_variant()
     {
         var id = UuidFormat.CreateVersion7(0x018F4E6C3C00, new byte[10]);
